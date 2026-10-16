@@ -1,0 +1,88 @@
+/* App-specific styles */
+
+/* Instrument container styling */
+.instrument {
+  background: var(--bg-secondary);
+  border-radius: 8px;
+  padding: 0.5rem;
+  box-shadow: 0 2px 8px var(--shadow-color);
+}
+
+/* Ensure all instruments have consistent sizing */
+.instrument speedometer,
+.instrument compass,
+.instrument wind-indicator,
+.instrument depth-sounder {
+  min-width: 200px;
+  min-height: 200px;
+}
+
+/* GPS display styling */
+.instrument gps-display {
+  min-width: 300px;
+}
+
+/* Smooth transitions for all animated elements */
+.instrument * {
+  transition: all 0.3s ease;
+}
+
+/* SVG elements should not transition fill/stroke for performance */
+.instrument svg,
+.instrument svg * {
+  transition: none;
+}
+
+/* Header styling */
+.app-header {
+  position: relative;
+}
+
+/* Connection indicator pulse animation */
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.7; }
+}
+
+.connection-status.connected {
+  animation: pulse 2s infinite;
+}
+
+/* Dashboard grid adjustments */
+.instruments-grid {
+  grid-auto-flow: dense;
+}
+
+/* Panel hover effect */
+.instrument-panel:hover {
+  box-shadow: 0 4px 12px var(--shadow-color);
+  transform: translateY(-2px);
+}
+
+.instrument-panel-inner {
+  transition: transform 0.3s ease;
+}
+
+/* Theme transition */
+html {
+  transition: background 0.5s ease, color 0.5s ease;
+}
+
+/* Scrollbar styling for sidebar */
+.sidebar::-webkit-scrollbar {
+  width: 8px;
+}
+
+.sidebar::-webkit-scrollbar-track {
+  background: var(--bg-tertiary);
+  border-radius: 4px;
+}
+
+.sidebar::-webkit-scrollbar-thumb {
+  background: var(--border-color);
+  border-radius: 4px;
+}
+
+.sidebar::-webkit-scrollbar-thumb:hover {
+  background: var(--accent-color);
+}
