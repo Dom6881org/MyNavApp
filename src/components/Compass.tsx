@@ -8,7 +8,7 @@ interface CompassProps {
 
 const Compass: React.FC<CompassProps> = ({ data, size = 200 }) => {
   // Calculate base font size based on container size
-  const baseFontSize = size * 0.1;
+  const baseFontSize = size * 0.08;
 
   return (
     <div 
@@ -18,7 +18,7 @@ const Compass: React.FC<CompassProps> = ({ data, size = 200 }) => {
         height: '100%',
         display: 'flex',
         flexDirection: 'column',
-        padding: `${baseFontSize * 0.5}px`,
+        padding: `${baseFontSize * 0.4}px`,
         boxSizing: 'border-box'
       }}
     >
@@ -27,14 +27,14 @@ const Compass: React.FC<CompassProps> = ({ data, size = 200 }) => {
         style={{
           width: '100%',
           textAlign: 'center',
-          padding: `${baseFontSize * 0.3}px`,
+          padding: `${baseFontSize * 0.2}px`,
           background: 'rgba(0, 0, 0, 0.2)',
           borderRadius: '4px',
-          marginBottom: `${baseFontSize * 0.5}px`
+          marginBottom: `${baseFontSize * 0.3}px`
         }}
       >
         <span className="instrument-title" style={{ 
-          fontSize: `${baseFontSize * 1}px`, 
+          fontSize: `${baseFontSize * 0.8}px`, 
           fontWeight: 'bold' 
         }}>Compass</span>
       </div>
@@ -46,68 +46,35 @@ const Compass: React.FC<CompassProps> = ({ data, size = 200 }) => {
           flexDirection: 'column',
           alignItems: 'center',
           justifyContent: 'center',
-          gap: `${baseFontSize * 0.3}px`
+          gap: `${baseFontSize * 0.2}px`
         }}
       >
         {/* Heading value (where the boat is pointing) */}
         <div 
           style={{
-            fontSize: `${baseFontSize * 1.8}px`,
+            fontSize: `${baseFontSize * 1.4}px`,
             fontWeight: 'bold',
             fontFamily: 'monospace',
             color: 'var(--accent-color)',
-            letterSpacing: '0.1em',
+            letterSpacing: '0.05em',
             lineHeight: 1
           }}
         >
-          Heading: {data.heading.toFixed(0)}°
+          HDG: {data.heading.toFixed(0)}°
         </div>
         
         {/* COG value (where the boat is actually going) */}
         <div 
           style={{
-            fontSize: `${baseFontSize * 1.8}px`,
+            fontSize: `${baseFontSize * 1.4}px`,
             fontWeight: 'bold',
             fontFamily: 'monospace',
             color: 'var(--accent-secondary)',
-            letterSpacing: '0.1em',
+            letterSpacing: '0.05em',
             lineHeight: 1
           }}
         >
           COG: {data.cog.toFixed(0)}°
-        </div>
-        
-        {/* Additional info */}
-        <div 
-          style={{
-            display: 'flex',
-            flexDirection: 'column',
-            gap: `${baseFontSize * 0.2}px`,
-            fontSize: `${baseFontSize * 0.8}px`,
-            color: 'var(--text-secondary)',
-            marginTop: `${baseFontSize * 0.5}px`,
-            textAlign: 'center'
-          }}
-        >
-          <span>Magnétique: {data.magneticHeading.toFixed(0)}°</span>
-          {data.deviation !== 0 && (
-            <span>Dévitation: {data.deviation}°</span>
-          )}
-        </div>
-        
-        {/* Legend */}
-        <div 
-          style={{
-            marginTop: `${baseFontSize * 0.5}px`,
-            padding: `${baseFontSize * 0.3}px`,
-            background: 'rgba(0, 0, 0, 0.1)',
-            borderRadius: '4px',
-            fontSize: `${baseFontSize * 0.65}px`,
-            color: 'var(--text-secondary)',
-            textAlign: 'center'
-          }}
-        >
-          Heading = Où pointe le bateau | COG = Où va le bateau
         </div>
       </div>
     </div>

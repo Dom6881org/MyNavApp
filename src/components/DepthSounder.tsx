@@ -36,7 +36,7 @@ const DepthSounder: React.FC<DepthSounderProps> = ({ data, unit, size = 200 }) =
   const depthColor = useMemo(() => getDepthColor(), [data.alarm, displayDepth]);
 
   // Calculate base font size based on container size
-  const baseFontSize = size * 0.1;
+  const baseFontSize = size * 0.08;
 
   return (
     <div 
@@ -46,7 +46,7 @@ const DepthSounder: React.FC<DepthSounderProps> = ({ data, unit, size = 200 }) =
         height: '100%',
         display: 'flex',
         flexDirection: 'column',
-        padding: `${baseFontSize * 0.5}px`,
+        padding: `${baseFontSize * 0.4}px`,
         boxSizing: 'border-box'
       }}
     >
@@ -57,21 +57,21 @@ const DepthSounder: React.FC<DepthSounderProps> = ({ data, unit, size = 200 }) =
           display: 'flex',
           justifyContent: 'space-between',
           alignItems: 'center',
-          padding: `${baseFontSize * 0.3}px`,
+          padding: `${baseFontSize * 0.2}px`,
           background: 'rgba(0, 0, 0, 0.2)',
           borderRadius: '4px',
-          marginBottom: `${baseFontSize * 0.5}px`
+          marginBottom: `${baseFontSize * 0.3}px`
         }}
       >
         <span className="instrument-title" style={{ 
-          fontSize: `${baseFontSize * 1}px`, 
+          fontSize: `${baseFontSize * 0.8}px`, 
           fontWeight: 'bold' 
         }}>Depth</span>
         {data.alarm && (
           <span className="instrument-alarm" style={{ 
-            fontSize: `${baseFontSize * 0.8}px` 
+            fontSize: `${baseFontSize * 0.7}px` 
           }}>
-            ALARM
+            !
           </span>
         )}
       </div>
@@ -83,24 +83,24 @@ const DepthSounder: React.FC<DepthSounderProps> = ({ data, unit, size = 200 }) =
           flexDirection: 'column',
           alignItems: 'center',
           justifyContent: 'center',
-          gap: `${baseFontSize * 0.3}px`
+          gap: `${baseFontSize * 0.2}px`
         }}
       >
         {/* Main depth value */}
         <div 
           style={{
-            fontSize: `${baseFontSize * 2.5}px`,
+            fontSize: `${baseFontSize * 1.8}px`,
             fontWeight: 'bold',
             fontFamily: 'monospace',
             color: depthColor,
-            letterSpacing: '0.1em',
+            letterSpacing: '0.05em',
             lineHeight: 1
           }}
         >
-          {displayDepth.toFixed(1)}
+          {displayDepth.toFixed(1)}{getUnitLabel()}
         </div>
         
-        {/* Unit */}
+        {/* Temperature */}
         <div 
           style={{
             fontSize: `${baseFontSize * 1}px`,
@@ -108,23 +108,7 @@ const DepthSounder: React.FC<DepthSounderProps> = ({ data, unit, size = 200 }) =
             fontWeight: 'normal'
           }}
         >
-          {getUnitLabel()}
-        </div>
-        
-        {/* Additional info */}
-        <div 
-          style={{
-            display: 'flex',
-            flexDirection: 'column',
-            gap: `${baseFontSize * 0.2}px`,
-            fontSize: `${baseFontSize * 0.8}px`,
-            color: 'var(--text-secondary)',
-            marginTop: `${baseFontSize * 0.3}px`,
-            textAlign: 'center'
-          }}
-        >
-          <span>Temp: {data.temperature.toFixed(1)}°C</span>
-          <span>Alarm: {data.alarmDepth}{getUnitLabel()}</span>
+          Temp: {data.temperature.toFixed(1)}°C
         </div>
       </div>
     </div>

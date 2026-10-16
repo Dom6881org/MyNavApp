@@ -44,7 +44,7 @@ const InstrumentPanel: React.FC<InstrumentPanelProps> = ({ data, config, units, 
       case 'map':
         return <MapView data={data} size={{ width: '100%', height: '100%' }} />;
       default:
-        return <div>Instrument inconnu</div>;
+        return <div>Unknown instrument</div>;
     }
   };
 

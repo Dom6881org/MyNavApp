@@ -23,7 +23,7 @@ const WindIndicator: React.FC<WindIndicatorProps> = ({ data, unit, size = 200 })
     switch (unit) {
       case 'kmh': return 'km/h';
       case 'mph': return 'mph';
-      default: return 'knots';
+      default: return 'kn';
     }
   };
 
@@ -39,7 +39,7 @@ const WindIndicator: React.FC<WindIndicatorProps> = ({ data, unit, size = 200 })
   const directionText = useMemo(() => getWindDirectionText(data.direction), [data.direction]);
 
   // Calculate base font size based on container size
-  const baseFontSize = size * 0.1;
+  const baseFontSize = size * 0.08;
 
   return (
     <div 
@@ -49,7 +49,7 @@ const WindIndicator: React.FC<WindIndicatorProps> = ({ data, unit, size = 200 })
         height: '100%',
         display: 'flex',
         flexDirection: 'column',
-        padding: `${baseFontSize * 0.5}px`,
+        padding: `${baseFontSize * 0.4}px`,
         boxSizing: 'border-box'
       }}
     >
@@ -58,14 +58,14 @@ const WindIndicator: React.FC<WindIndicatorProps> = ({ data, unit, size = 200 })
         style={{
           width: '100%',
           textAlign: 'center',
-          padding: `${baseFontSize * 0.3}px`,
+          padding: `${baseFontSize * 0.2}px`,
           background: 'rgba(0, 0, 0, 0.2)',
           borderRadius: '4px',
-          marginBottom: `${baseFontSize * 0.5}px`
+          marginBottom: `${baseFontSize * 0.3}px`
         }}
       >
         <span className="instrument-title" style={{ 
-          fontSize: `${baseFontSize * 1}px`, 
+          fontSize: `${baseFontSize * 0.8}px`, 
           fontWeight: 'bold' 
         }}>Wind</span>
       </div>
@@ -77,13 +77,13 @@ const WindIndicator: React.FC<WindIndicatorProps> = ({ data, unit, size = 200 })
           flexDirection: 'column',
           alignItems: 'center',
           justifyContent: 'center',
-          gap: `${baseFontSize * 0.3}px`
+          gap: `${baseFontSize * 0.2}px`
         }}
       >
         {/* Direction */}
         <div 
           style={{
-            fontSize: `${baseFontSize * 1.8}px`,
+            fontSize: `${baseFontSize * 1.2}px`,
             fontWeight: 'bold',
             fontFamily: 'monospace',
             color: 'var(--accent-color)',
@@ -91,57 +91,32 @@ const WindIndicator: React.FC<WindIndicatorProps> = ({ data, unit, size = 200 })
             lineHeight: 1
           }}
         >
-          {directionText}
-        </div>
-        
-        {/* Direction in degrees */}
-        <div 
-          style={{
-            fontSize: `${baseFontSize * 1}px`,
-            color: 'var(--text-secondary)',
-            fontWeight: 'normal'
-          }}
-        >
-          {data.direction.toFixed(0)}°
+          {directionText} ({data.direction.toFixed(0)}°)
         </div>
         
         {/* Wind speed */}
         <div 
           style={{
-            fontSize: `${baseFontSize * 2}px`,
+            fontSize: `${baseFontSize * 1.4}px`,
             fontWeight: 'bold',
             fontFamily: 'monospace',
-            color: 'var(--accent-color)',
-            letterSpacing: '0.1em',
-            lineHeight: 1,
-            marginTop: `${baseFontSize * 0.3}px`
+            color: 'var(--accent-secondary)',
+            letterSpacing: '0.05em',
+            lineHeight: 1
           }}
         >
-          {displaySpeed.toFixed(1)}
-        </div>
-        
-        {/* Unit */}
-        <div 
-          style={{
-            fontSize: `${baseFontSize * 0.9}px`,
-            color: 'var(--text-secondary)',
-            fontWeight: 'normal'
-          }}
-        >
-          {getUnitLabel()}
+          {displaySpeed.toFixed(1)}{getUnitLabel()}
         </div>
         
         {/* Gust info */}
         <div 
           style={{
-            display: 'flex',
-            gap: `${baseFontSize * 0.3}px`,
-            fontSize: `${baseFontSize * 0.8}px`,
+            fontSize: `${baseFontSize * 0.9}px`,
             color: 'var(--text-secondary)',
-            marginTop: `${baseFontSize * 0.3}px`
+            marginTop: `${baseFontSize * 0.2}px`
           }}
         >
-          <span>Gust: {displayGust.toFixed(1)}</span>
+          Gust: {displayGust.toFixed(1)}{getUnitLabel()}
         </div>
       </div>
     </div>
