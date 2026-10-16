@@ -115,14 +115,15 @@ const App: React.FC = () => {
           <aside className="instruments-sidebar">
             <div className="instruments-container">
               {layout.instruments
-                .filter(instr => instr.visible && instr.type !== 'map')
+                .filter(instr => instr.type !== 'map')
                 .map(instrument => {
                   const isCollapsed = collapsedInstruments[instrument.id] || false;
+                  const isHidden = !instrument.visible;
                   
                   return (
                     <div 
                       key={instrument.id}
-                      className={`instrument-wrapper ${isCollapsed ? 'collapsed' : ''}`}
+                      className={`instrument-wrapper ${isCollapsed ? 'collapsed' : ''} ${isHidden ? 'hidden' : ''}`}
                     >
                       {/* Instrument header with collapse button */}
                       <div className="instrument-header-with-controls">
@@ -134,6 +135,7 @@ const App: React.FC = () => {
                             className="collapse-toggle"
                             onClick={() => toggleCollapse(instrument.id)}
                             title={isCollapsed ? 'Développer' : 'Réduire'}
+                            disabled={isHidden}
                           >
                             {isCollapsed ? '⤢' : '⤣'}
                           </button>
@@ -147,9 +149,13 @@ const App: React.FC = () => {
                         </div>
                       </div>
                       
-                      {/* Instrument content (collapsed or full) */}
+                      {/* Instrument content (collapsed, hidden, or full) */}
                       <div className="instrument-content">
-                        {isCollapsed ? (
+                        {isHidden ? (
+                          <div className="instrument-hidden-message">
+                            Instrument masqué - cliquez sur 👁️ pour afficher
+                          </div>
+                        ) : isCollapsed ? (
                           <div className="instrument-minimized">
                             <InstrumentPanel
                               data={navigationData}

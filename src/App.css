@@ -605,6 +605,22 @@ html {
   min-height: auto;
 }
 
+.instrument-wrapper.hidden {
+  opacity: 0.5;
+}
+
+.instrument-wrapper.hidden .instrument-content {
+  display: none;
+}
+
+.instrument-hidden-message {
+  padding: 0.5rem;
+  text-align: center;
+  color: var(--text-secondary);
+  font-size: 0.8rem;
+  font-style: italic;
+}
+
 .instrument-header-with-controls {
   display: flex;
   justify-content: space-between;
