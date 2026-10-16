@@ -19,6 +19,7 @@ interface SettingsPageProps {
   onThemeChange: (theme: 'light' | 'dark' | 'night') => void;
   onUnitChange: (unitType: keyof DashboardLayout['units'], value: any) => void;
   onReset: () => void;
+  onClose?: () => void;
 }
 
 const SettingsPage: React.FC<SettingsPageProps> = ({
@@ -32,12 +33,30 @@ const SettingsPage: React.FC<SettingsPageProps> = ({
   onToggleGPSConnection,
   onThemeChange,
   onUnitChange,
-  onReset
+  onReset,
+  onClose
 }) => {
   return (
     <div className="settings-page">
       <div className="settings-header">
-        <h2>Paramètres</h2>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <h2>Paramètres</h2>
+          {onClose && (
+            <button 
+              onClick={onClose}
+              style={{
+                background: 'transparent',
+                border: '1px solid var(--border-color)',
+                borderRadius: '4px',
+                color: 'var(--text-primary)',
+                cursor: 'pointer',
+                padding: '0.3rem 0.6rem'
+              }}
+            >
+              ✕
+            </button>
+          )}
+        </div>
         <p>Configurez votre tableau de bord</p>
       </div>
       
