@@ -5,6 +5,7 @@ import Compass from './Compass';
 import WindIndicator from './WindIndicator';
 import DepthSounder from './DepthSounder';
 import GPSDisplay from './GPSDisplay';
+import MapView from './MapView';
 
 interface InstrumentPanelProps {
   data: NavigationData;
@@ -36,6 +37,8 @@ const InstrumentPanel: React.FC<InstrumentPanelProps> = ({ data, config, units }
           signalStrength={data.signalStrength}
           size={{ width: 400, height: 200 }}
         />;
+      case 'map':
+        return <MapView data={data} size={{ width: 800, height: 400 }} />;
       default:
         return <div>Instrument inconnu</div>;
     }

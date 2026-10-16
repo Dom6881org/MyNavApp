@@ -6,7 +6,8 @@ export interface Position {
 }
 
 export interface SpeedData {
-  speed: number; // en nœuds (knots)
+  speed: number; // en nœuds (knots) - vitesse du bateau
+  sog: number; // en nœuds (knots) - Speed Over Ground from GPS
   maxSpeed: number;
   averageSpeed: number;
 }
@@ -18,7 +19,8 @@ export interface WindData {
 }
 
 export interface CompassData {
-  heading: number; // cap en degrés (0-360)
+  heading: number; // cap en degrés (0-360) - où le bateau pointe
+  cog: number; // Course Over Ground en degrés (0-360) - où le bateau va (from GPS)
   magneticHeading: number;
   deviation: number;
 }
@@ -48,7 +50,7 @@ export interface NavigationData {
 }
 
 // Types pour les instruments
-export type InstrumentType = 'speed' | 'wind' | 'compass' | 'depth' | 'gps' | 'all';
+export type InstrumentType = 'speed' | 'wind' | 'compass' | 'depth' | 'gps' | 'map' | 'all';
 
 export interface InstrumentConfig {
   id: string;

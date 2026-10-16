@@ -7,7 +7,8 @@ const DEFAULT_LAYOUT: DashboardLayout = {
     { id: 'compass', type: 'compass', title: 'Compas', visible: true, position: { x: 2, y: 0 }, size: { width: 2, height: 2 } },
     { id: 'wind', type: 'wind', title: 'Vent', visible: true, position: { x: 0, y: 2 }, size: { width: 2, height: 2 } },
     { id: 'depth', type: 'depth', title: 'Sondeur', visible: true, position: { x: 2, y: 2 }, size: { width: 2, height: 2 } },
-    { id: 'gps', type: 'gps', title: 'GPS', visible: true, position: { x: 0, y: 4 }, size: { width: 4, height: 2 } }
+    { id: 'gps', type: 'gps', title: 'GPS', visible: true, position: { x: 0, y: 4 }, size: { width: 4, height: 2 } },
+    { id: 'map', type: 'map', title: 'Carte', visible: false, position: { x: 0, y: 0 }, size: { width: 2, height: 2 } }
   ],
   theme: 'dark',
   units: {
@@ -16,6 +17,7 @@ const DEFAULT_LAYOUT: DashboardLayout = {
     temperature: 'celsius'
   }
 };
+
 
 export const useDashboardLayout = () => {
   const [layout, setLayout] = useState<DashboardLayout>(() => {

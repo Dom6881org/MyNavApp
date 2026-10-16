@@ -2,24 +2,41 @@
 
 /* Instrument container styling */
 .instrument {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Instrument panel styling - consistent look */
+.instrument-panel {
   background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
   border-radius: 8px;
-  padding: 0.5rem;
+  padding: 0;
   box-shadow: 0 2px 8px var(--shadow-color);
+  overflow: hidden;
+}
+
+.instrument-panel-inner {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  padding: 0.5rem;
 }
 
 /* Ensure all instruments have consistent sizing */
-.instrument speedometer,
-.instrument compass,
-.instrument wind-indicator,
-.instrument depth-sounder {
-  min-width: 200px;
+.instrument-panel.speedometer,
+.instrument-panel.compass,
+.instrument-panel.wind-indicator,
+.instrument-panel.depth-sounder {
   min-height: 200px;
 }
 
-/* GPS display styling */
-.instrument gps-display {
-  min-width: 300px;
+/* GPS display - full width and taller */
+.instrument-panel.gps-display {
+  min-height: 300px;
 }
 
 /* Smooth transitions for all animated elements */
@@ -35,7 +52,57 @@
 
 /* Header styling */
 .app-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
   position: relative;
+  background: var(--bg-secondary);
+  padding: 1rem 2rem;
+  border-bottom: 2px solid var(--border-color);
+  box-shadow: 0 4px 12px var(--shadow-color);
+  flex-wrap: wrap;
+  gap: 1rem;
+}
+
+.header-title {
+  flex: 1;
+  min-width: 200px;
+}
+
+.app-header h1 {
+  font-size: 1.5rem;
+  font-weight: 300;
+  letter-spacing: 0.1em;
+  color: var(--accent-color);
+  margin: 0;
+}
+
+.header-info {
+  display: flex;
+  gap: 1rem;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+/* GPS Status Indicator */
+.gps-status {
+  padding: 0.4rem 0.8rem;
+  border-radius: 16px;
+  font-size: 0.85rem;
+  font-weight: bold;
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+}
+
+.gps-status.connected {
+  background: rgba(0, 255, 0, 0.2);
+  color: #00ff00;
+}
+
+.gps-status.disconnected {
+  background: rgba(255, 170, 0, 0.2);
+  color: #ffaa00;
 }
 
 /* Connection indicator pulse animation */
@@ -48,14 +115,119 @@
   animation: pulse 2s infinite;
 }
 
+.connection-status {
+  padding: 0.5rem 1rem;
+  border-radius: 20px;
+  font-size: 0.9rem;
+  font-weight: bold;
+}
+
+.connection-status.connected {
+  background: rgba(0, 255, 0, 0.2);
+  color: #00ff00;
+}
+
+.connection-status.disconnected {
+  background: rgba(255, 0, 0, 0.2);
+  color: #ff4444;
+}
+
+.battery-indicator {
+  padding: 0.5rem 1rem;
+  background: rgba(100, 100, 100, 0.2);
+  border-radius: 20px;
+  font-size: 0.9rem;
+}
+
+/* Navigation tabs */
+.app-nav {
+  display: flex;
+  background: var(--bg-secondary);
+  border-bottom: 1px solid var(--border-color);
+  padding: 0.5rem;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.nav-tab {
+  flex: 1;
+  min-width: 150px;
+  padding: 0.75rem 1.5rem;
+  border: none;
+  border-radius: 4px;
+  background: transparent;
+  color: var(--text-secondary);
+  font-size: 1rem;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.nav-tab:hover {
+  background: var(--bg-tertiary);
+  color: var(--text-primary);
+}
+
+.nav-tab.active {
+  background: var(--accent-color);
+  color: white;
+}
+
+/* Main content area */
+.app-main {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  background: var(--bg-primary);
+  min-height: 0;
+  overflow: hidden;
+  width: 100%;
+}
+
+.dashboard {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  padding: 1rem;
+}
+
 /* Dashboard grid adjustments */
 .instruments-grid {
-  grid-auto-flow: dense;
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  grid-template-rows: repeat(6, auto);
+  gap: 1rem;
+  min-width: 0;
+  flex: 1;
+}
+
+/* Make instrument panels fill their grid cells properly */
+.instrument-panel {
+  display: flex;
+  align-items: stretch;
+  justify-content: stretch;
+}
+
+.instrument-panel-inner {
+  flex: 1;
+}
+
+/* Map container - full size */
+.map-container {
+  width: 100%;
+  flex: 1;
+  min-height: 500px;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  padding: 1rem;
+  box-sizing: border-box;
 }
 
 /* Panel hover effect */
 .instrument-panel:hover {
   box-shadow: 0 4px 12px var(--shadow-color);
+  border-color: var(--accent-color);
   transform: translateY(-2px);
 }
 
@@ -68,21 +240,319 @@ html {
   transition: background 0.5s ease, color 0.5s ease;
 }
 
-/* Scrollbar styling for sidebar */
-.sidebar::-webkit-scrollbar {
-  width: 8px;
+/* Settings page */
+.settings-page {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  padding: 1rem;
+  background: var(--bg-primary);
 }
 
-.sidebar::-webkit-scrollbar-track {
+.settings-header {
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  padding: 1rem 2rem;
+  border-radius: 8px;
+  margin-bottom: 1.5rem;
+  box-shadow: 0 2px 8px var(--shadow-color);
+  text-align: center;
+}
+
+.settings-header h2 {
+  font-size: 1.5rem;
+  color: var(--accent-color);
+  margin-bottom: 0.5rem;
+}
+
+.settings-header p {
+  color: var(--text-secondary);
+  font-size: 0.9rem;
+}
+
+.settings-content {
+  max-width: 600px;
+  margin: 0 auto;
+  width: 100%;
+}
+
+/* Control panel styles */
+.control-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  padding: 1.5rem;
+  box-shadow: 0 2px 8px var(--shadow-color);
+}
+
+.control-section {
   background: var(--bg-tertiary);
-  border-radius: 4px;
+  border-radius: 8px;
+  padding: 1rem;
 }
 
-.sidebar::-webkit-scrollbar-thumb {
-  background: var(--border-color);
-  border-radius: 4px;
+.control-section h3 {
+  margin-bottom: 1rem;
+  font-size: 1rem;
+  color: var(--accent-color);
+  border-bottom: 1px solid var(--border-color);
+  padding-bottom: 0.5rem;
 }
 
-.sidebar::-webkit-scrollbar-thumb:hover {
+.connection-button {
+  padding: 0.75rem 1.5rem;
+  border: none;
+  border-radius: 4px;
   background: var(--accent-color);
+  color: white;
+  font-size: 1rem;
+  cursor: pointer;
+  transition: background 0.3s;
+  width: 100%;
+}
+
+.connection-button:hover {
+  background: var(--accent-secondary);
+}
+
+.connection-button:disabled {
+  background: #444;
+  cursor: not-allowed;
+}
+
+.connection-button.connected {
+  background: #44aa44;
+}
+
+.connection-button.connected:hover {
+  background: #66cc66;
+}
+
+.connection-button.disconnected {
+  background: #aa4444;
+}
+
+.connection-button.disconnected:hover {
+  background: #cc6666;
+}
+
+.gps-button {
+  background: linear-gradient(135deg, #4488ff, #0066cc);
+}
+
+.gps-button.connected {
+  background: linear-gradient(135deg, #00aa00, #008800);
+}
+
+.gps-button.disconnected:hover {
+  background: linear-gradient(135deg, #6699ff, #3377cc);
+}
+
+.reset-button {
+  padding: 0.75rem 1.5rem;
+  border: 1px solid var(--border-color);
+  border-radius: 4px;
+  background: transparent;
+  color: var(--text-primary);
+  font-size: 1rem;
+  cursor: pointer;
+  transition: all 0.3s;
+  width: 100%;
+}
+
+.reset-button:hover {
+  background: var(--bg-secondary);
+}
+
+.theme-selector {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.theme-button {
+  flex: 1;
+  min-width: calc(33% - 0.5rem);
+  padding: 0.5rem;
+  border: 1px solid var(--border-color);
+  border-radius: 4px;
+  background: transparent;
+  color: var(--text-primary);
+  cursor: pointer;
+  transition: all 0.3s;
+}
+
+.theme-button:hover {
+  background: var(--bg-secondary);
+}
+
+.theme-button.active {
+  background: var(--accent-color);
+  border-color: var(--accent-color);
+}
+
+.unit-selector {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.unit-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.unit-group label {
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+}
+
+.unit-group select {
+  padding: 0.5rem;
+  border: 1px solid var(--border-color);
+  border-radius: 4px;
+  background: var(--bg-secondary);
+  color: var(--text-primary);
+  font-size: 1rem;
+  cursor: pointer;
+}
+
+.unit-group select:focus {
+  outline: none;
+  border-color: var(--accent-color);
+}
+
+.unit-group select:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+/* Instrument header consistent styling */
+.instrument-header {
+  padding: 0.5rem;
+  background: rgba(0, 0, 0, 0.2);
+  border-radius: 4px;
+  margin-bottom: 0.5rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.instrument-title {
+  font-size: 0.9rem;
+  font-weight: bold;
+  color: var(--accent-color);
+}
+
+.instrument-unit {
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+}
+
+.instrument-value {
+  font-size: 0.9rem;
+  color: var(--accent-color);
+}
+
+.instrument-alarm {
+  color: var(--danger-color);
+  font-weight: bold;
+  animation: blink 1s infinite;
+}
+
+@keyframes blink {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
+}
+
+/* App footer */
+.app-footer {
+  background: var(--bg-secondary);
+  padding: 1rem 2rem;
+  border-top: 2px solid var(--border-color);
+  text-align: center;
+  font-size: 0.9rem;
+  color: var(--text-secondary);
+}
+
+/* Responsive layout */
+@media (max-width: 1200px) {
+  .instruments-grid {
+    grid-template-columns: repeat(3, 1fr);
+    grid-template-rows: repeat(6, auto);
+  }
+  
+  .instrument-panel.gps-display {
+    grid-column: span 3;
+  }
+}
+
+@media (max-width: 900px) {
+  .app-header {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+  
+  .header-title {
+    width: 100%;
+  }
+  
+  .header-info {
+    width: 100%;
+    justify-content: space-between;
+  }
+  
+  .dashboard {
+    flex-direction: column;
+  }
+  
+  .instruments-grid {
+    grid-template-columns: repeat(2, 1fr);
+    grid-template-rows: repeat(6, auto);
+  }
+  
+  .instrument-panel.gps-display {
+    grid-column: span 2;
+  }
+}
+
+@media (max-width: 600px) {
+  .instruments-grid {
+    grid-template-columns: 1fr;
+    grid-template-rows: repeat(6, auto);
+  }
+  
+  .instrument-panel.gps-display {
+    grid-column: span 1;
+  }
+  
+  .app-header {
+    flex-direction: column;
+    gap: 0.5rem;
+    text-align: center;
+  }
+  
+  .header-info {
+    flex-direction: column;
+    gap: 0.5rem;
+    width: 100%;
+  }
+  
+  .app-nav {
+    flex-direction: column;
+  }
+  
+  .nav-tab {
+    width: 100%;
+    min-width: 100%;
+  }
+  
+  .gps-status {
+    width: 100%;
+    justify-content: center;
+  }
 }

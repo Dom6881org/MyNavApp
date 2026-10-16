@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import React from 'react';
 import { CompassData } from '../types';
 
 interface CompassProps {
@@ -7,111 +7,107 @@ interface CompassProps {
 }
 
 const Compass: React.FC<CompassProps> = ({ data, size = 200 }) => {
-  const cardinalDirections = ['N', 'NE', 'E', 'SE', 'S', 'SW', 'W', 'NW'];
-
-  // Calculer la direction cardinale principale
-  const getCardinalDirection = (heading: number): string => {
-    const index = Math.round(heading / 45) % 8;
-    return cardinalDirections[index];
-  };
-
-  const cardinal = useMemo(() => getCardinalDirection(data.heading), [data.heading]);
+  // Calculate base font size based on container size
+  const baseFontSize = size * 0.1;
 
   return (
-    <div className="instrument compass" style={{ width: size, height: size }}>
-      <div className="instrument-header">
-        <span className="instrument-title">Compas</span>
-        <span className="instrument-value">{data.heading}°</span>
+    <div 
+      className="instrument compass" 
+      style={{
+        width: '100%',
+        height: '100%',
+        display: 'flex',
+        flexDirection: 'column',
+        padding: `${baseFontSize * 0.5}px`,
+        boxSizing: 'border-box'
+      }}
+    >
+      <div 
+        className="instrument-header" 
+        style={{
+          width: '100%',
+          textAlign: 'center',
+          padding: `${baseFontSize * 0.3}px`,
+          background: 'rgba(0, 0, 0, 0.2)',
+          borderRadius: '4px',
+          marginBottom: `${baseFontSize * 0.5}px`
+        }}
+      >
+        <span className="instrument-title" style={{ 
+          fontSize: `${baseFontSize * 1}px`, 
+          fontWeight: 'bold' 
+        }}>Compass</span>
       </div>
       
-      <div className="compass-container">
-        <svg viewBox="0 0 200 200" className="compass-svg">
-          {/* Cercle extérieur */}
-          <circle cx="100" cy="100" r="90" fill="none" stroke="#444" strokeWidth="2" />
-          
-          {/* Cercle intérieur */}
-          <circle cx="100" cy="100" r="70" fill="none" stroke="#666" strokeWidth="1" />
-          
-          {/* Marqueurs des directions cardinales */}
-          {cardinalDirections.map((dir, i) => {
-            const angle = i * 45;
-            const x = 100 + 60 * Math.cos((angle - 90) * Math.PI / 180);
-            const y = 100 + 60 * Math.sin((angle - 90) * Math.PI / 180);
-            
-            return (
-              <text 
-                key={dir}
-                x={x} 
-                y={y}
-                textAnchor="middle"
-                dominantBaseline="middle"
-                fill="#ccc"
-                fontSize="12"
-                fontWeight="bold"
-              >
-                {dir}
-              </text>
-            );
-          })}
-          
-          {/* Graduations tous les 10 degrés */}
-          {Array.from({ length: 36 }).map((_, i) => {
-            const angle = i * 10;
-            const length = i % 5 === 0 ? 15 : 8;
-            const x1 = 100 + 80 * Math.cos((angle - 90) * Math.PI / 180);
-            const y1 = 100 + 80 * Math.sin((angle - 90) * Math.PI / 180);
-            const x2 = 100 + (80 + length) * Math.cos((angle - 90) * Math.PI / 180);
-            const y2 = 100 + (80 + length) * Math.sin((angle - 90) * Math.PI / 180);
-            
-            return (
-              <line 
-                key={i}
-                x1={x1} y1={y1} x2={x2} y2={y2}
-                stroke="#666" 
-                strokeWidth="2"
-              />
-            );
-          })}
-          
-          {/* Aiguille de direction */}
-          <g transform={`rotate(${data.heading - 90} 100 100)`}>
-            <path 
-              d="M100,30 L120,100 L80,100 Z" 
-              fill="#ff4444" 
-              stroke="#ff0000" 
-              strokeWidth="1"
-            />
-            {/* Flèche */}
-            <path 
-              d="M100,20 L115,40 L100,50 L85,40 Z" 
-              fill="#ff0000"
-            />
-          </g>
-          
-          {/* Centre */}
-          <circle cx="100" cy="100" r="6" fill="#ff0000" />
-          
-          {/* Indicateurs de déviation */}
-          {data.deviation !== 0 && (
-            <text 
-              x="100" y="180"
-              textAnchor="middle"
-              fill="#ffaa00"
-              fontSize="10"
-            >
-              Dev: {data.deviation}°
-            </text>
-          )}
-        </svg>
-        
-        {/* Direction cardinale principale */}
-        <div className="compass-cardinal">
-          {cardinal}
+      <div 
+        style={{
+          flex: 1,
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          justifyContent: 'center',
+          gap: `${baseFontSize * 0.3}px`
+        }}
+      >
+        {/* Heading value (where the boat is pointing) */}
+        <div 
+          style={{
+            fontSize: `${baseFontSize * 1.8}px`,
+            fontWeight: 'bold',
+            fontFamily: 'monospace',
+            color: 'var(--accent-color)',
+            letterSpacing: '0.1em',
+            lineHeight: 1
+          }}
+        >
+          Heading: {data.heading.toFixed(0)}°
         </div>
         
-        {/* Cap magnétique */}
-        <div className="compass-magnetic">
-          Magnétique: {data.magneticHeading}°
+        {/* COG value (where the boat is actually going) */}
+        <div 
+          style={{
+            fontSize: `${baseFontSize * 1.8}px`,
+            fontWeight: 'bold',
+            fontFamily: 'monospace',
+            color: 'var(--accent-secondary)',
+            letterSpacing: '0.1em',
+            lineHeight: 1
+          }}
+        >
+          COG: {data.cog.toFixed(0)}°
+        </div>
+        
+        {/* Additional info */}
+        <div 
+          style={{
+            display: 'flex',
+            flexDirection: 'column',
+            gap: `${baseFontSize * 0.2}px`,
+            fontSize: `${baseFontSize * 0.8}px`,
+            color: 'var(--text-secondary)',
+            marginTop: `${baseFontSize * 0.5}px`,
+            textAlign: 'center'
+          }}
+        >
+          <span>Magnétique: {data.magneticHeading.toFixed(0)}°</span>
+          {data.deviation !== 0 && (
+            <span>Dévitation: {data.deviation}°</span>
+          )}
+        </div>
+        
+        {/* Legend */}
+        <div 
+          style={{
+            marginTop: `${baseFontSize * 0.5}px`,
+            padding: `${baseFontSize * 0.3}px`,
+            background: 'rgba(0, 0, 0, 0.1)',
+            borderRadius: '4px',
+            fontSize: `${baseFontSize * 0.65}px`,
+            color: 'var(--text-secondary)',
+            textAlign: 'center'
+          }}
+        >
+          Heading = Où pointe le bateau | COG = Où va le bateau
         </div>
       </div>
     </div>
