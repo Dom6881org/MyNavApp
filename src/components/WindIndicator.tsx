@@ -45,7 +45,7 @@ const WindIndicator: React.FC<WindIndicatorProps> = ({ data, status, unit, size 
   if (!data) {
     return (
       <div className="instrument-unavailable">
-        {status.error || (status.isLoading ? 'Chargement de la prévision météo…' : 'Vent disponible après réception du GPS')}
+        {status.error || (status.isLoading ? 'Loading weather forecast…' : 'Wind forecast available after GPS fix')}
       </div>
     );
   }
@@ -76,7 +76,7 @@ const WindIndicator: React.FC<WindIndicatorProps> = ({ data, status, unit, size 
         <span className="instrument-title" style={{ 
           fontSize: `${baseFontSize * 0.8}px`, 
           fontWeight: 'bold' 
-        }}>Vent · Prévision Open-Meteo</span>
+        }}>WIND · FORECAST</span>
       </div>
       
       <div
@@ -129,11 +129,11 @@ const WindIndicator: React.FC<WindIndicatorProps> = ({ data, status, unit, size 
             marginTop: `${baseFontSize * 0.2}px`
           }}
         >
-          Rafales: {displayGust === null ? '—' : `${displayGust.toFixed(1)} ${getUnitLabel()}`}
+          GUSTS: {displayGust === null ? '—' : `${displayGust.toFixed(1)} ${getUnitLabel()}`}
         </div>
         {status.updatedAt && (
           <div className="instrument-reading-secondary">
-            Prévision Open-Meteo · {new Date(status.updatedAt).toLocaleTimeString('fr-FR')}
+            Open-Meteo · {new Date(status.updatedAt).toLocaleTimeString('en-GB')}
           </div>
         )}
         {status.error && <div className="instrument-unavailable" role="alert">{status.error}</div>}

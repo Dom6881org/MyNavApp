@@ -104,8 +104,8 @@ export const useRealGPS = () => {
       compass,
       gpsTime: {
         utcTime: timestamp.toISOString().slice(11, 19),
-        localTime: timestamp.toLocaleTimeString('fr-FR'),
-        date: timestamp.toLocaleDateString('fr-FR')
+        localTime: timestamp.toLocaleTimeString('en-GB'),
+        date: timestamp.toLocaleDateString('en-GB')
       },
       status: {
         isConnected: true,
@@ -130,7 +130,7 @@ export const useRealGPS = () => {
         ...prev.status,
         isConnected: false,
         accuracy: null,
-        error: error.message || 'La position GPS est temporairement indisponible.'
+        error: getGeolocationErrorMessage(error)
       }
     }));
   }, []);
@@ -142,7 +142,7 @@ export const useRealGPS = () => {
         status: {
           ...prev.status,
           isConnected: false,
-          error: 'La géolocalisation n’est pas prise en charge par ce navigateur.',
+          error: 'Geolocation is not supported by this browser.',
           accuracy: null
         }
       }));
@@ -168,7 +168,7 @@ export const useRealGPS = () => {
         status: {
           ...prev.status,
           isConnected: false,
-          error: error instanceof Error ? error.message : 'Impossible de démarrer le GPS.',
+          error: error instanceof Error ? error.message : 'Unable to start GPS.',
           accuracy: null
         }
       }));
@@ -197,6 +197,19 @@ export const useRealGPS = () => {
     disableGPS,
     hasGPS: typeof navigator !== 'undefined' && 'geolocation' in navigator
   };
+};
+
+const getGeolocationErrorMessage = (error: GeolocationPositionError): string => {
+  switch (error.code) {
+    case error.PERMISSION_DENIED:
+      return 'Location permission was denied.';
+    case error.POSITION_UNAVAILABLE:
+      return 'GPS position is currently unavailable.';
+    case error.TIMEOUT:
+      return 'GPS position request timed out.';
+    default:
+      return 'Unable to retrieve GPS position.';
+  }
 };
 
 export default useRealGPS;

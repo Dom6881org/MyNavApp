@@ -113,7 +113,7 @@ const MapViewSimple: React.FC<MapViewSimpleProps> = ({ data, onWindGridRequest, 
 
         L.control.layers(
           { 'Fond OSM': baseLayer },
-          { 'Balisage et aides à la navigation': seamarkLayer },
+          { 'Seamarks & navigation aids': seamarkLayer },
           { collapsed: true, position: 'topright' }
         ).addTo(map);
         L.control.scale({ metric: true, imperial: false, position: 'bottomleft' }).addTo(map);
@@ -300,7 +300,7 @@ const MapViewSimple: React.FC<MapViewSimpleProps> = ({ data, onWindGridRequest, 
         }}
       >
         <span className="instrument-title" style={{ fontSize: '0.9rem', fontWeight: 'bold' }}>
-          Carte marine - OpenSeaMap
+          Marine Chart · OpenSeaMap
         </span>
       </div>
       
@@ -320,18 +320,18 @@ const MapViewSimple: React.FC<MapViewSimpleProps> = ({ data, onWindGridRequest, 
         }}
       >
         <div className="wind-map-readout" aria-live="polite">
-          <strong>VENT · PRÉVISION OPEN-METEO</strong>
+          <strong>WIND FORECAST · OPEN-METEO</strong>
           {data.wind ? (
             <span>
-              {data.wind.speed.toFixed(1)} kn · vient du {getWindDirectionText(data.wind.direction)} {data.wind.direction.toFixed(0)}°
-              {' · '}rafales {data.wind.gust.toFixed(1)} kn
+              {data.wind.speed.toFixed(1)} kn · FROM {getWindDirectionText(data.wind.direction)} {data.wind.direction.toFixed(0)}°
+              {' · '}GUSTS {data.wind.gust.toFixed(1)} kn
             </span>
           ) : (
-            <span>{data.windForecastStatus.error || (data.windForecastStatus.isLoading ? 'Chargement…' : 'En attente du GPS')}</span>
+            <span>{data.windForecastStatus.error || (data.windForecastStatus.isLoading ? 'Loading…' : 'Waiting for GPS fix')}</span>
           )}
           {data.windForecastStatus.updatedAt && (
             <span className="wind-map-updated">
-              Mise à jour {new Date(data.windForecastStatus.updatedAt).toLocaleTimeString('fr-FR')}
+              Updated {new Date(data.windForecastStatus.updatedAt).toLocaleTimeString('en-GB')}
             </span>
           )}
           {data.windForecastStatus.error && <span role="alert">{data.windForecastStatus.error}</span>}
@@ -351,14 +351,14 @@ const MapViewSimple: React.FC<MapViewSimpleProps> = ({ data, onWindGridRequest, 
             zIndex: 1000,
             textAlign: 'center'
           }}>
-            <div>Chargement de la carte marine...</div>
+            <div>Loading marine chart…</div>
           </div>
         )}
 
         {!leafletError && leafletLoaded && !data.position && (
           <>
             <div className="map-gps-pending">
-              Autorisez l’accès à la position pour afficher la carte autour du bateau.
+              Allow location access to show the chart around your vessel.
             </div>
           </>
         )}
@@ -378,8 +378,8 @@ const MapViewSimple: React.FC<MapViewSimpleProps> = ({ data, onWindGridRequest, 
             lineHeight: 1.5,
             zIndex: 1000
           }}>
-            <strong>Carte marine indisponible</strong>
-            <span>Vérifiez votre connexion pour charger OpenSeaMap.</span>
+            <strong>Marine chart unavailable</strong>
+            <span>Check your connection to load OpenSeaMap.</span>
           </div>
         )}
       </div>
@@ -401,33 +401,33 @@ const MapViewSimple: React.FC<MapViewSimpleProps> = ({ data, onWindGridRequest, 
       >
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
           <div style={{ width: '12px', height: '2px', backgroundColor: '#ff4444' }} />
-          <span>Cap et vitesse</span>
+          <span>GPS COG · SOG</span>
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
           <div style={{ width: '12px', height: '2px', backgroundColor: '#4488ff', border: '1px dashed #4488ff' }} />
-          <span>Route fond (COG)</span>
+          <span>Calculated COG</span>
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
           <svg width="14" height="18" viewBox="0 0 48 48" aria-hidden="true">
             <path d={getWindBarbSvg(15, false)} fill="none" stroke="#10202a" strokeWidth="8" strokeLinejoin="round" strokeLinecap="round" />
             <path d={getWindBarbSvg(15, false)} fill="none" stroke="#fff" strokeWidth="4" strokeLinejoin="round" strokeLinecap="round" />
           </svg>
-          <span>Barbules du vent · Open-Meteo</span>
+          <span>Wind barbs · Open-Meteo</span>
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
           <span>🚤</span>
-          <span>Position du bateau</span>
+          <span>Vessel position</span>
         </div>
-        <span>Chaque barbule utilise la prévision à son emplacement; les vents proches peuvent rester identiques selon la résolution météo.</span>
-        <span>Activez « Balisage et aides à la navigation » pour afficher les données OpenSeaMap.</span>
-        <span>Ces données indicatives ne remplacent pas une carte marine officielle.</span>
+        <span>Each barb uses the forecast at its location; nearby winds may match due to model resolution.</span>
+        <span>Enable “Seamarks & navigation aids” to show OpenSeaMap data.</span>
+        <span>Indicative data only · not a substitute for an official nautical chart.</span>
       </div>
     </div>
   );
 };
 
 const getWindDirectionText = (degrees: number): string => {
-  const directions = ['N', 'NNE', 'NE', 'ENE', 'E', 'ESE', 'SE', 'SSE', 'S', 'SSO', 'SO', 'OSO', 'O', 'ONO', 'NO', 'NNO'];
+  const directions = ['N', 'NNE', 'NE', 'ENE', 'E', 'ESE', 'SE', 'SSE', 'S', 'SSW', 'SW', 'WSW', 'W', 'WNW', 'NW', 'NNW'];
   return directions[Math.round(degrees / 22.5) % 16];
 };
 

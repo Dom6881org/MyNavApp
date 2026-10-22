@@ -27,7 +27,7 @@ const InstrumentPanel: React.FC<InstrumentPanelProps> = ({ data, config, units, 
     
     switch (config.type) {
       case 'speed':
-        return <Speedometer data={data.speed} unit={units.speed} size={instrumentSize} />;
+        return <Speedometer data={data.speed} size={instrumentSize} />;
       case 'compass':
         return <Compass data={data.compass} size={instrumentSize} />;
       case 'wind':

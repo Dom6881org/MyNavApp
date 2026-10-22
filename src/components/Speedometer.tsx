@@ -3,29 +3,12 @@ import { SpeedData } from '../types';
 
 interface SpeedometerProps {
   data: SpeedData | null;
-  unit: 'knots' | 'kmh' | 'mph';
   size?: number;
 }
 
-const Speedometer: React.FC<SpeedometerProps> = ({ data, unit, size = 200 }) => {
-  const convertSpeed = (speed: number): number => {
-    switch (unit) {
-      case 'kmh': return speed * 1.852;
-      case 'mph': return speed * 1.15078;
-      default: return speed;
-    }
-  };
-
-  const displaySpeed = useMemo(() => data?.speed === null || data?.speed === undefined ? null : convertSpeed(data.speed), [data?.speed, unit]);
-  const displaySOG = useMemo(() => data?.sog === null || data?.sog === undefined ? null : convertSpeed(data.sog), [data?.sog, unit]);
-
-  const getUnitLabel = () => {
-    switch (unit) {
-      case 'kmh': return 'km/h';
-      case 'mph': return 'mph';
-      default: return 'kn';
-    }
-  };
+const Speedometer: React.FC<SpeedometerProps> = ({ data, size = 200 }) => {
+  const displaySTW = null;
+  const displaySOG = useMemo(() => data?.sog ?? data?.speed ?? 0, [data?.sog, data?.speed]);
 
   // Calculate base font size based on container size
   const baseFontSize = size * 0.08;
@@ -70,7 +53,7 @@ const Speedometer: React.FC<SpeedometerProps> = ({ data, unit, size = 200 }) => 
           gap: `${baseFontSize * 0.2}px`
         }}
       >
-        {/* Speed value (from log/speed sensor) */}
+        {/* STW stays at zero until a water-speed sensor is connected. */}
         <div
           className="instrument-reading instrument-reading-primary"
           style={{
@@ -82,12 +65,12 @@ const Speedometer: React.FC<SpeedometerProps> = ({ data, unit, size = 200 }) => 
             lineHeight: 1
           }}
         >
-          Vitesse GPS: {displaySpeed === null ? '—' : `${displaySpeed.toFixed(1)} ${getUnitLabel()}`}
+          STW: {(displaySTW ?? 0).toFixed(1)} kn
         </div>
         
-        {/* SOG value (from GPS) */}
+        {/* Speed over ground */}
         <div
-          className="instrument-reading instrument-reading-secondary"
+          className="instrument-reading instrument-reading-primary"
           style={{
             fontSize: `${baseFontSize * 1.4}px`,
             fontWeight: 'bold',
@@ -97,7 +80,7 @@ const Speedometer: React.FC<SpeedometerProps> = ({ data, unit, size = 200 }) => 
             lineHeight: 1
           }}
         >
-          SOG: {displaySOG === null ? '—' : `${displaySOG.toFixed(1)} ${getUnitLabel()}`}
+          SOG: {displaySOG.toFixed(1)} kn
         </div>
       </div>
     </div>

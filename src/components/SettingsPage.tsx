@@ -32,7 +32,7 @@ const SettingsPage: React.FC<SettingsPageProps> = ({
     <div className="settings-page">
       <div className="settings-header">
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <h2>Paramètres</h2>
+          <h2>Settings</h2>
           {onClose && (
             <button 
               onClick={onClose}
@@ -49,7 +49,7 @@ const SettingsPage: React.FC<SettingsPageProps> = ({
             </button>
           )}
         </div>
-        <p>Configurez votre tableau de bord</p>
+        <p>Configure your dashboard</p>
       </div>
       
       <div className="settings-content">

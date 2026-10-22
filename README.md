@@ -1,102 +1,71 @@
-# MyNavApp - Application de Navigation Maritime
+# MyNavApp - Marine Navigation Dashboard
 
-Une application de tableau de bord personnelle pour visualiser les instruments de navigation de votre bateau.
+A personal dashboard for viewing your vessel's navigation instruments.
 
-## Fonctionnalités
+## Features
 
-- **GPS** : Position, heure de la mesure, précision, vitesse fond et route fond lorsque le navigateur les fournit
-- **Carte marine** : Fond OpenStreetMap avec aides à la navigation OpenSeaMap
-- **Vent** : Barbules météo basées sur les prévisions Open-Meteo aux emplacements visibles de la carte, avec vitesse, direction et rafales. Les points sont interrogés ensemble et rechargés après un déplacement/zoom (ainsi que toutes les 15 minutes); des positions proches peuvent avoir la même prévision selon la résolution des modèles météo
-- **Sondeur** : Indiqué comme indisponible tant qu'aucun capteur compatible n'est connecté
+- **GPS**: Position, fix time, accuracy, SOG and COG when provided or calculated from browser GPS data
+- **Marine chart**: OpenStreetMap base map with OpenSeaMap navigation marks
+- **Wind**: Weather barb forecasts from Open-Meteo at visible map locations, including speed, direction and gusts. Points are requested together and refreshed after map movement/zoom and every 15 minutes. Nearby points may show the same forecast because weather models have limited resolution
+- **Depth**: Shown as unavailable until a compatible depth sounder is connected
+
+### Navigation abbreviations
+
+- **SOG** - Speed Over Ground
+- **COG** - Course Over Ground
+- **HDG** - Heading; not currently available because browser GPS does not provide vessel-heading sensor data
+- **LAT / LON** - Latitude / Longitude
 
 ## Installation
 
 ```bash
-# Cloner le dépôt
+# Clone the repository
 git clone https://github.com/Dom6881org/MyNavApp.git
 cd MyNavApp
 
-# Installer les dépendances
+# Install dependencies
 npm install
 
-# Lancer l'application en développement
+# Start the development server
 npm run dev
 ```
 
-## Utilisation
+## Usage
 
-Au démarrage, l'application demande l'accès à la géolocalisation du navigateur. Autorisez la position pour centrer la carte et afficher les données disponibles. La géolocalisation nécessite un contexte sécurisé (HTTPS ou `localhost`).
+At startup, the app requests browser geolocation permission. Allow location access to center the chart and show available navigation data. Geolocation requires a secure context (HTTPS or `localhost`).
 
-- Changer le thème (clair, sombre, nuit)
-- Modifier les unités de vitesse
-- Arrêter ou relancer le GPS depuis les paramètres
-- Le vent affiché est une prévision météo Open-Meteo, pas une mesure d'un capteur embarqué. La position GPS arrondie à deux décimales est envoyée à ce service pour obtenir la prévision
-- Les données absentes du GPS, comme la profondeur ou la batterie, ne sont pas simulées
+- Change the theme (light, dark, night)
+- Change speed and depth units
+- Stop or restart GPS from Settings
+- Wind values are Open-Meteo forecasts, not readings from an onboard sensor. The GPS position rounded to two decimal places is sent to Open-Meteo to retrieve the forecast
+- Data not provided by GPS, such as depth or battery, is not simulated
 
-## Structure du projet
+## Project structure
 
 ```
 my-nav-app/
 ├── src/
-│   ├── components/         # Composants React
-│   │   ├── Speedometer.tsx
-│   │   ├── Compass.tsx
-│   │   ├── WindIndicator.tsx
-│   │   ├── DepthSounder.tsx
-│   │   ├── GPSDisplay.tsx
-│   │   ├── InstrumentPanel.tsx
-│   │   └── ControlPanel.tsx
-│   ├── hooks/              # Hooks personnalisés
-│   │   ├── useNavigationData.ts
-│   │   └── useDashboardLayout.ts
-│   ├── types/              # Types TypeScript
-│   │   └── navigation.ts
-│   ├── App.tsx             # Composant principal
-│   ├── main.tsx            # Point d'entrée
-│   ├── index.css           # Styles globaux
-│   └── App.css             # Styles de l'application
+│   ├── components/         # React components
+│   ├── hooks/              # Custom React hooks
+│   ├── types/              # TypeScript types
+│   ├── App.tsx             # Main application
+│   ├── main.tsx            # Entry point
+│   ├── index.css           # Global styles
+│   └── App.css             # Application styles
 ├── package.json
 ├── vite.config.ts
 ├── tsconfig.json
 └── index.html
 ```
 
-## Personnalisation
-
-### Ajouter un nouvel instrument
-
-1. Créer un nouveau composant dans `src/components/`
-2. Ajouter le type correspondant dans `src/types/navigation.ts`
-3. Mettre à jour `InstrumentPanel.tsx` pour gérer le nouvel instrument
-
-### Modifier les unités
-
-Les unités disponibles sont définies dans `src/types/navigation.ts`. Vous pouvez ajouter de nouvelles unités en :
-
-1. Ajoutant l'option dans le type `DashboardLayout`
-2. Mettant à jour les fonctions de conversion dans les composants concernés
-
-## Technologies utilisées
-
-- **React 18** : Bibliothèque UI
-- **TypeScript** : Typage statique
-- **Vite** : Bundler et serveur de développement
-- **CSS3** : Styles et animations
-
-## Déploiement
-
-Pour déployer l'application :
+## Build
 
 ```bash
 npm run build
 ```
 
-Les fichiers seront générés dans le dossier `dist/`.
+Production files are generated in the `dist/` directory.
 
-## Contribution
-
-Les contributions sont les bienvenues ! N'hésitez pas à ouvrir une issue ou une pull request.
-
-## Licence
+## License
 
 MIT

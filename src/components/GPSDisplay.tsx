@@ -46,13 +46,13 @@ const GPSDisplay: React.FC<GPSDisplayProps> = ({
 
       <div className="gps-coordinate-list" style={{ display: 'flex', gap: `${baseSize * 0.5}px` }}>
         <div style={{ display: 'flex', flexDirection: 'column' }}>
-          <span className="gps-field-label">Latitude</span>
+          <span className="gps-field-label">LAT</span>
           <span className="gps-field-value">
-            {position ? formatCoord(position.latitude, true) : 'En attente du GPS'}
+            {position ? formatCoord(position.latitude, true) : 'Waiting for GPS fix'}
           </span>
         </div>
         <div style={{ display: 'flex', flexDirection: 'column' }}>
-          <span className="gps-field-label">Longitude</span>
+          <span className="gps-field-label">LON</span>
           <span className="gps-field-value">
             {position ? formatCoord(position.longitude, false) : '—'}
           </span>
@@ -61,11 +61,11 @@ const GPSDisplay: React.FC<GPSDisplayProps> = ({
 
       <div className="gps-time-list" style={{ display: 'flex', gap: `${baseSize * 0.5}px` }}>
         <div style={{ display: 'flex', flexDirection: 'column' }}>
-          <span className="gps-field-label">Heure UTC</span>
+          <span className="gps-field-label">UTC</span>
           <span className="gps-field-value">{gpsTime?.utcTime ?? '—'}</span>
         </div>
         <div style={{ display: 'flex', flexDirection: 'column' }}>
-          <span className="gps-field-label">Heure locale</span>
+          <span className="gps-field-label">LOCAL</span>
           <span className="gps-field-value">{gpsTime?.localTime ?? '—'}</span>
         </div>
         <div style={{ display: 'flex', flexDirection: 'column' }}>
@@ -75,9 +75,9 @@ const GPSDisplay: React.FC<GPSDisplayProps> = ({
       </div>
 
       <div className="gps-signal">
-        <span className="gps-field-label">Précision GPS</span>
+        <span className="gps-field-label">GPS ACCURACY</span>
         <span className="gps-field-value">
-          {accuracy === null ? 'En attente de position' : `± ${Math.round(accuracy)} m`}
+          {accuracy === null ? 'Waiting for position' : `± ${Math.round(accuracy)} m`}
         </span>
       </div>
     </div>

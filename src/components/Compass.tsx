@@ -36,7 +36,7 @@ const Compass: React.FC<CompassProps> = ({ data, size = 200 }) => {
         <span className="instrument-title" style={{ 
           fontSize: `${baseFontSize * 0.8}px`, 
           fontWeight: 'bold' 
-        }}>Compass</span>
+        }}>Course</span>
       </div>
       
       <div
@@ -50,7 +50,7 @@ const Compass: React.FC<CompassProps> = ({ data, size = 200 }) => {
           gap: `${baseFontSize * 0.2}px`
         }}
       >
-        {/* Heading value (where the boat is pointing) */}
+        {/* Heading is unavailable until a heading sensor is connected. */}
         <div
           className="instrument-reading instrument-reading-primary"
           style={{
@@ -62,12 +62,12 @@ const Compass: React.FC<CompassProps> = ({ data, size = 200 }) => {
             lineHeight: 1
           }}
         >
-          Cap GPS: {data?.heading === null || data?.heading === undefined ? '—' : `${data.heading.toFixed(0)}°`}
+          HDG: {(data?.heading ?? 0).toFixed(0)}°
         </div>
         
-        {/* COG value (where the boat is actually going) */}
+        {/* Course over ground calculated from GPS positions. */}
         <div
-          className="instrument-reading instrument-reading-secondary"
+          className="instrument-reading instrument-reading-primary"
           style={{
             fontSize: `${baseFontSize * 1.4}px`,
             fontWeight: 'bold',
@@ -77,7 +77,7 @@ const Compass: React.FC<CompassProps> = ({ data, size = 200 }) => {
             lineHeight: 1
           }}
         >
-          Route fond: {data?.cog === null || data?.cog === undefined ? '—' : `${data.cog.toFixed(0)}°`}
+          COG: {(data?.cog ?? 0).toFixed(0)}°
         </div>
       </div>
     </div>

@@ -13,7 +13,7 @@ const isRecord = (value: unknown): value is Record<string, unknown> =>
 
 const readWindData = (payload: unknown): WindData => {
   if (!isRecord(payload) || !isRecord(payload.current)) {
-    throw new Error('Réponse météo invalide.');
+    throw new Error('Invalid weather response.');
   }
 
   const current = payload.current;
@@ -23,7 +23,7 @@ const readWindData = (payload: unknown): WindData => {
     typeof direction !== 'number' || !Number.isFinite(direction) ||
     typeof gust !== 'number' || !Number.isFinite(gust) || gust < 0
   ) {
-    throw new Error('Les données de vent reçues sont incomplètes.');
+    throw new Error('Wind forecast data is incomplete.');
   }
 
   return {
@@ -64,13 +64,13 @@ export const useWindForecast = (position: Position | null) => {
         signal: controller.signal
       });
       if (!response.ok) {
-        throw new Error(`Le service météo a répondu avec le statut ${response.status}.`);
+        throw new Error(`Weather service returned status ${response.status}.`);
       }
 
       const payload: unknown = await response.json();
       const forecasts = Array.isArray(payload) ? payload : [payload];
       if (forecasts.length !== points.length) {
-        throw new Error('Le nombre de prévisions reçues ne correspond pas aux points de la carte.');
+        throw new Error('The number of forecasts does not match the map points.');
       }
 
       const grid = forecasts.map((forecast, index) => ({
@@ -84,7 +84,7 @@ export const useWindForecast = (position: Position | null) => {
       const message = error instanceof Error ? error.message : 'Erreur inconnue.';
       setStatus(previous => ({
         ...previous,
-        gridError: `Prévisions de la carte indisponibles : ${message}`
+        gridError: `Map wind forecasts unavailable: ${message}`
       }));
     }
   }, []);
@@ -114,7 +114,7 @@ export const useWindForecast = (position: Position | null) => {
           signal: controller.signal
         });
         if (!response.ok) {
-          throw new Error(`Le service météo a répondu avec le statut ${response.status}.`);
+          throw new Error(`Weather service returned status ${response.status}.`);
         }
 
         const forecast = readWindData(await response.json());
@@ -131,7 +131,7 @@ export const useWindForecast = (position: Position | null) => {
         setStatus(previous => ({
           ...previous,
           isLoading: false,
-          error: `Prévision météo indisponible : ${message}`
+          error: `Weather forecast unavailable: ${message}`
         }));
       }
     };

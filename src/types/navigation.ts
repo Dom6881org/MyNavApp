@@ -1,4 +1,4 @@
-// Types pour les données de navigation maritime
+// Types for marine navigation data.
 
 export interface Position {
   latitude: number;
@@ -6,16 +6,16 @@ export interface Position {
 }
 
 export interface SpeedData {
-  speed: number | null; // vitesse fournie par le GPS, en nœuds
-  sog: number | null; // vitesse fond calculée à partir des positions GPS
+  speed: number | null; // GPS-reported speed over ground, in knots.
+  sog: number | null; // Speed over ground calculated from GPS positions, in knots.
   maxSpeed: number | null;
   averageSpeed: number | null;
 }
 
 export interface WindData {
-  direction: number; // en degrés (0-360)
-  speed: number; // en nœuds
-  gust: number; // rafales en nœuds
+  direction: number; // Degrees (0-360).
+  speed: number; // Knots.
+  gust: number; // Gusts in knots.
   source: 'Open-Meteo';
 }
 
@@ -32,15 +32,15 @@ export interface WindForecastPoint {
 }
 
 export interface CompassData {
-  heading: number | null; // cap fourni par le GPS, en degrés
-  cog: number | null; // route fond calculée à partir des positions GPS
+  heading: number | null; // Direction of travel reported by GPS, in degrees.
+  cog: number | null; // Course over ground calculated from GPS positions, in degrees.
   magneticHeading: number | null;
-  deviation: number;
+  deviation: number; // Degrees.
 }
 
 export interface DepthData {
-  depth: number; // en mètres
-  temperature: number; // température de l'eau en °C
+  depth: number; // Meters.
+  temperature: number; // Water temperature in °C.
   alarm: boolean;
   alarmDepth: number;
 }
@@ -63,7 +63,7 @@ export interface NavigationData {
   gpsAccuracy: number | null;
 }
 
-// Types pour les instruments
+// Instrument configuration types.
 export type InstrumentType = 'speed' | 'wind' | 'compass' | 'depth' | 'gps' | 'map' | 'all';
 
 export interface InstrumentConfig {

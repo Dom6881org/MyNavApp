@@ -25,7 +25,7 @@ const App: React.FC = () => {
   const [showSettings, setShowSettings] = useState<boolean>(false);
   const [collapsedInstruments, setCollapsedInstruments] = useState<Record<string, boolean>>({});
 
-  // Appliquer le thème au document
+  // Apply the selected theme to the document.
   React.useEffect(() => {
     document.documentElement.className = `theme-${layout.theme}`;
   }, [layout.theme]);
@@ -61,25 +61,25 @@ const App: React.FC = () => {
     <div className="app">
       <header className="app-header">
         <div className="header-title">
-          <h1>MyNavApp - Tableau de bord de navigation</h1>
+          <h1>MyNavApp - Marine Navigation Dashboard</h1>
         </div>
         
         <div className="header-info">
           {/* GPS Status Indicator */}
           <span 
             className={`gps-status ${gpsStatus.isConnected ? 'connected' : 'disconnected'}`}
-            title={gpsStatus.error || (gpsStatus.isConnected ? `Précision GPS : ±${gpsStatus.accuracy?.toFixed(0) ?? '?'} m` : 'En attente d’une position GPS')}
+            title={gpsStatus.error || (gpsStatus.isConnected ? `GPS accuracy: ±${gpsStatus.accuracy?.toFixed(0) ?? '?'} m` : 'Waiting for GPS fix')}
           >
             {gpsStatus.isConnected
               ? `📡 GPS · ±${gpsStatus.accuracy?.toFixed(0) ?? '?'} m`
-              : !hasGPS ? '📡 GPS indisponible' : !isGPSEnabled ? '📡 GPS arrêté' : gpsStatus.error ? '📡 GPS · erreur' : '📡 GPS en attente'}
+              : !hasGPS ? '📡 GPS unavailable' : !isGPSEnabled ? '📡 GPS stopped' : gpsStatus.error ? '📡 GPS · error' : '📡 GPS waiting'}
           </span>
           
           {/* Settings button */}
           <button
             className="settings-button"
             onClick={() => setShowSettings(true)}
-            title="Paramètres"
+            title="Settings"
           >
             ⚙️
           </button>
@@ -88,7 +88,7 @@ const App: React.FC = () => {
           <button
             className="collapse-button"
             onClick={toggleAllCollapse}
-            title={Object.values(collapsedInstruments).every(v => v) ? 'Tout développer' : 'Tout réduire'}
+            title={Object.values(collapsedInstruments).every(v => v) ? 'Expand all' : 'Collapse all'}
           >
             {Object.values(collapsedInstruments).every(v => v) ? '⤢' : '⤣'}
           </button>
@@ -115,18 +115,18 @@ const App: React.FC = () => {
                       {/* Instrument header with collapse button */}
                       <div className="instrument-header-with-controls">
                         <span className="instrument-title">
-                          {instrument.title}
+                          {getInstrumentTitle(instrument.type)}
                         </span>
                         {instrument.type === 'depth' && navigationData.depth?.alarm && (
                           <span className="instrument-wrapper-alarm" role="status">
-                            Alerte
+                            ALARM
                           </span>
                         )}
                         <div className="instrument-controls">
                           <button 
                             className="collapse-toggle"
                             onClick={() => toggleCollapse(instrument.id)}
-                            title={isCollapsed ? 'Développer' : 'Réduire'}
+                            title={isCollapsed ? 'Expand' : 'Collapse'}
                             disabled={isHidden}
                           >
                             {isCollapsed ? '⤢' : '⤣'}
@@ -134,7 +134,7 @@ const App: React.FC = () => {
                           <button 
                             className="visibility-toggle"
                             onClick={() => toggleInstrumentVisibility(instrument.id)}
-                            title={instrument.visible ? 'Masquer' : 'Afficher'}
+                            title={instrument.visible ? 'Hide' : 'Show'}
                           >
                             {instrument.visible ? '👁️' : '👁️‍🗨'}
                           </button>
@@ -145,7 +145,7 @@ const App: React.FC = () => {
                       <div className="instrument-content">
                         {isHidden ? (
                           <div className="instrument-hidden-message">
-                            Instrument masqué - cliquez sur 👁️ pour afficher
+                            Instrument hidden · select 👁️ to show
                           </div>
                         ) : isCollapsed ? (
                           <div className="instrument-minimized">
@@ -200,10 +200,21 @@ const App: React.FC = () => {
       )}
 
       <footer className="app-footer">
-        <p>MyNavApp - Tableau de bord de navigation personnelle</p>
+        <p>MyNavApp · Personal Marine Navigation Dashboard</p>
       </footer>
     </div>
   );
+};
+
+const getInstrumentTitle = (type: string): string => {
+  switch (type) {
+    case 'speed': return 'SPEED';
+    case 'compass': return 'COURSE';
+    case 'wind': return 'WIND';
+    case 'depth': return 'DEPTH';
+    case 'gps': return 'GPS';
+    default: return type.toUpperCase();
+  }
 };
 
 export default App;

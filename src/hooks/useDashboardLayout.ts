@@ -4,7 +4,7 @@ import { DashboardLayout, InstrumentType } from '../types';
 const DEFAULT_LAYOUT: DashboardLayout = {
   instruments: [
     { id: 'speed', type: 'speed', title: 'Speed', visible: true, position: { x: 0, y: 0 }, size: { width: 2, height: 2 } },
-    { id: 'compass', type: 'compass', title: 'Compass', visible: true, position: { x: 2, y: 0 }, size: { width: 2, height: 2 } },
+    { id: 'compass', type: 'compass', title: 'Course', visible: true, position: { x: 2, y: 0 }, size: { width: 2, height: 2 } },
     { id: 'wind', type: 'wind', title: 'Wind', visible: true, position: { x: 0, y: 2 }, size: { width: 2, height: 2 } },
     { id: 'depth', type: 'depth', title: 'Depth', visible: true, position: { x: 2, y: 2 }, size: { width: 2, height: 2 } },
     { id: 'gps', type: 'gps', title: 'GPS', visible: true, position: { x: 0, y: 4 }, size: { width: 4, height: 2 } },

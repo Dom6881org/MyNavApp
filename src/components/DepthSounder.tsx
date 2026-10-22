@@ -41,7 +41,7 @@ const DepthSounder: React.FC<DepthSounderProps> = ({ data, unit, size = 200 }) =
   const baseFontSize = size * 0.08;
 
   if (!data || displayDepth === null) {
-    return <div className="instrument-unavailable">Aucune donnée de sondeur fournie par le GPS</div>;
+    return <div className="instrument-unavailable">No depth data · connect a depth sounder</div>;
   }
 
   return (
@@ -117,7 +117,7 @@ const DepthSounder: React.FC<DepthSounderProps> = ({ data, unit, size = 200 }) =
             fontWeight: 'normal'
           }}
         >
-          Temp: {data.temperature.toFixed(1)}°C
+          WATER TEMP: {data.temperature.toFixed(1)}°C
         </div>
       </div>
     </div>

@@ -29,7 +29,7 @@ const ControlPanel: React.FC<ControlPanelProps> = ({
     <div className="control-panel">
       {/* Connection section */}
       <div className="control-section">
-        <h3>Connexion</h3>
+        <h3>Connection</h3>
         
         {/* GPS Connection */}
         <div style={{ marginBottom: '1rem' }}>
@@ -46,8 +46,8 @@ const ControlPanel: React.FC<ControlPanelProps> = ({
               style={{ flex: 1 }}
             >
               {isGPSEnabled
-                ? gpsStatus.isConnected ? 'GPS: Connecté' : gpsStatus.error ? 'GPS: Relancer' : 'GPS: Recherche…'
-                : 'GPS: Démarrer'}
+                ? gpsStatus.isConnected ? 'GPS: Connected' : gpsStatus.error ? 'GPS: Retry' : 'GPS: Searching…'
+                : 'GPS: Start'}
             </button>
           </div>
           
@@ -60,17 +60,17 @@ const ControlPanel: React.FC<ControlPanelProps> = ({
               borderRadius: '4px'
             }}>
               {gpsStatus.isConnected
-                ? `Position reçue · précision ±${gpsStatus.accuracy?.toFixed(0) ?? '?'} m`
+                ? `Position received · accuracy ±${gpsStatus.accuracy?.toFixed(0) ?? '?'} m`
                 : gpsStatus.error
                   ? `⚠️ ${gpsStatus.error}`
-                  : '⏳ Autorisez la géolocalisation et attendez une position GPS.'}
+                  : '⏳ Allow location access and wait for a GPS fix.'}
           </div>
         </div>
 
       </div>
 
       <div className="control-section">
-        <h3>Thème</h3>
+        <h3>Theme</h3>
         <div className="theme-selector">
           {['light', 'dark', 'night'].map(theme => (
             <button
@@ -85,32 +85,32 @@ const ControlPanel: React.FC<ControlPanelProps> = ({
       </div>
 
       <div className="control-section">
-        <h3>Unités</h3>
+        <h3>Units</h3>
         <div className="unit-selector">
           <div className="unit-group">
-            <label>Vitesse:</label>
+            <label>Speed:</label>
             <select 
               value={layout.units.speed}
               onChange={(e) => onUnitChange('speed', e.target.value as 'knots' | 'kmh' | 'mph')}
             >
-              <option value="knots">Nœuds</option>
+              <option value="knots">Knots</option>
               <option value="kmh">km/h</option>
               <option value="mph">mph</option>
             </select>
           </div>
           <div className="unit-group">
-            <label>Profondeur:</label>
+            <label>Depth:</label>
             <select 
               value={layout.units.depth}
               onChange={(e) => onUnitChange('depth', e.target.value as 'meters' | 'feet' | 'fathoms')}
             >
-              <option value="meters">Mètres</option>
-              <option value="feet">Pieds</option>
-              <option value="fathoms">Brasses</option>
+              <option value="meters">Meters</option>
+              <option value="feet">Feet</option>
+              <option value="fathoms">Fathoms</option>
             </select>
           </div>
           <div className="unit-group">
-            <label>Température:</label>
+            <label>Temperature:</label>
             <select 
               value={layout.units.temperature}
               onChange={(e) => onUnitChange('temperature', e.target.value as 'celsius' | 'fahrenheit')}
