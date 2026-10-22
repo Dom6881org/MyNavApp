@@ -31,14 +31,21 @@ const InstrumentPanel: React.FC<InstrumentPanelProps> = ({ data, config, units, 
       case 'compass':
         return <Compass data={data.compass} size={instrumentSize} />;
       case 'wind':
-        return <WindIndicator data={data.wind} unit={units.speed} size={instrumentSize} />;
+        return (
+          <WindIndicator
+            data={data.wind}
+            status={data.windForecastStatus}
+            unit={units.speed}
+            size={instrumentSize}
+          />
+        );
       case 'depth':
         return <DepthSounder data={data.depth} unit={units.depth} size={instrumentSize} />;
       case 'gps':
         return <GPSDisplay 
           position={data.position} 
           gpsTime={data.gpsTime} 
-          signalStrength={data.signalStrength}
+          accuracy={data.gpsAccuracy}
           size={gpsSize}
         />;
       case 'map':
@@ -50,7 +57,7 @@ const InstrumentPanel: React.FC<InstrumentPanelProps> = ({ data, config, units, 
 
   return (
     <div 
-      className="instrument-panel"
+      className={`instrument-panel instrument-panel-${config.type}`}
       style={{
         gridColumn: `span ${config.size.width}`,
         gridRow: `span ${config.size.height}`

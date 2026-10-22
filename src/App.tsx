@@ -8,15 +8,12 @@ import './App.css';
 const App: React.FC = () => {
   const {
     navigationData,
-    isConnected,
+    requestWindGrid,
     isGPSEnabled,
-    dataSource,
     gpsStatus,
     hasGPS,
-    toggleConnection,
-    toggleGPSConnection,
-    resetData
-  } = useNavigationData(1000);
+    toggleGPSConnection
+  } = useNavigationData();
   
   const {
     layout,
@@ -71,21 +68,11 @@ const App: React.FC = () => {
           {/* GPS Status Indicator */}
           <span 
             className={`gps-status ${gpsStatus.isConnected ? 'connected' : 'disconnected'}`}
-            title={gpsStatus.isConnected ? `GPS: ${gpsStatus.accuracy?.toFixed(0)}m` : gpsStatus.error || 'GPS non connecté'}
+            title={gpsStatus.error || (gpsStatus.isConnected ? `Précision GPS : ±${gpsStatus.accuracy?.toFixed(0) ?? '?'} m` : 'En attente d’une position GPS')}
           >
-            {dataSource === 'gps' ? (
-              gpsStatus.isConnected ? '📡 GPS' : '📡 GPS...'
-            ) : (
-              '🎮 SIM'
-            )}
-          </span>
-          
-          <span className={`connection-status ${isConnected ? 'connected' : 'disconnected'}`}>
-            {isConnected ? 'Connecté' : 'Déconnecté'}
-          </span>
-          
-          <span className="battery-indicator">
-            Batterie: {navigationData.batteryVoltage.toFixed(1)}V
+            {gpsStatus.isConnected
+              ? `📡 GPS · ±${gpsStatus.accuracy?.toFixed(0) ?? '?'} m`
+              : !hasGPS ? '📡 GPS indisponible' : !isGPSEnabled ? '📡 GPS arrêté' : gpsStatus.error ? '📡 GPS · erreur' : '📡 GPS en attente'}
           </span>
           
           {/* Settings button */}
@@ -123,13 +110,18 @@ const App: React.FC = () => {
                   return (
                     <div 
                       key={instrument.id}
-                      className={`instrument-wrapper ${isCollapsed ? 'collapsed' : ''} ${isHidden ? 'hidden' : ''}`}
+                      className={`instrument-wrapper instrument-wrapper-${instrument.type} ${isCollapsed ? 'collapsed' : ''} ${isHidden ? 'hidden' : ''}`}
                     >
                       {/* Instrument header with collapse button */}
                       <div className="instrument-header-with-controls">
                         <span className="instrument-title">
                           {instrument.title}
                         </span>
+                        {instrument.type === 'depth' && navigationData.depth?.alarm && (
+                          <span className="instrument-wrapper-alarm" role="status">
+                            Alerte
+                          </span>
+                        )}
                         <div className="instrument-controls">
                           <button 
                             className="collapse-toggle"
@@ -161,6 +153,7 @@ const App: React.FC = () => {
                               data={navigationData}
                               config={instrument}
                               units={layout.units}
+                              size="minimized"
                             />
                           </div>
                         ) : (
@@ -179,7 +172,11 @@ const App: React.FC = () => {
           
           {/* Right side - Map */}
           <div className="map-container">
-            <MapView data={navigationData} size={{ width: '100%', height: '100%' }} />
+            <MapView
+              data={navigationData}
+              onWindGridRequest={requestWindGrid}
+              size={{ width: '100%', height: '100%' }}
+            />
           </div>
         </div>
       </main>
@@ -190,16 +187,12 @@ const App: React.FC = () => {
           <div className="modal-content" onClick={(e) => e.stopPropagation()}>
             <SettingsPage
               layout={layout}
-              isConnected={isConnected}
               isGPSEnabled={isGPSEnabled}
-              dataSource={dataSource}
               gpsStatus={gpsStatus}
               hasGPS={hasGPS}
-              onToggleConnection={toggleConnection}
               onToggleGPSConnection={toggleGPSConnection}
               onThemeChange={setTheme}
               onUnitChange={setUnit}
-              onReset={resetData}
               onClose={() => setShowSettings(false)}
             />
           </div>

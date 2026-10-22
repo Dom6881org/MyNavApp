@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { Position, SpeedData, CompassData } from '../types';
+import { CompassData, GPSTime, Position, SpeedData } from '../types';
 
 interface GPSStatus {
   isConnected: boolean;
@@ -12,172 +12,129 @@ interface RealGPSData {
   position: Position | null;
   speed: SpeedData | null;
   compass: CompassData | null;
+  gpsTime: GPSTime | null;
   status: GPSStatus;
 }
 
-export const useRealGPS = (_updateInterval: number = 1000) => {
-  const [gpsData, setGpsData] = useState<RealGPSData>({
-    position: null,
-    speed: null,
-    compass: null,
-    status: {
-      isConnected: false,
-      error: null,
-      accuracy: null,
-      lastUpdate: null
-    }
-  });
+const emptyGPSData: RealGPSData = {
+  position: null,
+  speed: null,
+  compass: null,
+  gpsTime: null,
+  status: {
+    isConnected: false,
+    error: null,
+    accuracy: null,
+    lastUpdate: null
+  }
+};
 
-  const [isEnabled, setIsEnabled] = useState<boolean>(false);
+const toRadians = (degrees: number) => degrees * Math.PI / 180;
+
+export const useRealGPS = () => {
+  const [gpsData, setGpsData] = useState<RealGPSData>(emptyGPSData);
+  const [isEnabled, setIsEnabled] = useState(false);
   const watchIdRef = useRef<number | null>(null);
   const lastPositionRef = useRef<GeolocationPosition | null>(null);
   const speedHistoryRef = useRef<number[]>([]);
-  const lastUpdateRef = useRef<number | null>(null);
 
-  // Calculate COG (Course Over Ground) from position changes
-  const calculateCOG = useCallback((
-    prevPos: GeolocationPosition | null,
-    currentPos: GeolocationPosition
-  ): number => {
-    if (!prevPos) {
-      return currentPos.coords.heading || 0;
-    }
-
-    const lat1 = prevPos.coords.latitude;
-    const lon1 = prevPos.coords.longitude;
-    const lat2 = currentPos.coords.latitude;
-    const lon2 = currentPos.coords.longitude;
-
-    // Calculate the bearing between two points
-    const y = Math.sin(lon2 - lon1) * Math.cos(lat2);
-    const x = Math.cos(lat1) * Math.sin(lat2) - Math.sin(lat1) * Math.cos(lat2) * Math.cos(lon2 - lon1);
-    
-    let bearing = Math.atan2(y, x);
-    bearing = bearing * 180 / Math.PI;
-    bearing = (bearing + 360) % 360; // Normalize to 0-360
-    
-    return bearing;
-  }, []);
-
-  // Calculate speed from position changes
-  const calculateSpeed = useCallback((
-    prevPos: GeolocationPosition | null,
-    currentPos: GeolocationPosition
-  ): SpeedData => {
-    if (!prevPos || !prevPos.timestamp) {
-      return {
-        speed: 0,
-        sog: 0,
-        maxSpeed: 0,
-        averageSpeed: 0
-      };
-    }
-
-    const timeDiffMs = currentPos.timestamp - prevPos.timestamp;
-    const timeDiffHours = timeDiffMs / (1000 * 60 * 60);
-    
-    if (timeDiffHours <= 0) {
-      return {
-        speed: 0,
-        sog: 0,
-        maxSpeed: 0,
-        averageSpeed: 0
-      };
-    }
-
-    // Calculate distance in meters using Haversine formula
-    const lat1 = prevPos.coords.latitude;
-    const lon1 = prevPos.coords.longitude;
-    const lat2 = currentPos.coords.latitude;
-    const lon2 = currentPos.coords.longitude;
-
-    const R = 6371000; // Earth radius in meters
-    const phi1 = lat1 * Math.PI / 180;
-    const phi2 = lat2 * Math.PI / 180;
-    const deltaPhi = (lat2 - lat1) * Math.PI / 180;
-    const deltaLambda = (lon2 - lon1) * Math.PI / 180;
-
-    const a = Math.sin(deltaPhi / 2) * Math.sin(deltaPhi / 2) +
-              Math.cos(phi1) * Math.cos(phi2) *
-              Math.sin(deltaLambda / 2) * Math.sin(deltaLambda / 2);
-    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-    const distance = R * c; // Distance in meters
-
-    // Speed in meters per hour, then convert to knots (1 knot = 1.852 km/h = 1852 meters/hour)
-    const speedKnots = (distance / timeDiffHours) / 1852;
-
-    // SOG (Speed Over Ground) is the speed calculated from GPS position changes
-    const sog = parseFloat(speedKnots.toFixed(1));
-
-    // Update speed history for average calculation
-    speedHistoryRef.current.push(sog);
-    if (speedHistoryRef.current.length > 10) {
-      speedHistoryRef.current.shift();
-    }
-
-    const maxSpeed = Math.max(...speedHistoryRef.current, sog);
-    const avgSpeed = speedHistoryRef.current.reduce((a, b) => a + b, 0) / speedHistoryRef.current.length;
-
-    // For GPS mode, speed and SOG are the same (both from GPS)
-    return {
-      speed: parseFloat(speedKnots.toFixed(1)),
-      sog: sog,
-      maxSpeed: parseFloat(maxSpeed.toFixed(1)),
-      averageSpeed: parseFloat(avgSpeed.toFixed(1))
-    };
-  }, []);
-
-  // Success callback for geolocation
   const handleSuccess = useCallback((position: GeolocationPosition) => {
-    const now = Date.now();
-    
-    // Calculate speed and COG if we have a previous position
-    const speedData = calculateSpeed(lastPositionRef.current, position);
-    const cog = calculateCOG(lastPositionRef.current, position);
-    
+    const previous = lastPositionRef.current;
+    const { latitude, longitude, speed: deviceSpeed, heading, accuracy } = position.coords;
+    let cog: number | null = null;
+    let calculatedSpeed: number | null = null;
+
+    if (previous) {
+      const lat1 = toRadians(previous.coords.latitude);
+      const lat2 = toRadians(latitude);
+      const deltaLat = lat2 - lat1;
+      const deltaLon = toRadians(longitude - previous.coords.longitude);
+      const haversine = Math.sin(deltaLat / 2) ** 2 +
+        Math.cos(lat1) * Math.cos(lat2) * Math.sin(deltaLon / 2) ** 2;
+      const distanceMeters = 2 * 6_371_000 * Math.atan2(
+        Math.sqrt(haversine),
+        Math.sqrt(1 - haversine)
+      );
+      const movementThreshold = Math.max(5, Math.hypot(previous.coords.accuracy, accuracy));
+
+      if (distanceMeters > movementThreshold) {
+        const y = Math.sin(deltaLon) * Math.cos(lat2);
+        const x = Math.cos(lat1) * Math.sin(lat2) -
+          Math.sin(lat1) * Math.cos(lat2) * Math.cos(deltaLon);
+        cog = (Math.atan2(y, x) * 180 / Math.PI + 360) % 360;
+
+        const elapsedHours = (position.timestamp - previous.timestamp) / 3_600_000;
+        if (elapsedHours > 0) {
+          calculatedSpeed = (distanceMeters - movementThreshold) / elapsedHours / 1852;
+        }
+      }
+    }
+
     lastPositionRef.current = position;
-    lastUpdateRef.current = now;
 
-    // Get heading from device if available, otherwise use COG
-    const deviceHeading = position.coords.heading || null;
+    const speedFromDevice = typeof deviceSpeed === 'number' && Number.isFinite(deviceSpeed) && deviceSpeed >= 0
+      ? deviceSpeed * 3600 / 1852
+      : null;
+    const sog = speedFromDevice ?? calculatedSpeed;
+    if (sog !== null) {
+      speedHistoryRef.current.push(sog);
+      if (speedHistoryRef.current.length > 10) speedHistoryRef.current.shift();
+    }
 
-    setGpsData(prev => ({
-      ...prev,
-      position: {
-        latitude: position.coords.latitude,
-        longitude: position.coords.longitude
-      },
-      speed: speedData,
-      compass: {
-        heading: deviceHeading !== null ? deviceHeading : cog,
-        cog: cog,
-        magneticHeading: deviceHeading !== null ? deviceHeading : cog,
-        deviation: 0
+    const speed: SpeedData = {
+      speed: speedFromDevice,
+      sog,
+      maxSpeed: speedHistoryRef.current.length ? Math.max(...speedHistoryRef.current) : null,
+      averageSpeed: speedHistoryRef.current.length
+        ? speedHistoryRef.current.reduce((total, value) => total + value, 0) / speedHistoryRef.current.length
+        : null
+    };
+    const deviceHeading = typeof heading === 'number' && Number.isFinite(heading) ? heading : null;
+    const compass: CompassData = {
+      heading: deviceHeading,
+      cog,
+      magneticHeading: null,
+      deviation: 0
+    };
+    const timestamp = new Date(position.timestamp);
+
+    setGpsData({
+      position: { latitude, longitude },
+      speed,
+      compass,
+      gpsTime: {
+        utcTime: timestamp.toISOString().slice(11, 19),
+        localTime: timestamp.toLocaleTimeString('fr-FR'),
+        date: timestamp.toLocaleDateString('fr-FR')
       },
       status: {
-        ...prev.status,
         isConnected: true,
         error: null,
-        accuracy: position.coords.accuracy || null,
-        lastUpdate: now
+        accuracy: Number.isFinite(accuracy) ? accuracy : null,
+        lastUpdate: Date.now()
       }
-    }));
-  }, [calculateSpeed, calculateCOG]);
+    });
+  }, []);
 
-  // Error callback for geolocation
   const handleError = useCallback((error: GeolocationPositionError) => {
+    if (error.code === error.PERMISSION_DENIED) {
+      if (watchIdRef.current !== null) {
+        navigator.geolocation.clearWatch(watchIdRef.current);
+        watchIdRef.current = null;
+      }
+      setIsEnabled(false);
+    }
     setGpsData(prev => ({
       ...prev,
       status: {
         ...prev.status,
         isConnected: false,
-        error: `Erreur GPS: ${error.message}`,
-        accuracy: null
+        accuracy: null,
+        error: error.message || 'La position GPS est temporairement indisponible.'
       }
     }));
   }, []);
 
-  // Enable real GPS
   const enableGPS = useCallback(() => {
     if (!navigator.geolocation) {
       setGpsData(prev => ({
@@ -185,85 +142,52 @@ export const useRealGPS = (_updateInterval: number = 1000) => {
         status: {
           ...prev.status,
           isConnected: false,
-          error: 'GPS non supporté par ce navigateur',
+          error: 'La géolocalisation n’est pas prise en charge par ce navigateur.',
           accuracy: null
         }
       }));
       return;
     }
 
-    setIsEnabled(true);
+    if (watchIdRef.current !== null) navigator.geolocation.clearWatch(watchIdRef.current);
     speedHistoryRef.current = [];
     lastPositionRef.current = null;
-    lastUpdateRef.current = null;
+    setIsEnabled(true);
+    setGpsData(emptyGPSData);
 
-    // Request high accuracy for marine navigation
-    const options: PositionOptions = {
-      enableHighAccuracy: true,
-      timeout: 10000,
-      maximumAge: 0
-    };
-
-    // Clear any existing watch
-    if (watchIdRef.current) {
-      navigator.geolocation.clearWatch(watchIdRef.current);
+    try {
+      watchIdRef.current = navigator.geolocation.watchPosition(
+        handleSuccess,
+        handleError,
+        { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 }
+      );
+    } catch (error) {
+      setIsEnabled(false);
+      setGpsData(prev => ({
+        ...prev,
+        status: {
+          ...prev.status,
+          isConnected: false,
+          error: error instanceof Error ? error.message : 'Impossible de démarrer le GPS.',
+          accuracy: null
+        }
+      }));
     }
-
-    // Watch position changes
-    watchIdRef.current = navigator.geolocation.watchPosition(
-      handleSuccess,
-      handleError,
-      options
-    );
-
-    // Also get immediate position
-    navigator.geolocation.getCurrentPosition(
-      handleSuccess,
-      handleError,
-      options
-    );
-
-    setGpsData(prev => ({
-      ...prev,
-      status: {
-        ...prev.status,
-        isConnected: false, // Will be set to true on first success
-        error: null
-      }
-    }));
   }, [handleSuccess, handleError]);
 
-  // Disable real GPS
   const disableGPS = useCallback(() => {
-    if (watchIdRef.current) {
+    if (watchIdRef.current !== null) {
       navigator.geolocation.clearWatch(watchIdRef.current);
       watchIdRef.current = null;
     }
-    setIsEnabled(false);
     lastPositionRef.current = null;
-    lastUpdateRef.current = null;
     speedHistoryRef.current = [];
-
-    setGpsData({
-      position: null,
-      speed: null,
-      compass: null,
-      status: {
-        isConnected: false,
-        error: null,
-        accuracy: null,
-        lastUpdate: null
-      }
-    });
+    setIsEnabled(false);
+    setGpsData(emptyGPSData);
   }, []);
 
-  // Cleanup on unmount
-  useEffect(() => {
-    return () => {
-      if (watchIdRef.current) {
-        navigator.geolocation.clearWatch(watchIdRef.current);
-      }
-    };
+  useEffect(() => () => {
+    if (watchIdRef.current !== null) navigator.geolocation.clearWatch(watchIdRef.current);
   }, []);
 
   return {
@@ -271,7 +195,7 @@ export const useRealGPS = (_updateInterval: number = 1000) => {
     isEnabled,
     enableGPS,
     disableGPS,
-    hasGPS: !!navigator.geolocation
+    hasGPS: typeof navigator !== 'undefined' && 'geolocation' in navigator
   };
 };
 

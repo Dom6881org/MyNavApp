@@ -2,7 +2,7 @@ import React, { useMemo } from 'react';
 import { DepthData } from '../types';
 
 interface DepthSounderProps {
-  data: DepthData;
+  data: DepthData | null;
   unit: 'meters' | 'feet' | 'fathoms';
   size?: number;
 }
@@ -16,7 +16,7 @@ const DepthSounder: React.FC<DepthSounderProps> = ({ data, unit, size = 200 }) =
     }
   };
 
-  const displayDepth = useMemo(() => convertDepth(data.depth), [data.depth, unit]);
+  const displayDepth = useMemo(() => data ? convertDepth(data.depth) : null, [data, unit]);
 
   const getUnitLabel = () => {
     switch (unit) {
@@ -27,16 +27,22 @@ const DepthSounder: React.FC<DepthSounderProps> = ({ data, unit, size = 200 }) =
   };
 
   const getDepthColor = () => {
+    if (!data) return 'var(--text-secondary)';
     if (data.alarm) return 'var(--danger-color)';
+    if (displayDepth === null) return 'var(--text-secondary)';
     if (displayDepth < 15) return 'var(--warning-color)';
     if (displayDepth < 30) return 'var(--accent-color)';
     return '#00ff88';
   };
 
-  const depthColor = useMemo(() => getDepthColor(), [data.alarm, displayDepth]);
+  const depthColor = useMemo(() => data ? getDepthColor() : 'var(--text-secondary)', [data, displayDepth]);
 
   // Calculate base font size based on container size
   const baseFontSize = size * 0.08;
+
+  if (!data || displayDepth === null) {
+    return <div className="instrument-unavailable">Aucune donnée de sondeur fournie par le GPS</div>;
+  }
 
   return (
     <div 
@@ -76,7 +82,8 @@ const DepthSounder: React.FC<DepthSounderProps> = ({ data, unit, size = 200 }) =
         )}
       </div>
       
-      <div 
+      <div
+        className="instrument-reading-group"
         style={{
           flex: 1,
           display: 'flex',
@@ -87,7 +94,8 @@ const DepthSounder: React.FC<DepthSounderProps> = ({ data, unit, size = 200 }) =
         }}
       >
         {/* Main depth value */}
-        <div 
+        <div
+          className="instrument-reading instrument-reading-primary"
           style={{
             fontSize: `${baseFontSize * 1.8}px`,
             fontWeight: 'bold',
@@ -101,7 +109,8 @@ const DepthSounder: React.FC<DepthSounderProps> = ({ data, unit, size = 200 }) =
         </div>
         
         {/* Temperature */}
-        <div 
+        <div
+          className="instrument-reading instrument-reading-secondary"
           style={{
             fontSize: `${baseFontSize * 1}px`,
             color: 'var(--text-secondary)',

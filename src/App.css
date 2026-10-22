@@ -50,6 +50,46 @@
   transition: none;
 }
 
+.wind-map-readout {
+  position: absolute;
+  z-index: 700;
+  bottom: 3rem;
+  left: 0.75rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  max-width: min(24rem, calc(100% - 5rem));
+  padding: 0.6rem 0.75rem;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 6px;
+  background: rgba(10, 24, 35, 0.88);
+  color: #f4f8fb;
+  font-size: 0.75rem;
+  line-height: 1.35;
+  pointer-events: none;
+}
+
+.wind-map-readout strong {
+  color: #59d9ff;
+  font-size: 0.68rem;
+  letter-spacing: 0.04em;
+}
+
+.wind-map-updated {
+  color: rgba(244, 248, 251, 0.72);
+}
+
+.wind-map-barb-icon {
+  background: transparent;
+  border: 0;
+}
+
+.wind-map-barb {
+  display: block;
+  overflow: visible;
+  filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.8));
+}
+
 /* Header styling */
 .app-header {
   display: flex;
@@ -785,3 +825,282 @@ html {
   }
 }
 
+/* Instrument cards */
+.instrument-wrapper {
+  flex: 0 0 auto;
+  min-height: 220px;
+  border: 1px solid var(--border-color);
+  border-radius: 12px;
+  background: linear-gradient(145deg, var(--bg-tertiary), var(--bg-secondary));
+  box-shadow: 0 6px 18px var(--shadow-color), inset 0 1px 0 rgba(255, 255, 255, 0.05);
+}
+
+.instrument-wrapper-gps {
+  min-height: 250px;
+}
+
+.instrument-header-with-controls {
+  min-height: 42px;
+  padding: 0.65rem 0.85rem;
+  background: transparent;
+}
+
+.instrument-header-with-controls > .instrument-title {
+  flex: 1;
+}
+
+.instrument-wrapper-alarm {
+  margin-right: 0.5rem;
+  padding: 0.2rem 0.5rem;
+  border: 1px solid var(--danger-color);
+  border-radius: 999px;
+  color: var(--danger-color);
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.instrument-header-with-controls:hover {
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.instrument-header-with-controls .instrument-title {
+  color: var(--text-primary);
+  font-size: 0.75rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.instrument-controls button {
+  min-width: 30px;
+  min-height: 30px;
+  border: 1px solid transparent;
+}
+
+.instrument-controls button:focus-visible {
+  outline: 2px solid var(--accent-color);
+  outline-offset: 2px;
+}
+
+.instrument-wrapper.hidden {
+  border-style: dashed;
+}
+
+.instrument-content {
+  display: flex;
+  min-height: 0;
+}
+
+.instrument-panel {
+  flex: 1;
+  min-width: 0;
+  min-height: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+  transform: none;
+}
+
+.instrument-panel:hover {
+  border-color: transparent;
+  box-shadow: none;
+  transform: none;
+}
+
+.instrument-panel-inner {
+  min-width: 0;
+  min-height: 0;
+  padding: 0.65rem 0.85rem 0.85rem;
+}
+
+.instrument-panel .instrument {
+  min-width: 0;
+  min-height: 0;
+  gap: 0.25rem;
+  padding: 0 !important;
+}
+
+.instrument-unavailable {
+  display: grid;
+  width: 100%;
+  height: 100%;
+  min-height: 90px;
+  place-content: center;
+  padding: 1rem;
+  color: var(--text-secondary);
+  font-size: 0.85rem;
+  text-align: center;
+}
+
+.map-gps-pending {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-content: center;
+  padding: 1.5rem;
+  background: var(--bg-secondary);
+  color: var(--text-primary);
+  line-height: 1.5;
+  text-align: center;
+  z-index: 1000;
+}
+
+.instrument-panel .instrument-header {
+  display: none !important;
+}
+
+.instrument-reading-group {
+  min-width: 0;
+  gap: 0.55rem !important;
+}
+
+.instrument-panel .instrument-reading {
+  max-width: 100%;
+  font-variant-numeric: tabular-nums;
+}
+
+.instrument-panel .instrument-reading-primary {
+  color: var(--text-primary) !important;
+  font-size: clamp(1.15rem, 1.8vw, 1.5rem) !important;
+  letter-spacing: 0.02em !important;
+}
+
+.instrument-panel .instrument-reading-secondary {
+  color: var(--text-secondary) !important;
+  font-size: clamp(0.8rem, 1.25vw, 1rem) !important;
+  letter-spacing: 0.02em !important;
+}
+
+.instrument-panel .instrument-reading-direction {
+  color: var(--accent-color) !important;
+  font-size: clamp(0.85rem, 1.3vw, 1rem) !important;
+}
+
+.instrument-panel-gps .instrument {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-rows: auto auto 1fr;
+  align-content: center;
+  gap: 0.6rem 1rem;
+}
+
+.instrument-panel-gps .gps-coordinate-list,
+.instrument-panel-gps .gps-time-list {
+  min-width: 0;
+  flex-wrap: wrap;
+  align-content: center;
+  gap: 0.5rem 1rem !important;
+  margin: 0 !important;
+}
+
+.instrument-panel-gps .gps-coordinate-list > div,
+.instrument-panel-gps .gps-time-list > div {
+  min-width: 0;
+  gap: 0.15rem;
+}
+
+.instrument-panel-gps .gps-field-label {
+  color: var(--text-secondary) !important;
+  font-size: 0.68rem !important;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.instrument-panel-gps .gps-field-value {
+  overflow-wrap: anywhere;
+  color: var(--text-primary) !important;
+  font-size: clamp(0.8rem, 1vw, 0.95rem) !important;
+  font-variant-numeric: tabular-nums;
+}
+
+.instrument-panel-gps .gps-signal {
+  grid-column: 1 / -1;
+  align-self: end;
+  min-width: 0;
+  margin: 0 !important;
+  padding-top: 0.5rem !important;
+}
+
+.instrument-wrapper.collapsed {
+  min-height: 0;
+  height: 125px;
+}
+
+.instrument-wrapper.collapsed .instrument-content,
+.instrument-minimized {
+  height: 100px;
+  flex: 0 0 100px;
+}
+
+.instrument-wrapper.collapsed .instrument-panel-inner {
+  padding: 0.25rem 0.75rem;
+}
+
+.instrument-minimized .instrument-panel .instrument-reading-primary {
+  font-size: 1rem !important;
+}
+
+.instrument-minimized .instrument-panel .instrument-reading-secondary,
+.instrument-minimized .instrument-panel .instrument-reading-direction {
+  font-size: 0.72rem !important;
+}
+
+@media (max-width: 900px) {
+  .instrument-wrapper,
+  .instrument-wrapper-gps {
+    flex: 1 1 300px;
+    min-width: 200px;
+    min-height: 215px;
+  }
+
+  .instrument-wrapper.collapsed {
+    min-height: 0;
+    height: 125px;
+  }
+
+  .instrument-panel .instrument-reading-primary {
+    font-size: clamp(1.25rem, 4vw, 1.8rem) !important;
+  }
+
+  .instrument-panel .instrument-reading-secondary,
+  .instrument-panel .instrument-reading-direction {
+    font-size: clamp(0.78rem, 2.5vw, 0.95rem) !important;
+  }
+}
+
+@media (max-width: 600px) {
+  .instrument-wrapper,
+  .instrument-wrapper-gps {
+    flex: 1 1 100%;
+    min-width: 100%;
+    min-height: 200px;
+  }
+
+  .instrument-wrapper-gps {
+    min-height: 230px;
+  }
+
+  .instrument-wrapper.collapsed {
+    min-height: 0;
+    height: 125px;
+  }
+
+  .instrument-panel-gps .instrument {
+    gap: 0.5rem;
+  }
+
+  .instrument-panel-gps .gps-coordinate-list,
+  .instrument-panel-gps .gps-time-list {
+    gap: 0.35rem !important;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .instrument *,
+  .instrument-wrapper {
+    transition: none !important;
+    animation: none !important;
+  }
+}

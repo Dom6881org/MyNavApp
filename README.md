@@ -4,11 +4,10 @@ Une application de tableau de bord personnelle pour visualiser les instruments d
 
 ## Fonctionnalités
 
-- **Vitesse** : Affichage de la vitesse actuelle, maximale et moyenne
-- **Compas** : Rose des vents avec cap magnétique et vrai
-- **Vent** : Direction et vitesse du vent avec indication des rafales
-- **Sondeur** : Profondeur, température de l'eau et alarme de profondeur
-- **GPS** : Position, heure UTC et force du signal
+- **GPS** : Position, heure de la mesure, précision, vitesse fond et route fond lorsque le navigateur les fournit
+- **Carte marine** : Fond OpenStreetMap avec aides à la navigation OpenSeaMap
+- **Vent** : Barbules météo basées sur les prévisions Open-Meteo aux emplacements visibles de la carte, avec vitesse, direction et rafales. Les points sont interrogés ensemble et rechargés après un déplacement/zoom (ainsi que toutes les 15 minutes); des positions proches peuvent avoir la même prévision selon la résolution des modèles météo
+- **Sondeur** : Indiqué comme indisponible tant qu'aucun capteur compatible n'est connecté
 
 ## Installation
 
@@ -26,13 +25,13 @@ npm run dev
 
 ## Utilisation
 
-L'application se lance automatiquement avec des données simulées. Vous pouvez :
+Au démarrage, l'application demande l'accès à la géolocalisation du navigateur. Autorisez la position pour centrer la carte et afficher les données disponibles. La géolocalisation nécessite un contexte sécurisé (HTTPS ou `localhost`).
 
 - Changer le thème (clair, sombre, nuit)
-- Modifier les unités de mesure (vitesse, profondeur, température)
-- Connecter/Déconnecter la simulation
-- Réinitialiser les données
-- Réorganiser les instruments (à venir)
+- Modifier les unités de vitesse
+- Arrêter ou relancer le GPS depuis les paramètres
+- Le vent affiché est une prévision météo Open-Meteo, pas une mesure d'un capteur embarqué. La position GPS arrondie à deux décimales est envoyée à ce service pour obtenir la prévision
+- Les données absentes du GPS, comme la profondeur ou la batterie, ne sont pas simulées
 
 ## Structure du projet
 

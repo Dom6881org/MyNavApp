@@ -1,13 +1,14 @@
 import React, { useMemo } from 'react';
-import { WindData } from '../types';
+import { WindData, WindForecastStatus } from '../types';
 
 interface WindIndicatorProps {
-  data: WindData;
+  data: WindData | null;
+  status: WindForecastStatus;
   unit: 'knots' | 'kmh' | 'mph';
   size?: number;
 }
 
-const WindIndicator: React.FC<WindIndicatorProps> = ({ data, unit, size = 200 }) => {
+const WindIndicator: React.FC<WindIndicatorProps> = ({ data, status, unit, size = 200 }) => {
   const convertSpeed = (speed: number): number => {
     switch (unit) {
       case 'kmh': return speed * 1.852;
@@ -16,8 +17,8 @@ const WindIndicator: React.FC<WindIndicatorProps> = ({ data, unit, size = 200 })
     }
   };
 
-  const displaySpeed = useMemo(() => convertSpeed(data.speed), [data.speed, unit]);
-  const displayGust = useMemo(() => convertSpeed(data.gust), [data.gust, unit]);
+  const displaySpeed = useMemo(() => data ? convertSpeed(data.speed) : null, [data, unit]);
+  const displayGust = useMemo(() => data ? convertSpeed(data.gust) : null, [data, unit]);
 
   const getUnitLabel = () => {
     switch (unit) {
@@ -36,10 +37,18 @@ const WindIndicator: React.FC<WindIndicatorProps> = ({ data, unit, size = 200 })
     return directions[index];
   };
 
-  const directionText = useMemo(() => getWindDirectionText(data.direction), [data.direction]);
+  const directionText = useMemo(() => data ? getWindDirectionText(data.direction) : null, [data]);
 
   // Calculate base font size based on container size
   const baseFontSize = size * 0.08;
+
+  if (!data) {
+    return (
+      <div className="instrument-unavailable">
+        {status.error || (status.isLoading ? 'Chargement de la prévision météo…' : 'Vent disponible après réception du GPS')}
+      </div>
+    );
+  }
 
   return (
     <div 
@@ -67,10 +76,11 @@ const WindIndicator: React.FC<WindIndicatorProps> = ({ data, unit, size = 200 })
         <span className="instrument-title" style={{ 
           fontSize: `${baseFontSize * 0.8}px`, 
           fontWeight: 'bold' 
-        }}>Wind</span>
+        }}>Vent · Prévision Open-Meteo</span>
       </div>
       
-      <div 
+      <div
+        className="instrument-reading-group"
         style={{
           flex: 1,
           display: 'flex',
@@ -81,7 +91,8 @@ const WindIndicator: React.FC<WindIndicatorProps> = ({ data, unit, size = 200 })
         }}
       >
         {/* Direction */}
-        <div 
+        <div
+          className="instrument-reading instrument-reading-direction"
           style={{
             fontSize: `${baseFontSize * 1.2}px`,
             fontWeight: 'bold',
@@ -95,7 +106,8 @@ const WindIndicator: React.FC<WindIndicatorProps> = ({ data, unit, size = 200 })
         </div>
         
         {/* Wind speed */}
-        <div 
+        <div
+          className="instrument-reading instrument-reading-primary"
           style={{
             fontSize: `${baseFontSize * 1.4}px`,
             fontWeight: 'bold',
@@ -105,19 +117,26 @@ const WindIndicator: React.FC<WindIndicatorProps> = ({ data, unit, size = 200 })
             lineHeight: 1
           }}
         >
-          {displaySpeed.toFixed(1)}{getUnitLabel()}
+          {displaySpeed === null ? '—' : `${displaySpeed.toFixed(1)} ${getUnitLabel()}`}
         </div>
         
         {/* Gust info */}
-        <div 
+        <div
+          className="instrument-reading instrument-reading-secondary"
           style={{
             fontSize: `${baseFontSize * 0.9}px`,
             color: 'var(--text-secondary)',
             marginTop: `${baseFontSize * 0.2}px`
           }}
         >
-          Gust: {displayGust.toFixed(1)}{getUnitLabel()}
+          Rafales: {displayGust === null ? '—' : `${displayGust.toFixed(1)} ${getUnitLabel()}`}
         </div>
+        {status.updatedAt && (
+          <div className="instrument-reading-secondary">
+            Prévision Open-Meteo · {new Date(status.updatedAt).toLocaleTimeString('fr-FR')}
+          </div>
+        )}
+        {status.error && <div className="instrument-unavailable" role="alert">{status.error}</div>}
       </div>
     </div>
   );

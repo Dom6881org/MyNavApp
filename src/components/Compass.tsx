@@ -2,7 +2,7 @@ import React from 'react';
 import { CompassData } from '../types';
 
 interface CompassProps {
-  data: CompassData;
+  data: CompassData | null;
   size?: number;
 }
 
@@ -39,7 +39,8 @@ const Compass: React.FC<CompassProps> = ({ data, size = 200 }) => {
         }}>Compass</span>
       </div>
       
-      <div 
+      <div
+        className="instrument-reading-group"
         style={{
           flex: 1,
           display: 'flex',
@@ -50,7 +51,8 @@ const Compass: React.FC<CompassProps> = ({ data, size = 200 }) => {
         }}
       >
         {/* Heading value (where the boat is pointing) */}
-        <div 
+        <div
+          className="instrument-reading instrument-reading-primary"
           style={{
             fontSize: `${baseFontSize * 1.4}px`,
             fontWeight: 'bold',
@@ -60,11 +62,12 @@ const Compass: React.FC<CompassProps> = ({ data, size = 200 }) => {
             lineHeight: 1
           }}
         >
-          HDG: {data.heading.toFixed(0)}°
+          Cap GPS: {data?.heading === null || data?.heading === undefined ? '—' : `${data.heading.toFixed(0)}°`}
         </div>
         
         {/* COG value (where the boat is actually going) */}
-        <div 
+        <div
+          className="instrument-reading instrument-reading-secondary"
           style={{
             fontSize: `${baseFontSize * 1.4}px`,
             fontWeight: 'bold',
@@ -74,7 +77,7 @@ const Compass: React.FC<CompassProps> = ({ data, size = 200 }) => {
             lineHeight: 1
           }}
         >
-          COG: {data.cog.toFixed(0)}°
+          Route fond: {data?.cog === null || data?.cog === undefined ? '—' : `${data.cog.toFixed(0)}°`}
         </div>
       </div>
     </div>

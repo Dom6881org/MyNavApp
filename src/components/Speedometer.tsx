@@ -2,7 +2,7 @@ import React, { useMemo } from 'react';
 import { SpeedData } from '../types';
 
 interface SpeedometerProps {
-  data: SpeedData;
+  data: SpeedData | null;
   unit: 'knots' | 'kmh' | 'mph';
   size?: number;
 }
@@ -16,8 +16,8 @@ const Speedometer: React.FC<SpeedometerProps> = ({ data, unit, size = 200 }) => 
     }
   };
 
-  const displaySpeed = useMemo(() => convertSpeed(data.speed), [data.speed, unit]);
-  const displaySOG = useMemo(() => convertSpeed(data.sog), [data.sog, unit]);
+  const displaySpeed = useMemo(() => data?.speed === null || data?.speed === undefined ? null : convertSpeed(data.speed), [data?.speed, unit]);
+  const displaySOG = useMemo(() => data?.sog === null || data?.sog === undefined ? null : convertSpeed(data.sog), [data?.sog, unit]);
 
   const getUnitLabel = () => {
     switch (unit) {
@@ -59,7 +59,8 @@ const Speedometer: React.FC<SpeedometerProps> = ({ data, unit, size = 200 }) => 
         }}>Speed</span>
       </div>
       
-      <div 
+      <div
+        className="instrument-reading-group"
         style={{
           flex: 1,
           display: 'flex',
@@ -70,7 +71,8 @@ const Speedometer: React.FC<SpeedometerProps> = ({ data, unit, size = 200 }) => 
         }}
       >
         {/* Speed value (from log/speed sensor) */}
-        <div 
+        <div
+          className="instrument-reading instrument-reading-primary"
           style={{
             fontSize: `${baseFontSize * 1.4}px`,
             fontWeight: 'bold',
@@ -80,11 +82,12 @@ const Speedometer: React.FC<SpeedometerProps> = ({ data, unit, size = 200 }) => 
             lineHeight: 1
           }}
         >
-          Speed: {displaySpeed.toFixed(1)}{getUnitLabel()}
+          Vitesse GPS: {displaySpeed === null ? '—' : `${displaySpeed.toFixed(1)} ${getUnitLabel()}`}
         </div>
         
         {/* SOG value (from GPS) */}
-        <div 
+        <div
+          className="instrument-reading instrument-reading-secondary"
           style={{
             fontSize: `${baseFontSize * 1.4}px`,
             fontWeight: 'bold',
@@ -94,7 +97,7 @@ const Speedometer: React.FC<SpeedometerProps> = ({ data, unit, size = 200 }) => 
             lineHeight: 1
           }}
         >
-          SOG: {displaySOG.toFixed(1)}{getUnitLabel()}
+          SOG: {displaySOG === null ? '—' : `${displaySOG.toFixed(1)} ${getUnitLabel()}`}
         </div>
       </div>
     </div>
