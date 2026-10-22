@@ -18,44 +18,15 @@ const App: React.FC = () => {
   const {
     layout,
     setTheme,
-    setUnit,
-    toggleInstrumentVisibility
+    setUnit
   } = useDashboardLayout();
 
   const [showSettings, setShowSettings] = useState<boolean>(false);
-  const [collapsedInstruments, setCollapsedInstruments] = useState<Record<string, boolean>>({});
 
   // Apply the selected theme to the document.
   React.useEffect(() => {
     document.documentElement.className = `theme-${layout.theme}`;
   }, [layout.theme]);
-
-  // Initialize collapsed state for all instruments
-  React.useEffect(() => {
-    const initialCollapsed: Record<string, boolean> = {};
-    layout.instruments.forEach(instr => {
-      initialCollapsed[instr.id] = false;
-    });
-    setCollapsedInstruments(initialCollapsed);
-  }, [layout.instruments]);
-
-  // Toggle collapse for a specific instrument
-  const toggleCollapse = (id: string) => {
-    setCollapsedInstruments(prev => ({
-      ...prev,
-      [id]: !prev[id]
-    }));
-  };
-
-  // Toggle all instruments collapsed/expanded
-  const toggleAllCollapse = () => {
-    const allCollapsed = Object.values(collapsedInstruments).every(v => v);
-    const newState: Record<string, boolean> = {};
-    layout.instruments.forEach(instr => {
-      newState[instr.id] = !allCollapsed;
-    });
-    setCollapsedInstruments(newState);
-  };
 
   return (
     <div className="app">
@@ -84,14 +55,6 @@ const App: React.FC = () => {
             ⚙️
           </button>
           
-          {/* Collapse all button */}
-          <button
-            className="collapse-button"
-            onClick={toggleAllCollapse}
-            title={Object.values(collapsedInstruments).every(v => v) ? 'Expand all' : 'Collapse all'}
-          >
-            {Object.values(collapsedInstruments).every(v => v) ? '⤢' : '⤣'}
-          </button>
         </div>
       </header>
 
@@ -104,16 +67,13 @@ const App: React.FC = () => {
               {layout.instruments
                 .filter(instr => instr.type !== 'map')
                 .map(instrument => {
-                  const isCollapsed = collapsedInstruments[instrument.id] || false;
-                  const isHidden = !instrument.visible;
-                  
                   return (
                     <div 
                       key={instrument.id}
-                      className={`instrument-wrapper instrument-wrapper-${instrument.type} ${isCollapsed ? 'collapsed' : ''} ${isHidden ? 'hidden' : ''}`}
+                      className={`instrument-wrapper instrument-wrapper-${instrument.type}`}
                     >
-                      {/* Instrument header with collapse button */}
-                      <div className="instrument-header-with-controls">
+                      {/* Instrument heading */}
+                      <div className="instrument-card-header">
                         <span className="instrument-title">
                           {getInstrumentTitle(instrument.type)}
                         </span>
@@ -122,47 +82,15 @@ const App: React.FC = () => {
                             ALARM
                           </span>
                         )}
-                        <div className="instrument-controls">
-                          <button 
-                            className="collapse-toggle"
-                            onClick={() => toggleCollapse(instrument.id)}
-                            title={isCollapsed ? 'Expand' : 'Collapse'}
-                            disabled={isHidden}
-                          >
-                            {isCollapsed ? '⤢' : '⤣'}
-                          </button>
-                          <button 
-                            className="visibility-toggle"
-                            onClick={() => toggleInstrumentVisibility(instrument.id)}
-                            title={instrument.visible ? 'Hide' : 'Show'}
-                          >
-                            {instrument.visible ? '👁️' : '👁️‍🗨'}
-                          </button>
-                        </div>
                       </div>
                       
-                      {/* Instrument content (collapsed, hidden, or full) */}
+                      {/* Instrument content */}
                       <div className="instrument-content">
-                        {isHidden ? (
-                          <div className="instrument-hidden-message">
-                            Instrument hidden · select 👁️ to show
-                          </div>
-                        ) : isCollapsed ? (
-                          <div className="instrument-minimized">
-                            <InstrumentPanel
-                              data={navigationData}
-                              config={instrument}
-                              units={layout.units}
-                              size="minimized"
-                            />
-                          </div>
-                        ) : (
-                          <InstrumentPanel
-                            data={navigationData}
-                            config={instrument}
-                            units={layout.units}
-                          />
-                        )}
+                        <InstrumentPanel
+                          data={navigationData}
+                          config={{ ...instrument, visible: true }}
+                          units={layout.units}
+                        />
                       </div>
                     </div>
                   );

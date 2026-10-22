@@ -6,7 +6,7 @@ A personal dashboard for viewing your vessel's navigation instruments.
 
 - **GPS**: Position, fix time, accuracy, SOG and COG when provided or calculated from browser GPS data
 - **Marine chart**: OpenStreetMap base map with OpenSeaMap navigation marks
-- **Wind**: Weather barb forecasts from Open-Meteo at visible map locations, including speed, direction and gusts. Points are requested together and refreshed after map movement/zoom and every 15 minutes. Nearby points may show the same forecast because weather models have limited resolution
+- **Wind**: The instrument shows apparent wind speed (AWS) and angle (AWA), at 0 until an anemometer is connected. Hover over map wind barbs for Open-Meteo forecast speed, direction and gusts at that location. Forecast points are refreshed after map movement/zoom and every 15 minutes. Nearby points may show the same forecast because weather models have limited resolution
 - **Depth**: Shown as unavailable until a compatible depth sounder is connected
 
 ### Navigation abbreviations

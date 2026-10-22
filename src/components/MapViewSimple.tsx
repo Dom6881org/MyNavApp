@@ -253,12 +253,20 @@ const MapViewSimple: React.FC<MapViewSimpleProps> = ({ data, onWindGridRequest, 
           iconSize: [48, 48],
           iconAnchor: [24, 24]
         });
+        const direction = getWindDirectionText(point.wind.direction);
+        const tooltip = [
+          '<strong>Wind forecast · Open-Meteo</strong>',
+          `Speed: ${point.wind.speed.toFixed(1)} kn`,
+          `Direction: from ${direction} ${point.wind.direction.toFixed(0)}°`,
+          `Gusts: ${point.wind.gust.toFixed(1)} kn`
+        ].join('<br>');
         L.marker([point.position.latitude, point.position.longitude], {
           icon: barbIcon,
-            interactive: false,
-            keyboard: false,
-            zIndexOffset: 500
-        }).addTo(flowLayer);
+          zIndexOffset: 500,
+          title: `Wind from ${direction}, ${point.wind.speed.toFixed(1)} knots`
+        })
+          .bindTooltip(tooltip, { direction: 'top', sticky: true, opacity: 0.95 })
+          .addTo(flowLayer);
       }
     };
 
@@ -320,15 +328,15 @@ const MapViewSimple: React.FC<MapViewSimpleProps> = ({ data, onWindGridRequest, 
         }}
       >
         <div className="wind-map-readout" aria-live="polite">
-          <strong>WIND FORECAST · OPEN-METEO</strong>
+          <strong>LOCAL WIND FORECAST</strong>
           {data.wind ? (
             <span>
               {data.wind.speed.toFixed(1)} kn · FROM {getWindDirectionText(data.wind.direction)} {data.wind.direction.toFixed(0)}°
-              {' · '}GUSTS {data.wind.gust.toFixed(1)} kn
             </span>
           ) : (
             <span>{data.windForecastStatus.error || (data.windForecastStatus.isLoading ? 'Loading…' : 'Waiting for GPS fix')}</span>
           )}
+          {data.wind && <span>Hover over a wind barb for its forecast</span>}
           {data.windForecastStatus.updatedAt && (
             <span className="wind-map-updated">
               Updated {new Date(data.windForecastStatus.updatedAt).toLocaleTimeString('en-GB')}
@@ -412,7 +420,7 @@ const MapViewSimple: React.FC<MapViewSimpleProps> = ({ data, onWindGridRequest, 
             <path d={getWindBarbSvg(15, false)} fill="none" stroke="#10202a" strokeWidth="8" strokeLinejoin="round" strokeLinecap="round" />
             <path d={getWindBarbSvg(15, false)} fill="none" stroke="#fff" strokeWidth="4" strokeLinejoin="round" strokeLinecap="round" />
           </svg>
-          <span>Wind barbs · Open-Meteo</span>
+          <span>Wind barbs · hover for forecast</span>
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
           <span>🚤</span>

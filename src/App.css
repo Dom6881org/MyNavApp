@@ -641,71 +641,17 @@ html {
   transition: all 0.3s ease;
 }
 
-.instrument-wrapper.collapsed {
-  min-height: auto;
-}
-
-.instrument-wrapper.hidden {
-  opacity: 0.5;
-}
-
-.instrument-wrapper.hidden .instrument-content {
-  display: none;
-}
-
-.instrument-hidden-message {
-  padding: 0.5rem;
-  text-align: center;
-  color: var(--text-secondary);
-  font-size: 0.8rem;
-  font-style: italic;
-}
-
-.instrument-header-with-controls {
+.instrument-card-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
   padding: 0.5rem;
   background: rgba(0, 0, 0, 0.2);
   border-bottom: 1px solid var(--border-color);
-  cursor: pointer;
-  user-select: none;
-}
-
-.instrument-header-with-controls:hover {
-  background: rgba(0, 0, 0, 0.3);
-}
-
-.instrument-controls {
-  display: flex;
-  gap: 0.3rem;
-}
-
-.collapse-toggle,
-.visibility-toggle {
-  padding: 0.2rem 0.4rem;
-  border: none;
-  border-radius: 4px;
-  background: transparent;
-  color: var(--text-secondary);
-  cursor: pointer;
-  font-size: 1rem;
-  transition: all 0.2s;
-}
-
-.collapse-toggle:hover,
-.visibility-toggle:hover {
-  background: rgba(255, 255, 255, 0.1);
-  color: var(--text-primary);
 }
 
 .instrument-content {
   flex: 1;
-  overflow: hidden;
-}
-
-.instrument-minimized {
-  height: 100px;
   overflow: hidden;
 }
 
@@ -720,8 +666,7 @@ html {
 }
 
 /* Settings button in header */
-.settings-button,
-.collapse-button {
+.settings-button {
   padding: 0.4rem 0.8rem;
   border: 1px solid var(--border-color);
   border-radius: 4px;
@@ -733,8 +678,7 @@ html {
   margin-left: 0.5rem;
 }
 
-.settings-button:hover,
-.collapse-button:hover {
+.settings-button:hover {
   background: var(--bg-tertiary);
   color: var(--accent-color);
 }
@@ -818,8 +762,7 @@ html {
     min-width: 100%;
   }
   
-  .settings-button,
-  .collapse-button {
+  .settings-button {
     padding: 0.3rem 0.5rem;
     font-size: 0.9rem;
   }
@@ -839,7 +782,7 @@ html {
   min-height: 250px;
 }
 
-.instrument-header-with-controls {
+.instrument-card-header {
   min-height: 42px;
   padding: 0.65rem 0.85rem;
   background: transparent;
@@ -861,30 +804,11 @@ html {
   text-transform: uppercase;
 }
 
-.instrument-header-with-controls:hover {
-  background: rgba(255, 255, 255, 0.04);
-}
-
-.instrument-header-with-controls .instrument-title {
+.instrument-card-header .instrument-title {
   color: var(--text-primary);
   font-size: 0.75rem;
   letter-spacing: 0.12em;
   text-transform: uppercase;
-}
-
-.instrument-controls button {
-  min-width: 30px;
-  min-height: 30px;
-  border: 1px solid transparent;
-}
-
-.instrument-controls button:focus-visible {
-  outline: 2px solid var(--accent-color);
-  outline-offset: 2px;
-}
-
-.instrument-wrapper.hidden {
-  border-style: dashed;
 }
 
 .instrument-content {
@@ -1023,41 +947,12 @@ html {
   padding-top: 0.5rem !important;
 }
 
-.instrument-wrapper.collapsed {
-  min-height: 0;
-  height: 125px;
-}
-
-.instrument-wrapper.collapsed .instrument-content,
-.instrument-minimized {
-  height: 100px;
-  flex: 0 0 100px;
-}
-
-.instrument-wrapper.collapsed .instrument-panel-inner {
-  padding: 0.25rem 0.75rem;
-}
-
-.instrument-minimized .instrument-panel .instrument-reading-primary {
-  font-size: 1rem !important;
-}
-
-.instrument-minimized .instrument-panel .instrument-reading-secondary,
-.instrument-minimized .instrument-panel .instrument-reading-direction {
-  font-size: 0.72rem !important;
-}
-
 @media (max-width: 900px) {
   .instrument-wrapper,
   .instrument-wrapper-gps {
     flex: 1 1 300px;
     min-width: 200px;
     min-height: 215px;
-  }
-
-  .instrument-wrapper.collapsed {
-    min-height: 0;
-    height: 125px;
   }
 
   .instrument-panel .instrument-reading-primary {
