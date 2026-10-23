@@ -10,6 +10,9 @@ declare global {
 
 interface MapViewSimpleProps {
   data: NavigationData;
+  isReplay?: boolean;
+  replayTrack?: Position[];
+  replayTrackIndex?: number;
   onWindGridRequest?: (points: Position[]) => void;
   size?: { width: number | string; height: number | string };
 }
@@ -17,7 +20,14 @@ interface MapViewSimpleProps {
 /**
  * Marine chart with OpenStreetMap base tiles and OpenSeaMap navigation marks.
  */
-const MapViewSimple: React.FC<MapViewSimpleProps> = ({ data, onWindGridRequest, size }) => {
+const MapViewSimple: React.FC<MapViewSimpleProps> = ({
+  data,
+  isReplay = false,
+  replayTrack = [],
+  replayTrackIndex = -1,
+  onWindGridRequest,
+  size
+}) => {
   const mapRef = useRef<HTMLDivElement>(null);
   const mapInstanceRef = useRef<any>(null);
   const [mapInstance, setMapInstance] = useState<any>(null);
@@ -117,23 +127,40 @@ const MapViewSimple: React.FC<MapViewSimpleProps> = ({ data, onWindGridRequest, 
           { collapsed: true, position: 'topright' }
         ).addTo(map);
         L.control.scale({ metric: true, imperial: false, position: 'bottomleft' }).addTo(map);
-        
-        // Add boat marker
-        const boatIcon = L.divIcon({
-          className: 'boat-marker',
-          html: '🚤',
-          iconSize: [30, 30],
-          iconAnchor: [15, 15]
-        });
-        
-        const marker = L.marker([data.position.latitude, data.position.longitude], {
-          icon: boatIcon,
-          title: 'Position du bateau'
+        const trackPane = map.createPane('vesselTrack');
+        trackPane.style.zIndex = '450';
+        const trackLine = L.polyline([], {
+          pane: 'vesselTrack',
+          color: '#19d3c5',
+          weight: 4,
+          opacity: 0.9,
+          lineCap: 'round',
+          lineJoin: 'round'
         }).addTo(map);
         
-        marker.bindPopup(`<b>Position du bateau</b><br>Lat: ${data.position.latitude.toFixed(6)}°<br>Lon: ${data.position.longitude.toFixed(6)}°`).openPopup();
+        const heading = data.compass?.heading ?? data.compass?.cog ?? 0;
+        const boatIcon = createBoatIcon(L, heading);
+        const marker = L.marker([data.position.latitude, data.position.longitude], {
+          icon: boatIcon,
+          title: `Vessel · ${getHeadingSource(data.compass?.heading)} ${heading.toFixed(0)}°`,
+          zIndexOffset: 1000
+        }).addTo(map);
         
-        const instance = { map, marker };
+        marker.bindPopup(`<b>Vessel position</b><br>LAT: ${data.position.latitude.toFixed(6)}°<br>LON: ${data.position.longitude.toFixed(6)}°`);
+        marker.bindTooltip(getVesselTooltip(data), {
+          direction: 'top',
+          offset: [0, -18],
+          opacity: 0.95
+        });
+        
+        const instance = {
+          map,
+          marker,
+          trackLine,
+          trackMode: null as string | null,
+          lastReplayTrackIndex: -1,
+          lastTrackPosition: null as Position | null
+        };
         mapInstanceRef.current = instance;
         setMapInstance(instance);
       } else {
@@ -146,7 +173,7 @@ const MapViewSimple: React.FC<MapViewSimpleProps> = ({ data, onWindGridRequest, 
         }
         instance.marker.setLatLng(boatPosition);
         instance.marker.setPopupContent(
-          `<b>Position du bateau</b><br>Lat: ${data.position.latitude.toFixed(6)}°<br>Lon: ${data.position.longitude.toFixed(6)}°`
+          `<b>Vessel position</b><br>LAT: ${data.position.latitude.toFixed(6)}°<br>LON: ${data.position.longitude.toFixed(6)}°`
         );
       }
     } catch (error) {
@@ -154,6 +181,37 @@ const MapViewSimple: React.FC<MapViewSimpleProps> = ({ data, onWindGridRequest, 
       if (!mapInstanceRef.current) setLeafletError(true);
     }
   }, [leafletLoaded, data.position, leafletError]);
+
+  useEffect(() => {
+    if (!mapInstance || !leafletLoaded || leafletError || !window.L) return;
+
+    const trackMode = isReplay ? 'replay' : 'live';
+    if (mapInstance.trackMode !== trackMode) {
+      mapInstance.trackLine.setLatLngs([]);
+      mapInstance.trackMode = trackMode;
+      mapInstance.lastReplayTrackIndex = -1;
+      mapInstance.lastTrackPosition = null;
+    }
+
+    if (isReplay) {
+      const firstIndex = mapInstance.lastReplayTrackIndex + 1;
+      const lastIndex = Math.min(replayTrackIndex, replayTrack.length - 1);
+      for (let index = firstIndex; index <= lastIndex; index += 1) {
+        const position = replayTrack[index];
+        mapInstance.trackLine.addLatLng([position.latitude, position.longitude]);
+        mapInstance.lastTrackPosition = position;
+      }
+      mapInstance.lastReplayTrackIndex = Math.max(mapInstance.lastReplayTrackIndex, lastIndex);
+      return;
+    }
+
+    const position = data.position;
+    const previous = mapInstance.lastTrackPosition as Position | null;
+    if (position && (position.latitude !== previous?.latitude || position.longitude !== previous?.longitude)) {
+      mapInstance.trackLine.addLatLng([position.latitude, position.longitude]);
+      mapInstance.lastTrackPosition = position;
+    }
+  }, [mapInstance, leafletLoaded, leafletError, isReplay, replayTrack, replayTrackIndex, data.position]);
 
   useEffect(() => () => {
     mapInstanceRef.current?.map.remove();
@@ -174,34 +232,32 @@ const MapViewSimple: React.FC<MapViewSimpleProps> = ({ data, onWindGridRequest, 
     if (mapInstance.speedLine && map.hasLayer(mapInstance.speedLine)) map.removeLayer(mapInstance.speedLine);
     if (mapInstance.windLine && map.hasLayer(mapInstance.windLine)) map.removeLayer(mapInstance.windLine);
     
-    // SOG Vector (blue dashed)
-    if (data.compass?.cog !== null && data.compass?.cog !== undefined && data.speed?.sog && data.speed.sog > 0) {
-      const cogRad = data.compass.cog * Math.PI / 180;
-      const scale = (data.speed.sog * 1852) / 111320; // meters to degrees
-      const endLat = lat + Math.cos(cogRad) * scale;
-      const endLng = lng + Math.sin(cogRad) * scale / Math.cos(lat * Math.PI / 180);
-      mapInstance.sogLine = L.polyline([[lat, lng], [endLat, endLng]], {
-        color: '#4488ff', weight: 3, dashArray: '10,5', opacity: 0.8
-      }).addTo(map);
-    }
-    
-    // Speed Vector (red solid)
-    if (data.compass?.heading !== null && data.compass?.heading !== undefined && data.speed?.speed && data.speed.speed > 0) {
-      const headingRad = data.compass.heading * Math.PI / 180;
-      const scale = (data.speed.speed * 1852) / 111320;
-      const endLat = lat + Math.cos(headingRad) * scale;
-      const endLng = lng + Math.sin(headingRad) * scale / Math.cos(lat * Math.PI / 180);
+    const course = data.compass?.cog ?? data.compass?.heading;
+    const speedKnots = data.speed?.sog ?? data.speed?.speed;
+    if (course !== null && course !== undefined && speedKnots !== null && speedKnots !== undefined && speedKnots > 0) {
+      const courseRad = course * Math.PI / 180;
+      const distanceDegrees = (speedKnots * 1852 / 4) / 111320;
+      const endLat = lat + Math.cos(courseRad) * distanceDegrees;
+      const endLng = lng + Math.sin(courseRad) * distanceDegrees / Math.cos(lat * Math.PI / 180);
       mapInstance.speedLine = L.polyline([[lat, lng], [endLat, endLng]], {
-        color: '#ff4444', weight: 2, opacity: 0.8
+        color: '#123b66',
+        weight: 4,
+        opacity: 0.95,
+        lineCap: 'round',
+        lineJoin: 'round'
       }).addTo(map);
     }
     
     // Update marker
     if (mapInstance.marker) {
       mapInstance.marker.setLatLng([lat, lng]);
+      const heading = data.compass?.heading ?? data.compass?.cog ?? 0;
+      mapInstance.marker.setIcon(createBoatIcon(L, heading));
+      mapInstance.marker.options.title = `Vessel · ${getHeadingSource(data.compass?.heading)} ${heading.toFixed(0)}°`;
       mapInstance.marker.setPopupContent(
-        `<b>Position du bateau</b><br>Lat: ${lat.toFixed(6)}°<br>Lon: ${lng.toFixed(6)}°`
+        `<b>Vessel position</b><br>LAT: ${lat.toFixed(6)}°<br>LON: ${lng.toFixed(6)}°`
       );
+      mapInstance.marker.setTooltipContent(getVesselTooltip(data));
     }
   }, [mapInstance, leafletLoaded, leafletError, data]);
 
@@ -408,12 +464,12 @@ const MapViewSimple: React.FC<MapViewSimpleProps> = ({ data, onWindGridRequest, 
         }}
       >
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
-          <div style={{ width: '12px', height: '2px', backgroundColor: '#ff4444' }} />
-          <span>GPS COG · SOG</span>
+          <div style={{ width: '12px', height: '3px', backgroundColor: '#123b66' }} />
+          <span>Speed vector · 15 min (SOG / COG)</span>
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
-          <div style={{ width: '12px', height: '2px', backgroundColor: '#4488ff', border: '1px dashed #4488ff' }} />
-          <span>Calculated COG</span>
+          <div style={{ width: '14px', height: '3px', backgroundColor: '#19d3c5' }} />
+          <span>Past positions · GPS / GPX replay</span>
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
           <svg width="14" height="18" viewBox="0 0 48 48" aria-hidden="true">
@@ -423,8 +479,11 @@ const MapViewSimple: React.FC<MapViewSimpleProps> = ({ data, onWindGridRequest, 
           <span>Wind barbs · hover for forecast</span>
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
-          <span>🚤</span>
-          <span>Vessel position</span>
+          <svg width="18" height="18" viewBox="0 0 48 48" aria-hidden="true">
+            <path d="M24 3 L40 38 Q24 47 8 38 Z" fill="#f4f8fb" stroke="#10202a" strokeWidth="4" />
+            <path d="M24 8 L24 35" stroke="#19d3c5" strokeWidth="3" />
+          </svg>
+          <span>Vessel · HDG</span>
         </div>
         <span>Each barb uses the forecast at its location; nearby winds may match due to model resolution.</span>
         <span>Enable “Seamarks & navigation aids” to show OpenSeaMap data.</span>
@@ -438,6 +497,31 @@ const getWindDirectionText = (degrees: number): string => {
   const directions = ['N', 'NNE', 'NE', 'ENE', 'E', 'ESE', 'SE', 'SSE', 'S', 'SSW', 'SW', 'WSW', 'W', 'WNW', 'NW', 'NNW'];
   return directions[Math.round(degrees / 22.5) % 16];
 };
+
+const getHeadingSource = (heading: number | null | undefined): 'HDG' | 'COG' => (
+  heading === null || heading === undefined ? 'COG' : 'HDG'
+);
+
+const getVesselTooltip = (data: NavigationData): string => {
+  const speed = data.speed?.sog ?? data.speed?.speed ?? 0;
+  const heading = data.compass?.heading;
+  const cog = data.compass?.cog;
+  const course = heading ?? cog ?? 0;
+  const courseLabel = heading !== null && heading !== undefined
+    ? 'HDG'
+    : cog !== null && cog !== undefined
+      ? 'COG'
+      : 'Course';
+
+  return `<strong>Vessel</strong><br>SOG: ${speed.toFixed(1)} kn<br>${courseLabel}: ${course.toFixed(0)}°`;
+};
+
+const createBoatIcon = (leaflet: any, heading: number) => leaflet.divIcon({
+  className: 'boat-marker',
+  html: `<svg class="boat-marker-icon" viewBox="0 0 48 48" aria-hidden="true" style="transform:rotate(${heading}deg)"><path d="M24 3 L40 38 Q24 47 8 38 Z" fill="#f4f8fb" stroke="#10202a" stroke-width="4"/><path d="M24 8 L24 35" stroke="#19d3c5" stroke-width="3" stroke-linecap="round"/></svg>`,
+  iconSize: [36, 36],
+  iconAnchor: [18, 18]
+});
 
 const getWindBarbSvg = (speedKnots: number, includeOutline = true): string => {
   const roundedSpeed = Math.round(speedKnots / 5) * 5;

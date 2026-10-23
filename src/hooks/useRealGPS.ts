@@ -84,6 +84,7 @@ export const useRealGPS = () => {
     const speed: SpeedData = {
       speed: speedFromDevice,
       sog,
+      stw: null,
       maxSpeed: speedHistoryRef.current.length ? Math.max(...speedHistoryRef.current) : null,
       averageSpeed: speedHistoryRef.current.length
         ? speedHistoryRef.current.reduce((total, value) => total + value, 0) / speedHistoryRef.current.length

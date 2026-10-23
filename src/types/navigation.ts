@@ -6,8 +6,9 @@ export interface Position {
 }
 
 export interface SpeedData {
-  speed: number | null; // GPS-reported speed over ground, in knots.
-  sog: number | null; // Speed over ground calculated from GPS positions, in knots.
+  speed: number | null; // Device-reported speed, in knots.
+  sog: number | null; // Speed over ground from GPS or track data, in knots.
+  stw: number | null; // Speed through water from a compatible sensor, in knots.
   maxSpeed: number | null;
   averageSpeed: number | null;
 }

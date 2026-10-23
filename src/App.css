@@ -84,6 +84,19 @@
   border: 0;
 }
 
+.boat-marker {
+  background: transparent;
+  border: 0;
+}
+
+.boat-marker-icon {
+  display: block;
+  width: 36px;
+  height: 36px;
+  overflow: visible;
+  filter: drop-shadow(0 1px 3px rgba(0, 0, 0, 0.9));
+}
+
 .wind-map-barb {
   display: block;
   overflow: visible;

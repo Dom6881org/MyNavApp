@@ -12,7 +12,8 @@ const App: React.FC = () => {
     isGPSEnabled,
     gpsStatus,
     hasGPS,
-    toggleGPSConnection
+    toggleGPSConnection,
+    gpxReplay
   } = useNavigationData();
   
   const {
@@ -36,12 +37,44 @@ const App: React.FC = () => {
         </div>
         
         <div className="header-info">
+          {import.meta.env.DEV && (
+            <div className="gpx-replay-controls">
+              <button
+                className="gpx-replay-button"
+                onClick={() => void (gpxReplay.isActive ? gpxReplay.stop() : gpxReplay.start())}
+                disabled={gpxReplay.isLoading}
+                title={gpxReplay.isActive ? 'Stop local GPX replay and resume device GPS' : 'Play the local Navionics GPX test track'}
+              >
+                {gpxReplay.isLoading ? 'Loading GPX…' : gpxReplay.isActive ? 'Stop GPX replay' : '▶ GPX replay'}
+              </button>
+              {gpxReplay.isActive && (
+                <>
+                  <select
+                    aria-label="GPX replay speed"
+                    value={gpxReplay.speedMultiplier}
+                    onChange={event => gpxReplay.setSpeedMultiplier(Number(event.target.value))}
+                  >
+                    <option value={1}>1×</option>
+                    <option value={10}>10×</option>
+                    <option value={60}>60×</option>
+                  </select>
+                  <progress aria-label="GPX replay progress" max={1} value={gpxReplay.progress} />
+                  {!gpxReplay.isPlaying && <span>Replay complete</span>}
+                </>
+              )}
+              {gpxReplay.error && <span className="gpx-replay-error" role="alert">{gpxReplay.error}</span>}
+            </div>
+          )}
           {/* GPS Status Indicator */}
           <span 
-            className={`gps-status ${gpsStatus.isConnected ? 'connected' : 'disconnected'}`}
-            title={gpsStatus.error || (gpsStatus.isConnected ? `GPS accuracy: ±${gpsStatus.accuracy?.toFixed(0) ?? '?'} m` : 'Waiting for GPS fix')}
+            className={`gps-status ${gpsStatus.isConnected ? 'connected' : 'disconnected'} ${gpxReplay.isActive ? 'replay' : ''}`}
+            title={gpxReplay.isActive
+              ? 'Using local Navionics GPX track replay'
+              : gpsStatus.error || (gpsStatus.isConnected ? `GPS accuracy: ±${gpsStatus.accuracy?.toFixed(0) ?? '?'} m` : 'Waiting for GPS fix')}
           >
-            {gpsStatus.isConnected
+            {gpxReplay.isActive
+              ? '▶ GPX REPLAY'
+              : gpsStatus.isConnected
               ? `📡 GPS · ±${gpsStatus.accuracy?.toFixed(0) ?? '?'} m`
               : !hasGPS ? '📡 GPS unavailable' : !isGPSEnabled ? '📡 GPS stopped' : gpsStatus.error ? '📡 GPS · error' : '📡 GPS waiting'}
           </span>
@@ -102,6 +135,9 @@ const App: React.FC = () => {
           <div className="map-container">
             <MapView
               data={navigationData}
+              isReplay={gpxReplay.isActive}
+              replayTrack={gpxReplay.trackPositions}
+              replayTrackIndex={gpxReplay.trackIndex}
               onWindGridRequest={requestWindGrid}
               size={{ width: '100%', height: '100%' }}
             />

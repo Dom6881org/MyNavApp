@@ -7,7 +7,7 @@ interface SpeedometerProps {
 }
 
 const Speedometer: React.FC<SpeedometerProps> = ({ data, size = 200 }) => {
-  const displaySTW = null;
+  const displaySTW = data?.stw ?? data?.sog ?? data?.speed ?? 0;
   const displaySOG = useMemo(() => data?.sog ?? data?.speed ?? 0, [data?.sog, data?.speed]);
 
   // Calculate base font size based on container size
@@ -53,7 +53,7 @@ const Speedometer: React.FC<SpeedometerProps> = ({ data, size = 200 }) => {
           gap: `${baseFontSize * 0.2}px`
         }}
       >
-        {/* STW stays at zero until a water-speed sensor is connected. */}
+        {/* Fall back to SOG when no water-speed sensor is connected. */}
         <div
           className="instrument-reading instrument-reading-primary"
           style={{
@@ -65,7 +65,7 @@ const Speedometer: React.FC<SpeedometerProps> = ({ data, size = 200 }) => {
             lineHeight: 1
           }}
         >
-          STW: {(displaySTW ?? 0).toFixed(1)} kn
+          STW: {displaySTW.toFixed(1)} kn
         </div>
         
         {/* Speed over ground */}
