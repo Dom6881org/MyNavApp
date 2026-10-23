@@ -17,6 +17,8 @@ interface MapViewSimpleProps {
   size?: { width: number | string; height: number | string };
 }
 
+type MapOrientation = 'north' | 'heading' | 'course';
+
 /**
  * Marine chart with OpenStreetMap base tiles and OpenSeaMap navigation marks.
  */
@@ -32,7 +34,10 @@ const MapViewSimple: React.FC<MapViewSimpleProps> = ({
   const mapInstanceRef = useRef<any>(null);
   const [mapInstance, setMapInstance] = useState<any>(null);
   const [leafletLoaded, setLeafletLoaded] = useState<boolean>(false);
+  const [rotationAvailable, setRotationAvailable] = useState<boolean>(false);
+  const [rotationUnavailable, setRotationUnavailable] = useState<boolean>(false);
   const [leafletError, setLeafletError] = useState<boolean>(false);
+  const [mapOrientation, setMapOrientation] = useState<MapOrientation>('north');
   
   // Load Leaflet library
   useEffect(() => {
@@ -40,58 +45,105 @@ const MapViewSimple: React.FC<MapViewSimpleProps> = ({
     let checkInterval: number | undefined;
     let timeoutId: number | undefined;
     const script = document.getElementById('leaflet-js') as HTMLScriptElement | null;
+    let rotationScript: HTMLScriptElement | null = null;
+    const onLeafletLoad = () => {
+      markMapLoaded();
+      loadRotationPlugin();
+    };
 
-    const markLoaded = () => {
+    const markMapLoaded = () => {
       if (disposed || !window.L) return;
-      if (checkInterval !== undefined) window.clearInterval(checkInterval);
-      if (timeoutId !== undefined) window.clearTimeout(timeoutId);
       setLeafletLoaded(true);
     };
-    const markFailed = () => {
+    const markRotationLoaded = () => {
+      if (disposed || !window.L?.Map?.prototype?.setBearing) return;
+      if (checkInterval !== undefined) window.clearInterval(checkInterval);
+      if (timeoutId !== undefined) window.clearTimeout(timeoutId);
+      setRotationAvailable(true);
+      setRotationUnavailable(false);
+      markMapLoaded();
+    };
+    const markUnavailable = () => {
       if (disposed) return;
+      if (window.L) {
+        markMapLoaded();
+        setRotationUnavailable(true);
+        if (checkInterval !== undefined) window.clearInterval(checkInterval);
+        if (timeoutId !== undefined) window.clearTimeout(timeoutId);
+        return;
+      }
       if (checkInterval !== undefined) window.clearInterval(checkInterval);
       if (timeoutId !== undefined) window.clearTimeout(timeoutId);
       setLeafletError(true);
     };
 
+    const loadRotationPlugin = () => {
+      if (disposed || !window.L) return;
+      if (window.L.Map?.prototype?.setBearing) {
+        markRotationLoaded();
+        return;
+      }
+
+      rotationScript = document.getElementById('leaflet-rotate-js') as HTMLScriptElement | null;
+      if (!rotationScript) {
+        rotationScript = document.createElement('script');
+        rotationScript.id = 'leaflet-rotate-js';
+        rotationScript.src = 'https://cdn.jsdelivr.net/npm/@tomickigrzegorz/leaflet-rotate@0.3.0/dist/leaflet-rotate.umd.min.js';
+        document.head.appendChild(rotationScript);
+      }
+      rotationScript.addEventListener('load', markRotationLoaded);
+      rotationScript.addEventListener('error', markUnavailable);
+    };
+
     if (window.L) {
-      markLoaded();
-      return;
+      loadRotationPlugin();
+    } else {
+      if (!document.getElementById('leaflet-css')) {
+        const link = document.createElement('link');
+        link.id = 'leaflet-css';
+        link.rel = 'stylesheet';
+        link.href = 'https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.min.css';
+        link.onerror = markUnavailable;
+        document.head.appendChild(link);
+      }
+
+      const leafletScript = script ?? document.createElement('script');
+      leafletScript.id = 'leaflet-js';
+      leafletScript.src = 'https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.min.js';
+      leafletScript.addEventListener('load', onLeafletLoad);
+      leafletScript.addEventListener('error', markUnavailable);
+      if (!script) document.head.appendChild(leafletScript);
+
+      rotationScript = document.getElementById('leaflet-rotate-js') as HTMLScriptElement | null;
+      checkInterval = window.setInterval(() => {
+        if (window.L?.Map?.prototype?.setBearing) markRotationLoaded();
+        else if (window.L) loadRotationPlugin();
+      }, 100);
     }
 
-    if (!document.getElementById('leaflet-css')) {
-      const link = document.createElement('link');
-      link.id = 'leaflet-css';
-      link.rel = 'stylesheet';
-      link.href = 'https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.min.css';
-      link.onerror = markFailed;
-      document.head.appendChild(link);
+    if (window.L) {
+      markMapLoaded();
+      if (window.L.Map?.prototype?.setBearing) markRotationLoaded();
     }
 
-    const leafletScript = script ?? document.createElement('script');
-    leafletScript.id = 'leaflet-js';
-    leafletScript.src = 'https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.min.js';
-    leafletScript.addEventListener('load', markLoaded);
-    leafletScript.addEventListener('error', markFailed);
-    if (!script) document.head.appendChild(leafletScript);
-
-    checkInterval = window.setInterval(markLoaded, 100);
     timeoutId = window.setTimeout(() => {
-      if (!window.L) markFailed();
+      markUnavailable();
     }, 10000);
 
     return () => {
       disposed = true;
       if (checkInterval !== undefined) window.clearInterval(checkInterval);
       if (timeoutId !== undefined) window.clearTimeout(timeoutId);
-      leafletScript.removeEventListener('load', markLoaded);
-      leafletScript.removeEventListener('error', markFailed);
+      script?.removeEventListener('load', onLeafletLoad);
+      script?.removeEventListener('error', markUnavailable);
+      rotationScript?.removeEventListener('load', markRotationLoaded);
+      rotationScript?.removeEventListener('error', markUnavailable);
     };
   }, []);
 
   // Initialize map when Leaflet is ready
   useEffect(() => {
-    if (!leafletLoaded || !mapRef.current || !window.L || leafletError || !data.position) return;
+    if (!leafletLoaded || (!rotationAvailable && !rotationUnavailable) || !mapRef.current || !window.L || leafletError || !data.position) return;
     
     const L = window.L;
     
@@ -102,7 +154,11 @@ const MapViewSimple: React.FC<MapViewSimpleProps> = ({
           center: [data.position.latitude, data.position.longitude],
           zoom: 15,
           zoomControl: true,
-          attributionControl: true
+          attributionControl: true,
+          rotate: rotationAvailable,
+          dragRotate: false,
+          shiftKeyRotate: false,
+          touchRotate: false
         });
         
         const baseLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
@@ -127,10 +183,7 @@ const MapViewSimple: React.FC<MapViewSimpleProps> = ({
           { collapsed: true, position: 'topright' }
         ).addTo(map);
         L.control.scale({ metric: true, imperial: false, position: 'bottomleft' }).addTo(map);
-        const trackPane = map.createPane('vesselTrack');
-        trackPane.style.zIndex = '450';
         const trackLine = L.polyline([], {
-          pane: 'vesselTrack',
           color: '#19d3c5',
           weight: 4,
           opacity: 0.9,
@@ -143,7 +196,8 @@ const MapViewSimple: React.FC<MapViewSimpleProps> = ({
         const marker = L.marker([data.position.latitude, data.position.longitude], {
           icon: boatIcon,
           title: `Vessel · ${getHeadingSource(data.compass?.heading)} ${heading.toFixed(0)}°`,
-          zIndexOffset: 1000
+          zIndexOffset: 1000,
+          rotateWithView: true
         }).addTo(map);
         
         marker.bindPopup(`<b>Vessel position</b><br>LAT: ${data.position.latitude.toFixed(6)}°<br>LON: ${data.position.longitude.toFixed(6)}°`);
@@ -180,7 +234,22 @@ const MapViewSimple: React.FC<MapViewSimpleProps> = ({
       console.error('Map error:', error);
       if (!mapInstanceRef.current) setLeafletError(true);
     }
-  }, [leafletLoaded, data.position, leafletError]);
+  }, [leafletLoaded, rotationAvailable, rotationUnavailable, data.position, leafletError]);
+
+  useEffect(() => {
+    if (!mapInstance || !rotationAvailable || !leafletLoaded || leafletError || !data.position) return;
+
+    const heading = data.compass?.heading ?? data.compass?.cog ?? 0;
+    const course = data.compass?.cog ?? data.compass?.heading ?? 0;
+    const selectedBearing = mapOrientation === 'heading'
+      ? heading
+      : mapOrientation === 'course'
+        ? course
+        : 0;
+    const bearing = (360 - selectedBearing) % 360;
+
+    mapInstance.map.setBearing(bearing);
+  }, [mapInstance, rotationAvailable, leafletLoaded, leafletError, mapOrientation, data.position, data.compass?.heading, data.compass?.cog]);
 
   useEffect(() => {
     if (!mapInstance || !leafletLoaded || leafletError || !window.L) return;
@@ -319,6 +388,7 @@ const MapViewSimple: React.FC<MapViewSimpleProps> = ({
         L.marker([point.position.latitude, point.position.longitude], {
           icon: barbIcon,
           zIndexOffset: 500,
+          rotateWithView: true,
           title: `Wind from ${direction}, ${point.wind.speed.toFixed(1)} knots`
         })
           .bindTooltip(tooltip, { direction: 'top', sticky: true, opacity: 0.95 })
@@ -339,7 +409,7 @@ const MapViewSimple: React.FC<MapViewSimpleProps> = ({
       style={{
         width: size?.width || '100%',
         height: size?.height || '100%',
-        minHeight: '500px',
+        minHeight: '0',
         display: 'flex',
         flexDirection: 'column',
         background: 'var(--bg-secondary)',
@@ -370,12 +440,13 @@ const MapViewSimple: React.FC<MapViewSimpleProps> = ({
       
       {/* Map container */}
       <div 
+        className="marine-chart-canvas"
         ref={mapRef}
         style={{
           width: '100%',
           flex: 1,
           height: '100%',
-          minHeight: '400px',
+          minHeight: '0',
           position: 'relative',
           overflow: 'hidden',
           border: '2px solid var(--accent-color)',
@@ -383,6 +454,34 @@ const MapViewSimple: React.FC<MapViewSimpleProps> = ({
           background: leafletError ? 'var(--bg-secondary)' : '#1a2e1a'
         }}
       >
+        {!leafletError && leafletLoaded && data.position && (rotationAvailable || rotationUnavailable) && (
+          <div className="map-orientation-control" role="group" aria-label="Map orientation">
+            {rotationUnavailable && (
+              <span className="map-rotation-error" role="status">
+                Rotation unavailable · North up
+              </span>
+            )}
+            {([
+              ['north', 'North up'],
+              ['heading', 'Heading up'],
+              ['course', 'Course up']
+            ] as const).map(([orientation, label]) => (
+              <button
+                key={orientation}
+                type="button"
+                aria-pressed={mapOrientation === orientation}
+                disabled={rotationUnavailable && orientation !== 'north'}
+                onClick={event => {
+                  event.stopPropagation();
+                  setMapOrientation(orientation);
+                }}
+                onMouseDown={event => event.stopPropagation()}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
+        )}
         <div className="wind-map-readout" aria-live="polite">
           <strong>LOCAL WIND FORECAST</strong>
           {data.wind ? (

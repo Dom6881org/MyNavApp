@@ -93,10 +93,10 @@ const App: React.FC = () => {
 
       {/* Main content - Split layout: instruments on left, map on right */}
       <main className="app-main">
-        <div className="main-layout">
-          {/* Left sidebar - Instruments */}
+        <div className="main-layout main-layout-instruments-top">
+          {/* Instrument strip */}
           <aside className="instruments-sidebar">
-            <div className="instruments-container">
+            <div className="instruments-container instrument-strip">
               {layout.instruments
                 .filter(instr => instr.type !== 'map')
                 .map(instrument => {
@@ -131,7 +131,7 @@ const App: React.FC = () => {
             </div>
           </aside>
           
-          {/* Right side - Map */}
+          {/* Primary chart */}
           <div className="map-container">
             <MapView
               data={navigationData}

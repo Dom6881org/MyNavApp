@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import React from 'react';
 import { SpeedData } from '../types';
 
 interface SpeedometerProps {
@@ -8,80 +8,27 @@ interface SpeedometerProps {
 
 const Speedometer: React.FC<SpeedometerProps> = ({ data, size = 200 }) => {
   const displaySTW = data?.stw ?? data?.sog ?? data?.speed ?? 0;
-  const displaySOG = useMemo(() => data?.sog ?? data?.speed ?? 0, [data?.sog, data?.speed]);
-
-  // Calculate base font size based on container size
-  const baseFontSize = size * 0.08;
+  const displaySOG = data?.sog ?? data?.speed ?? 0;
+  const progress = Math.min(displaySTW / 20, 1) * 100;
 
   return (
-    <div 
-      className="instrument speedometer" 
-      style={{
-        width: '100%',
-        height: '100%',
-        display: 'flex',
-        flexDirection: 'column',
-        padding: `${baseFontSize * 0.4}px`,
-        boxSizing: 'border-box'
-      }}
-    >
-      <div 
-        className="instrument-header" 
-        style={{
-          width: '100%',
-          textAlign: 'center',
-          padding: `${baseFontSize * 0.2}px`,
-          background: 'rgba(0, 0, 0, 0.2)',
-          borderRadius: '4px',
-          marginBottom: `${baseFontSize * 0.3}px`
-        }}
-      >
-        <span className="instrument-title" style={{ 
-          fontSize: `${baseFontSize * 0.8}px`, 
-          fontWeight: 'bold' 
-        }}>Speed</span>
+    <div className="instrument speedometer speed-instrument" style={{ '--speed-size': `${size}px` } as React.CSSProperties}>
+      <svg className="speed-gauge" viewBox="0 0 180 104" role="img" aria-label={`Speed ${displaySTW.toFixed(1)} knots`}>
+        <path className="speed-gauge-track" d="M 18 92 A 72 72 0 0 1 162 92" pathLength="100" />
+        <path className="speed-gauge-value" d="M 18 92 A 72 72 0 0 1 162 92" pathLength="100" style={{ strokeDasharray: `${progress} 100` }} />
+        <text className="speed-gauge-mark" x="14" y="104">0</text>
+        <text className="speed-gauge-mark" x="151" y="104">20</text>
+      </svg>
+      <div className="speed-primary-reading">
+        <strong>{displaySTW.toFixed(1)}</strong>
+        <span>kn</span>
       </div>
-      
-      <div
-        className="instrument-reading-group"
-        style={{
-          flex: 1,
-          display: 'flex',
-          flexDirection: 'column',
-          alignItems: 'center',
-          justifyContent: 'center',
-          gap: `${baseFontSize * 0.2}px`
-        }}
-      >
-        {/* Fall back to SOG when no water-speed sensor is connected. */}
-        <div
-          className="instrument-reading instrument-reading-primary"
-          style={{
-            fontSize: `${baseFontSize * 1.4}px`,
-            fontWeight: 'bold',
-            fontFamily: 'monospace',
-            color: 'var(--accent-color)',
-            letterSpacing: '0.05em',
-            lineHeight: 1
-          }}
-        >
-          STW: {displaySTW.toFixed(1)} kn
-        </div>
-        
-        {/* Speed over ground */}
-        <div
-          className="instrument-reading instrument-reading-primary"
-          style={{
-            fontSize: `${baseFontSize * 1.4}px`,
-            fontWeight: 'bold',
-            fontFamily: 'monospace',
-            color: 'var(--accent-secondary)',
-            letterSpacing: '0.05em',
-            lineHeight: 1
-          }}
-        >
-          SOG: {displaySOG.toFixed(1)} kn
-        </div>
+      <div className="speed-secondary-reading">
+        <span>STW</span>
+        <strong>{displaySTW.toFixed(1)} <small>kn</small></strong>
+        <span className="speed-reading-divider" />
+        <span>SOG</span>
+        <strong>{displaySOG.toFixed(1)} <small>kn</small></strong>
       </div>
     </div>
   );
