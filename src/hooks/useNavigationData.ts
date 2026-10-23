@@ -2,6 +2,7 @@ import { useCallback, useEffect } from 'react';
 import { useRealGPS } from './useRealGPS';
 import { useGpxReplay } from './useGpxReplay';
 import { useWindForecast } from './useWindForecast';
+import { useNavigationBackend } from './useNavigationBackend';
 import { NavigationData } from '../types';
 
 export const useNavigationData = () => {
@@ -13,18 +14,36 @@ export const useNavigationData = () => {
 
   const replay = useGpxReplay();
   const activeSample = replay.currentSample;
-  const position = activeSample?.position ?? gpsData.position;
+  const { snapshot: backendSnapshot, status: backendStatus, postBrowserNavigation } = useNavigationBackend();
+  const nmeaNavigation = backendSnapshot?.nmeaConnected ? backendSnapshot.navigation : null;
+
+  useEffect(() => {
+    if (!gpsData.position || !gpsData.status.lastUpdate || replay.isActive) return;
+    void postBrowserNavigation({
+      position: gpsData.position,
+      speed: gpsData.speed,
+      compass: gpsData.compass,
+      gpsTime: gpsData.gpsTime,
+      gpsAccuracy: gpsData.status.accuracy,
+      receivedAt: gpsData.status.lastUpdate
+    });
+  }, [gpsData, postBrowserNavigation, replay.isActive]);
+
+  const backendNavigation = backendSnapshot?.source !== 'none' ? backendSnapshot?.navigation : null;
+  const livePosition = nmeaNavigation?.position ?? backendNavigation?.position ?? gpsData.position;
+  const position = activeSample?.position ?? livePosition;
   const { wind, windGrid, status: windForecastStatus, requestWindGrid } = useWindForecast(position);
   const navigationData: NavigationData = {
     position,
-    speed: activeSample?.speed ?? gpsData.speed,
+    speed: activeSample?.speed ?? nmeaNavigation?.speed ?? backendNavigation?.speed ?? gpsData.speed,
     wind,
+    apparentWind: nmeaNavigation?.apparentWind ?? backendNavigation?.apparentWind ?? null,
     windGrid,
     windForecastStatus,
-    compass: activeSample?.compass ?? gpsData.compass,
-    depth: null,
-    gpsTime: activeSample?.gpsTime ?? gpsData.gpsTime,
-    gpsAccuracy: activeSample?.accuracy ?? gpsData.status.accuracy
+    compass: activeSample?.compass ?? nmeaNavigation?.compass ?? backendNavigation?.compass ?? gpsData.compass,
+    depth: nmeaNavigation?.depth ?? backendNavigation?.depth ?? null,
+    gpsTime: activeSample?.gpsTime ?? nmeaNavigation?.gpsTime ?? backendNavigation?.gpsTime ?? gpsData.gpsTime,
+    gpsAccuracy: activeSample?.accuracy ?? nmeaNavigation?.gpsAccuracy ?? backendNavigation?.gpsAccuracy ?? gpsData.status.accuracy
   };
 
   const startGpxReplay = useCallback(async () => {
@@ -51,8 +70,10 @@ export const useNavigationData = () => {
 
   return {
     navigationData,
-    isConnected: replay.isActive || gpsData.status.isConnected,
+    isConnected: replay.isActive || Boolean(nmeaNavigation) || gpsData.status.isConnected,
     isGPSEnabled: replay.isActive || isGPSEnabled,
+    navigationSource: replay.isActive ? 'replay' : nmeaNavigation ? 'nmea' : gpsData.status.isConnected ? 'browser' : 'none',
+    backendStatus,
     gpsStatus: replay.isActive && activeSample
       ? { isConnected: true, error: null, accuracy: activeSample.accuracy, lastUpdate: Date.now() }
       : gpsData.status,

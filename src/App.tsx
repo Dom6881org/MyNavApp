@@ -11,6 +11,8 @@ const App: React.FC = () => {
     requestWindGrid,
     isGPSEnabled,
     gpsStatus,
+    navigationSource,
+    backendStatus,
     hasGPS,
     toggleGPSConnection,
     gpxReplay
@@ -91,16 +93,26 @@ const App: React.FC = () => {
           )}
           {/* GPS Status Indicator */}
           <span 
-            className={`gps-status ${gpsStatus.isConnected ? 'connected' : 'disconnected'} ${gpxReplay.isActive ? 'replay' : ''}`}
-            title={gpxReplay.isActive
+            className={`gps-status ${gpsStatus.isConnected || navigationSource === 'nmea' ? 'connected' : 'disconnected'} ${gpxReplay.isActive ? 'replay' : ''}`}
+            title={navigationSource === 'nmea'
+              ? 'Navigation data received from NMEA'
+              : gpxReplay.isActive
               ? 'Using local Navionics GPX track replay'
               : gpsStatus.error || (gpsStatus.isConnected ? `GPS accuracy: ±${gpsStatus.accuracy?.toFixed(0) ?? '?'} m` : 'Waiting for GPS fix')}
           >
-            {gpxReplay.isActive
+            {navigationSource === 'nmea'
+              ? '📡 NMEA'
+              : gpxReplay.isActive
               ? '▶ GPX REPLAY'
               : gpsStatus.isConnected
               ? `📡 GPS · ±${gpsStatus.accuracy?.toFixed(0) ?? '?'} m`
               : !hasGPS ? '📡 GPS unavailable' : !isGPSEnabled ? '📡 GPS stopped' : gpsStatus.error ? '📡 GPS · error' : '📡 GPS waiting'}
+          </span>
+          <span
+            className={`backend-status ${backendStatus.isConnected ? 'connected' : 'disconnected'}`}
+            title={backendStatus.error ?? 'Local navigation backend connection'}
+          >
+            {backendStatus.isConnected ? 'API local' : 'API hors ligne'}
           </span>
           
           {/* Settings button */}

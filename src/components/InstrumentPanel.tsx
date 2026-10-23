@@ -23,7 +23,6 @@ const InstrumentPanel: React.FC<InstrumentPanelProps> = ({ data, config, units, 
 
   const renderInstrument = () => {
     const instrumentSize = size === 'minimized' ? 100 : 200;
-    const gpsSize = size === 'minimized' ? { width: 200, height: 100 } : { width: 400, height: 200 };
     
     switch (config.type) {
       case 'speed':
@@ -33,6 +32,7 @@ const InstrumentPanel: React.FC<InstrumentPanelProps> = ({ data, config, units, 
       case 'wind':
         return (
           <WindIndicator
+            data={data.apparentWind}
             unit={units.speed}
             size={instrumentSize}
           />
@@ -44,7 +44,6 @@ const InstrumentPanel: React.FC<InstrumentPanelProps> = ({ data, config, units, 
           position={data.position} 
           gpsTime={data.gpsTime} 
           accuracy={data.gpsAccuracy}
-          size={gpsSize}
         />;
       case 'map':
         return <MapView data={data} size={{ width: '100%', height: '100%' }} />;

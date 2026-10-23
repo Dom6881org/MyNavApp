@@ -696,6 +696,21 @@ html {
   color: var(--accent-color);
 }
 
+.backend-status {
+  flex: 0 0 auto;
+  color: var(--text-secondary);
+  font-size: 0.68rem;
+  white-space: nowrap;
+}
+
+.backend-status.connected {
+  color: var(--accent-color);
+}
+
+.backend-status.disconnected {
+  color: var(--warning-color);
+}
+
 /* Modal overlay for settings */
 .modal-overlay {
   position: fixed;
@@ -916,48 +931,94 @@ html {
 }
 
 .instrument-panel-gps .instrument {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  grid-template-rows: auto auto 1fr;
-  align-content: center;
-  gap: 0.6rem 1rem;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  justify-content: center;
+  gap: 0.65rem;
+  padding: 0.3rem 0.65rem;
 }
 
-.instrument-panel-gps .gps-coordinate-list,
-.instrument-panel-gps .gps-time-list {
+.instrument-panel-gps .gps-coordinate-list {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: clamp(1rem, 4vw, 2.5rem);
   min-width: 0;
-  flex-wrap: wrap;
-  align-content: center;
-  gap: 0.5rem 1rem !important;
   margin: 0 !important;
 }
 
-.instrument-panel-gps .gps-coordinate-list > div,
-.instrument-panel-gps .gps-time-list > div {
+.instrument-panel-gps .gps-field {
+  display: flex;
   min-width: 0;
-  gap: 0.15rem;
+}
+
+.instrument-panel-gps .gps-coordinate {
+  flex-direction: column;
+  gap: 0.12rem;
+}
+
+.instrument-panel-gps .gps-meta-list,
+.instrument-panel-gps .gps-time-list {
+  display: flex;
+  align-items: center;
+  min-width: 0;
+}
+
+.instrument-panel-gps .gps-meta-list {
+  flex-wrap: wrap;
+  gap: 0.5rem 1rem;
+}
+
+.instrument-panel-gps .gps-time-list {
+  flex-wrap: wrap;
+  gap: 0.35rem 1rem;
+}
+
+.instrument-panel-gps .gps-time {
+  flex-direction: row;
+  align-items: baseline;
+  gap: 0.35rem;
+}
+
+.instrument-panel-gps .gps-signal {
+  display: flex;
+  align-items: baseline;
+  gap: 0.4rem;
+  min-width: 0;
+  margin: 0 0 0 auto !important;
 }
 
 .instrument-panel-gps .gps-field-label {
+  flex: 0 0 auto;
   color: var(--text-secondary) !important;
-  font-size: 0.68rem !important;
+  font-size: 0.65rem !important;
   letter-spacing: 0.08em;
   text-transform: uppercase;
 }
 
 .instrument-panel-gps .gps-field-value {
+  min-width: 0;
   overflow-wrap: anywhere;
   color: var(--text-primary) !important;
-  font-size: clamp(0.8rem, 1vw, 0.95rem) !important;
+  font-size: clamp(0.75rem, 1vw, 0.9rem) !important;
   font-variant-numeric: tabular-nums;
 }
 
-.instrument-panel-gps .gps-signal {
-  grid-column: 1 / -1;
-  align-self: end;
-  min-width: 0;
-  margin: 0 !important;
-  padding-top: 0.5rem !important;
+.instrument-panel-gps .gps-signal .gps-field-value {
+  white-space: nowrap;
+}
+
+@media (max-width: 600px) {
+  .instrument-panel-gps .gps-meta-list {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 0.4rem;
+  }
+
+  .instrument-panel-gps .gps-signal {
+    margin-left: 0 !important;
+  }
 }
 
 @media (max-width: 900px) {
@@ -1001,7 +1062,7 @@ html {
 
   .instrument-panel-gps .gps-coordinate-list,
   .instrument-panel-gps .gps-time-list {
-    gap: 0.35rem !important;
+    gap: 0.35rem 0.65rem;
   }
 }
 
@@ -1225,101 +1286,107 @@ html {
   min-height: 0;
   flex-direction: column;
   align-items: center;
-  justify-content: flex-start;
+  justify-content: space-between;
   overflow: hidden;
 }
 
 .speed-gauge {
-  position: absolute;
-  top: -2px;
-  left: 50%;
-  width: min(86%, 210px);
-  height: 106px;
+  display: block;
+  flex: 1 1 auto;
+  width: 100%;
+  min-height: 0;
+  max-height: 145px;
   overflow: visible;
-  transform: translateX(-50%);
-}
-
-.speed-gauge-track,
-.speed-gauge-value {
-  fill: none;
-  stroke-width: 6;
-  stroke-linecap: round;
 }
 
 .speed-gauge-track {
-  stroke: rgba(128, 170, 188, 0.16);
+  fill: none;
+  stroke: rgba(128, 170, 188, 0.24);
+  stroke-width: 2.5;
+  stroke-linecap: round;
 }
 
-.speed-gauge-value {
-  stroke: #36c7d0;
-  filter: drop-shadow(0 0 5px rgba(54, 199, 208, 0.42));
-  transition: stroke-dasharray 350ms ease;
+.speed-gauge-tick {
+  stroke: rgba(128, 170, 188, 0.45);
+  stroke-width: 1;
+}
+
+.speed-gauge-tick-major {
+  stroke: #91aab6;
+  stroke-width: 1.8;
 }
 
 .speed-gauge-mark {
-  fill: #7793a3;
-  font-size: 8px;
+  fill: #9ab0bb;
+  font-size: 7px;
+  font-weight: 600;
   text-anchor: middle;
 }
 
-.speed-primary-reading {
-  position: relative;
-  z-index: 1;
+.speed-needle {
+  stroke-linecap: round;
+  filter: drop-shadow(0 0 3px rgba(0, 0, 0, 0.45));
+  transition: transform 350ms ease;
+}
+
+.speed-needle-stw {
+  stroke: #ffb454;
+  stroke-width: 3.5;
+}
+
+.speed-needle-sog {
+  stroke: #36c7d0;
+  stroke-width: 2.3;
+}
+
+.speed-gauge-hub {
+  fill: #d8e6eb;
+  stroke: #183847;
+  stroke-width: 2;
+}
+
+.speed-readouts {
   display: flex;
   width: 100%;
+  flex: 0 0 auto;
   justify-content: center;
-  align-items: baseline;
-  gap: 0.35rem;
-  margin-top: 1.45rem;
-  color: #f3fbfd;
-  text-align: center;
+  gap: 1.1rem;
+  padding: 0 0.25rem 0.1rem;
+}
+
+.speed-reading {
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+  min-width: 0;
   font-variant-numeric: tabular-nums;
 }
 
-.speed-primary-reading strong {
-  font-size: clamp(1.9rem, 2.2vw, 2.35rem);
-  font-weight: 600;
-  letter-spacing: -0.06em;
-  line-height: 1;
-}
-
-.speed-primary-reading > span {
-  color: #8baab8;
-  font-size: 0.78rem;
-}
-
-.speed-secondary-reading {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 0.45rem;
-  width: 100%;
-  margin-top: auto;
-  padding-top: 0.45rem;
-  color: #829eac;
+.speed-reading > span {
   font-size: 0.62rem;
-  letter-spacing: 0.08em;
+  font-weight: 700;
+  letter-spacing: 0.06em;
 }
 
-.speed-secondary-reading strong {
-  color: #dbeaf0;
-  font-size: 0.78rem;
+.speed-reading-stw > span {
+  color: #ffb454;
+}
+
+.speed-reading-sog > span {
+  color: #36c7d0;
+}
+
+.speed-reading strong {
+  color: #e8f3f6;
+  font-size: 0.76rem;
   font-weight: 600;
-  letter-spacing: 0;
   white-space: nowrap;
 }
 
-.speed-secondary-reading small {
-  color: #91a9b4;
+.speed-reading small {
+  color: #9ab0bb;
   font-size: 0.62rem;
   font-weight: 400;
-}
-
-.speed-reading-divider {
-  width: 1px;
-  height: 17px;
-  margin: 0 0.15rem;
-  background: rgba(145, 169, 180, 0.24);
 }
 
 .main-layout-instruments-top .course-instrument {
@@ -1535,13 +1602,12 @@ html {
 }
 
 .main-layout-instruments-top .instrument-panel-gps .instrument {
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  grid-template-rows: auto auto 1fr;
+  gap: 0.55rem;
 }
 
 .main-layout-instruments-top .instrument-panel-gps .gps-coordinate-list,
 .main-layout-instruments-top .instrument-panel-gps .gps-time-list {
-  gap: 0.3rem 0.65rem !important;
+  gap: 0.35rem 0.8rem;
 }
 
 .main-layout-instruments-top .instrument-panel-gps .gps-field-label {
@@ -1556,7 +1622,7 @@ html {
 }
 
 .main-layout-instruments-top .instrument-panel-gps .gps-signal {
-  padding-top: 0.28rem !important;
+  padding-top: 0;
 }
 
 .theme-light .main-layout-instruments-top .instruments-sidebar {
@@ -1570,17 +1636,14 @@ html {
 }
 
 .theme-light .main-layout-instruments-top .instrument-card-header .instrument-title,
-.theme-light .speed-primary-reading,
-.theme-light .speed-secondary-reading strong,
+.theme-light .speed-reading strong,
 .theme-light .course-secondary-readings strong,
 .theme-light .wind-readings strong,
 .theme-light .main-layout-instruments-top .instrument-panel-gps .gps-field-value {
   color: #183847 !important;
 }
 
-.theme-light .speed-primary-reading > span,
-.theme-light .speed-secondary-reading,
-.theme-light .speed-secondary-reading small,
+.theme-light .speed-reading small,
 .theme-light .course-secondary-readings span,
 .theme-light .wind-readings > div > span,
 .theme-light .main-layout-instruments-top .instrument-panel-gps .gps-field-label {
@@ -1690,13 +1753,8 @@ html {
     display: none;
   }
 
-  .speed-primary-reading strong {
-    font-size: 1.8rem;
-  }
-
-  .speed-gauge {
-    width: min(86%, 190px);
-    height: 98px;
+  .speed-readouts {
+    gap: 0.5rem;
   }
 
   .compass-dial {

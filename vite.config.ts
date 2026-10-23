@@ -28,7 +28,7 @@ const gpxReplayMiddleware = () => ({
         response.setHeader('Cache-Control', 'no-store')
         response.end(fixture)
       } catch (error) {
-        if ((error as NodeJS.ErrnoException).code === 'ENOENT') {
+        if (typeof error === 'object' && error !== null && 'code' in error && error.code === 'ENOENT') {
           response.statusCode = 404
           response.end('Local GPX replay fixture not found')
           return
@@ -42,4 +42,10 @@ const gpxReplayMiddleware = () => ({
 // https://vitejs.dev/config/
 export default defineConfig({
   plugins: [react(), gpxReplayMiddleware()],
+  server: {
+    host: process.env.VITE_HOST ?? '127.0.0.1',
+    proxy: {
+      '/api': `http://127.0.0.1:${process.env.PORT ?? '3001'}`
+    }
+  }
 })

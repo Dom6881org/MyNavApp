@@ -2,12 +2,22 @@
 
 A personal dashboard for viewing your vessel's navigation instruments.
 
+The frontend requires Node.js 20.6 or later. The Python backend requires Python 3.10 or later and uses only the standard library.
+
 ## Features
 
 - **GPS**: Position, fix time, accuracy, SOG and COG when provided or calculated from browser GPS data
 - **Marine chart**: A chart-first layout with speed, wind and course instruments beside the map on wide screens and above it on mobile, plus depth and GPS below the chart. Depth and GPS can be hidden independently in Settings. Includes OpenStreetMap base tiles, OpenSeaMap navigation marks, a past-position trail, and north-up, heading-up or course-up map orientation
 - **Wind**: The instrument shows apparent wind speed (AWS) and angle (AWA), at 0 until an anemometer is connected. Hover over map wind barbs for Open-Meteo forecast speed, direction and gusts at that location. The local forecast updates every 15 minutes; map forecasts update after movement/zoom, at most once per minute. Nearby points may show the same forecast because weather models have limited resolution
 - **Depth**: Shown as unavailable until a compatible depth sounder is connected
+
+## Local backend
+
+The React app runs as a Vite frontend and talks to a separate Python service. The service accepts browser GPS updates over HTTP, receives NMEA 0183 sentences over UDP (default port `10111`), and publishes merged navigation data over Server-Sent Events. RMC, GGA, VTG, HDT, HDG, DPT, DBT and relative MWV sentences are currently parsed. NMEA data takes precedence while fresh; browser GPS is the fallback.
+
+`npm run dev` starts both processes (install Python 3.10+ and Node.js 20.6+ first). The API is proxied through Vite at `/api`; `npm run build` type-checks and builds the frontend, and `npm start` serves the built frontend and API from one origin. Run the backend tests with `npm run test:server`. Configure `NMEA_UDP_PORT=0` to disable the UDP listener, or set `NMEA_UDP_PORT`, `NMEA_UDP_HOST`, `PORT`, and `HOST` for the boat's network. The HTTP API binds to loopback by default. Configure the NMEA gateway to send UDP sentences to the selected port. To test from another LAN device, set both `HOST=0.0.0.0` and `VITE_HOST=0.0.0.0` as appropriate.
+
+The LAN mode is an early development feature: the API and Vite server do not yet provide authentication or HTTPS. Use loopback by default, and expose it only on a trusted, firewalled boat network. Browser geolocation on other devices may also require HTTPS; NMEA-fed positions are available without client geolocation.
 
 ### Navigation abbreviations
 
@@ -52,6 +62,7 @@ Map rotation is provided at runtime by [`@tomickigrzegorz/leaflet-rotate`](https
 
 ```
 my-nav-app/
+├── server/                 # Python HTTP/SSE and NMEA UDP backend
 ├── src/
 │   ├── components/         # React components
 │   ├── hooks/              # Custom React hooks
