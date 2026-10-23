@@ -82,6 +82,32 @@ export interface BackendNavigationSnapshot {
   nmeaConnected: boolean;
   updatedAt: number | null;
   navigation: Pick<NavigationData, 'position' | 'speed' | 'compass' | 'depth' | 'gpsTime' | 'gpsAccuracy' | 'apparentWind'>;
+  ais: AISBackendState;
+}
+
+export type AISSource = 'local' | 'internet';
+
+export interface AISTarget {
+  mmsi: string;
+  name: string | null;
+  latitude: number;
+  longitude: number;
+  sog: number | null;
+  cog: number | null;
+  heading: number | null;
+  navigationalStatus: number | null;
+  updatedAt: number;
+}
+
+export interface AISBackendState {
+  source: AISSource;
+  localNmeaPort: number | null;
+  targets: AISTarget[];
+  localTargetCount: number;
+  internetTargetCount: number;
+  internetConfigured: boolean;
+  internetConnected: boolean;
+  internetError: string | null;
 }
 
 export type InstrumentType = 'speed' | 'wind' | 'compass' | 'depth' | 'gps' | 'map' | 'all';

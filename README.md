@@ -2,7 +2,7 @@
 
 A personal dashboard for viewing your vessel's navigation instruments.
 
-The frontend requires Node.js 20.6 or later. The Python backend requires Python 3.10 or later and uses only the standard library.
+The frontend requires Node.js 20.6 or later. The Python backend requires Python 3.10 or later.
 
 ## Features
 
@@ -15,9 +15,17 @@ The frontend requires Node.js 20.6 or later. The Python backend requires Python 
 
 The React app runs as a Vite frontend and talks to a separate Python service. The service accepts browser GPS updates over HTTP, receives NMEA 0183 sentences over UDP (default port `10111`), and publishes merged navigation data over Server-Sent Events. RMC, GGA, VTG, HDT, HDG, DPT, DBT and relative MWV sentences are currently parsed. NMEA data takes precedence while fresh; browser GPS is the fallback.
 
-`npm run dev` starts both processes (install Python 3.10+ and Node.js 20.6+ first). The API is proxied through Vite at `/api`; `npm run build` type-checks and builds the frontend, and `npm start` serves the built frontend and API from one origin. Run the backend tests with `npm run test:server`. Configure `NMEA_UDP_PORT=0` to disable the UDP listener, or set `NMEA_UDP_PORT`, `NMEA_UDP_HOST`, `PORT`, and `HOST` for the boat's network. The HTTP API binds to loopback by default. Configure the NMEA gateway to send UDP sentences to the selected port. To test from another LAN device, set both `HOST=0.0.0.0` and `VITE_HOST=0.0.0.0` as appropriate.
+`npm run dev` starts both processes (install Python 3.10+ and Node.js 20.6+ first). The API is proxied through Vite at `/api`; `npm run build` type-checks and builds the frontend, and `npm start` serves the built frontend and API from one origin. Run the backend tests with `npm run test:server`. Backend settings can be provided as environment variables or in the ignored root `.env` file; process environment variables take precedence. Configure `NMEA_UDP_PORT=0` to disable the UDP listener, or set `NMEA_UDP_PORT`, `NMEA_UDP_HOST`, `PORT`, and `HOST` for the boat's network. The HTTP API binds to loopback by default. Configure the NMEA gateway to send UDP sentences to the selected port. To test from another LAN device, set both `HOST=0.0.0.0` and `VITE_HOST=0.0.0.0` as appropriate.
 
 The LAN mode is an early development feature: the API and Vite server do not yet provide authentication or HTTPS. Use loopback by default, and expose it only on a trusted, firewalled boat network. Browser geolocation on other devices may also require HTTPS; NMEA-fed positions are available without client geolocation.
+
+### AIS targets
+
+Install the Python backend dependencies with `python -m pip install -r requirements.txt`. To configure Internet AIS, copy `.env.example` to `.env`, replace the placeholder with your AISstream key, and restart the app with `npm run dev`. The `.env` file is local and ignored by Git; do not share it or commit it. Configure the VHF/AIS receiver or NMEA gateway to send NMEA 0183 UDP to `NMEA_UDP_HOST:NMEA_UDP_PORT` (default `0.0.0.0:10111`). Use the AIS controls at the bottom-right of the chart to select **Local VHF · NMEA/UDP** or **Internet · AISstream**, and toggle **Show AIS targets**. The chart reports the selected source's connection status; when targets are available, **Zoom to targets** fits them on the chart. Local AIS target reports are kept for up to 10 minutes.
+
+Internet AIS uses AISstream.io and requires an API key configured only on the server as `AISSTREAM_API_KEY`; never put the key in frontend settings or commit it. AISstream is subscribed to a small area around the latest vessel GPS position (about 15 nautical miles in each direction, adjusted for longitude). During GPX replay, the replay position is used for the subscription area; when replay stops, AISstream returns to the live GPS/NMEA position. Internet AIS availability depends on AISstream coverage and service limits.
+
+AIS positions may be delayed or unavailable and are for situational awareness only; they are not a substitute for a certified AIS receiver, official chart, or collision-avoidance equipment.
 
 ### Navigation abbreviations
 
@@ -35,6 +43,7 @@ cd MyNavApp
 
 # Install dependencies
 npm install
+python -m pip install -r requirements.txt
 
 # Start the development server
 npm run dev

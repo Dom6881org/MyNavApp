@@ -1,9 +1,9 @@
-import { useCallback, useEffect } from 'react';
+import { useCallback, useEffect, useRef } from 'react';
 import { useRealGPS } from './useRealGPS';
 import { useGpxReplay } from './useGpxReplay';
 import { useWindForecast } from './useWindForecast';
 import { useNavigationBackend } from './useNavigationBackend';
-import { NavigationData } from '../types';
+import { NavigationData, Position } from '../types';
 
 export const useNavigationData = () => {
   const { gpsData, isEnabled: isGPSEnabled, enableGPS, disableGPS, hasGPS } = useRealGPS();
@@ -14,7 +14,9 @@ export const useNavigationData = () => {
 
   const replay = useGpxReplay();
   const activeSample = replay.currentSample;
-  const { snapshot: backendSnapshot, status: backendStatus, postBrowserNavigation } = useNavigationBackend();
+  const { snapshot: backendSnapshot, status: backendStatus, postBrowserNavigation, postAISReplayPosition } = useNavigationBackend();
+  const replayPositionRef = useRef<Position | null>(null);
+  replayPositionRef.current = replay.isActive ? activeSample?.position ?? null : null;
   const nmeaNavigation = backendSnapshot?.nmeaConnected ? backendSnapshot.navigation : null;
 
   useEffect(() => {
@@ -28,6 +30,22 @@ export const useNavigationData = () => {
       receivedAt: gpsData.status.lastUpdate
     });
   }, [gpsData, postBrowserNavigation, replay.isActive]);
+
+  useEffect(() => {
+    if (!replay.isActive) return;
+
+    const sendReplayPosition = () => {
+      const position = replayPositionRef.current;
+      if (position) void postAISReplayPosition(position);
+    };
+    sendReplayPosition();
+    const interval = window.setInterval(sendReplayPosition, 1000);
+
+    return () => {
+      window.clearInterval(interval);
+      void postAISReplayPosition(null);
+    };
+  }, [replay.isActive, postAISReplayPosition]);
 
   const backendNavigation = backendSnapshot?.source !== 'none' ? backendSnapshot?.navigation : null;
   const livePosition = nmeaNavigation?.position ?? backendNavigation?.position ?? gpsData.position;
@@ -74,6 +92,7 @@ export const useNavigationData = () => {
     isGPSEnabled: replay.isActive || isGPSEnabled,
     navigationSource: replay.isActive ? 'replay' : nmeaNavigation ? 'nmea' : gpsData.status.isConnected ? 'browser' : 'none',
     backendStatus,
+    aisState: backendSnapshot?.ais ?? null,
     gpsStatus: replay.isActive && activeSample
       ? { isConnected: true, error: null, accuracy: activeSample.accuracy, lastUpdate: Date.now() }
       : gpsData.status,

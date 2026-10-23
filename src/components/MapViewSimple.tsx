@@ -1,5 +1,5 @@
-import React, { useEffect, useRef, useState } from 'react';
-import { NavigationData, Position } from '../types';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { AISBackendState, AISSource, AISTarget, NavigationData, Position } from '../types';
 
 // Extend Window interface for Leaflet
 declare global {
@@ -14,6 +14,12 @@ interface MapViewSimpleProps {
   replayTrack?: Position[];
   replayTrackIndex?: number;
   onWindGridRequest?: (points: Position[]) => void;
+  aisTargets?: AISTarget[];
+  aisState?: AISBackendState | null;
+  showAIS?: boolean;
+  aisSource?: AISSource;
+  onAISSourceChange?: (source: AISSource) => void;
+  onAISVisibilityChange?: (visible: boolean) => void;
   size?: { width: number | string; height: number | string };
 }
 
@@ -28,6 +34,12 @@ const MapViewSimple: React.FC<MapViewSimpleProps> = ({
   replayTrack = [],
   replayTrackIndex = -1,
   onWindGridRequest,
+  aisTargets = [],
+  aisState = null,
+  showAIS = false,
+  aisSource = 'local',
+  onAISSourceChange,
+  onAISVisibilityChange,
   size
 }) => {
   const mapRef = useRef<HTMLDivElement>(null);
@@ -38,6 +50,12 @@ const MapViewSimple: React.FC<MapViewSimpleProps> = ({
   const [rotationUnavailable, setRotationUnavailable] = useState<boolean>(false);
   const [leafletError, setLeafletError] = useState<boolean>(false);
   const [mapOrientation, setMapOrientation] = useState<MapOrientation>('north');
+  const aisMarkersRef = useRef<Map<string, any>>(new Map());
+  const visibleAISTargets = useMemo(() => aisTargets.filter(target =>
+    Number.isFinite(target.latitude) && Number.isFinite(target.longitude) &&
+    target.latitude >= -90 && target.latitude <= 90 &&
+    target.longitude >= -180 && target.longitude <= 180
+  ), [aisTargets]);
   
   // Load Leaflet library
   useEffect(() => {
@@ -285,6 +303,7 @@ const MapViewSimple: React.FC<MapViewSimpleProps> = ({
   useEffect(() => () => {
     mapInstanceRef.current?.map.remove();
     mapInstanceRef.current = null;
+    aisMarkersRef.current.clear();
   }, []);
 
   // Update vectors when data changes
@@ -329,6 +348,59 @@ const MapViewSimple: React.FC<MapViewSimpleProps> = ({
       mapInstance.marker.setTooltipContent(getVesselTooltip(data));
     }
   }, [mapInstance, leafletLoaded, leafletError, data]);
+
+  useEffect(() => {
+    if (!mapInstance || !leafletLoaded || leafletError || !window.L) return;
+    const L = window.L;
+    const map = mapInstance.map;
+    if (!mapInstance.aisLayer) mapInstance.aisLayer = L.layerGroup().addTo(map);
+
+    const visibleTargets = showAIS ? visibleAISTargets : [];
+    const visibleMmsi = new Set(visibleTargets.map(target => target.mmsi));
+
+    for (const [mmsi, marker] of aisMarkersRef.current) {
+      if (!visibleMmsi.has(mmsi)) {
+        mapInstance.aisLayer.removeLayer(marker);
+        aisMarkersRef.current.delete(mmsi);
+      }
+    }
+
+    for (const target of visibleTargets) {
+      const position: [number, number] = [target.latitude, target.longitude];
+      const marker = aisMarkersRef.current.get(target.mmsi);
+      if (marker) {
+        const previous = marker.aisTarget as AISTarget;
+        if (previous.latitude !== target.latitude || previous.longitude !== target.longitude) {
+          marker.setLatLng(position);
+        }
+        if (previous.cog !== target.cog || previous.heading !== target.heading) {
+          marker.setIcon(createAisIcon(L, target));
+        }
+        if (previous.name !== target.name || previous.sog !== target.sog || previous.updatedAt !== target.updatedAt) {
+          marker.setTooltipContent(getAISTargetTooltip(target, aisSource));
+          marker.setPopupContent(getAISTargetPopup(target, aisSource));
+          marker.options.title = `${target.name ?? 'AIS target'} · MMSI ${target.mmsi}`;
+        }
+        marker.aisTarget = target;
+      } else {
+        const newMarker = L.marker(position, {
+          icon: createAisIcon(L, target),
+          title: `${target.name ?? 'AIS target'} · MMSI ${target.mmsi}`,
+          zIndexOffset: 600,
+          rotateWithView: true
+        });
+        newMarker.bindTooltip(getAISTargetTooltip(target, aisSource), {
+          direction: 'top',
+          sticky: true,
+          opacity: 0.95
+        });
+        newMarker.bindPopup(getAISTargetPopup(target, aisSource));
+        newMarker.aisTarget = target;
+        newMarker.addTo(mapInstance.aisLayer);
+        aisMarkersRef.current.set(target.mmsi, newMarker);
+      }
+    }
+  }, [mapInstance, leafletLoaded, leafletError, visibleAISTargets, showAIS, aisSource]);
 
   useEffect(() => {
     if (!mapInstance || !leafletLoaded || leafletError || !onWindGridRequest) return;
@@ -482,6 +554,58 @@ const MapViewSimple: React.FC<MapViewSimpleProps> = ({
             ))}
           </div>
         )}
+        <section className="ais-map-controls" aria-label="AIS controls" onMouseDown={event => event.stopPropagation()}>
+          <label className="ais-map-source">
+            <span>AIS source</span>
+            <select
+              value={aisSource}
+              onChange={event => onAISSourceChange?.(event.target.value as AISSource)}
+            >
+              <option value="local">Local VHF · NMEA/UDP</option>
+              <option value="internet">Internet · AISstream</option>
+            </select>
+          </label>
+          <label className="ais-map-visibility">
+            <input
+              type="checkbox"
+              checked={showAIS}
+              onChange={event => onAISVisibilityChange?.(event.target.checked)}
+            />
+            <span>Show AIS targets</span>
+          </label>
+          <div className="ais-map-target-count" aria-live="polite">
+            <span>AIS targets detected</span>
+            <strong>{getAISDetectedTargetCount(aisSource, aisState)}</strong>
+          </div>
+          <div className="ais-map-status" role="status">
+            {getAISStatusMessage(aisSource, aisState)}
+          </div>
+          {aisSource === 'internet' && (
+            <div className="ais-map-coverage">
+              AISstream area: about 15 NM around the latest GPS position
+            </div>
+          )}
+          {visibleAISTargets.length > 0 && (
+            <button
+              className="ais-map-zoom"
+              type="button"
+              disabled={!showAIS || !mapInstance}
+              onClick={event => {
+                event.stopPropagation();
+                if (!mapInstance || !window.L || !showAIS) return;
+                const points: [number, number][] = visibleAISTargets.map(target => [target.latitude, target.longitude]);
+                if (data.position) points.push([data.position.latitude, data.position.longitude]);
+                mapInstance.map.fitBounds(window.L.latLngBounds(points), {
+                  padding: [48, 48],
+                  maxZoom: 13
+                });
+              }}
+              onMouseDown={event => event.stopPropagation()}
+            >
+              Zoom to {visibleAISTargets.length === 1 ? 'target' : 'targets'} ({visibleAISTargets.length})
+            </button>
+          )}
+        </section>
         <div className="wind-map-readout" aria-live="polite">
           <strong>LOCAL WIND FORECAST</strong>
           {data.wind ? (
@@ -621,6 +745,61 @@ const createBoatIcon = (leaflet: any, heading: number) => leaflet.divIcon({
   iconSize: [36, 36],
   iconAnchor: [18, 18]
 });
+
+const createAisIcon = (leaflet: any, target: AISTarget) => {
+  const heading = target.heading ?? target.cog ?? 0;
+  return leaflet.divIcon({
+    className: 'ais-vessel-marker',
+    html: `<svg class="ais-vessel-marker-icon" viewBox="0 0 32 32" aria-hidden="true" style="transform:rotate(${heading}deg)"><path d="M16 2 L26 25 L16 21 L6 25 Z" fill="#ffd166" stroke="#10202a" stroke-width="2"/><path d="M16 7 L16 21" stroke="#fff4cf" stroke-width="1.5"/></svg>`,
+    iconSize: [28, 28],
+    iconAnchor: [14, 14]
+  });
+};
+
+const escapeHtml = (value: string): string => value.replace(/[&<>"']/g, character => ({
+  '&': '&amp;',
+  '<': '&lt;',
+  '>': '&gt;',
+  '"': '&quot;',
+  "'": '&#39;'
+})[character] ?? character);
+
+const getAISTargetTooltip = (target: AISTarget, source: AISSource): string => {
+  const name = escapeHtml(target.name ?? 'Unknown vessel');
+  const speed = target.sog === null ? '—' : `${target.sog.toFixed(1)} kn`;
+  return `<strong>${name}</strong><br>MMSI ${escapeHtml(target.mmsi)}<br>SOG ${speed}<br>${source === 'local' ? 'Local VHF AIS' : 'Internet AIS · AISstream'}`;
+};
+
+const getAISTargetPopup = (target: AISTarget, source: AISSource): string => {
+  const name = escapeHtml(target.name ?? 'Unknown vessel');
+  const course = target.cog === null ? '—' : `${target.cog.toFixed(0)}°`;
+  const heading = target.heading === null ? '—' : `${target.heading.toFixed(0)}°`;
+  const updated = new Date(target.updatedAt).toLocaleTimeString('en-GB');
+  return `<strong>${name}</strong><br>MMSI ${escapeHtml(target.mmsi)}<br>SOG: ${target.sog === null ? '—' : `${target.sog.toFixed(1)} kn}`}<br>COG: ${course} · HDG: ${heading}<br>Source: ${source === 'local' ? 'Local VHF AIS' : 'Internet AIS · AISstream'}<br>Last report: ${updated}<br><small>AIS positions may be delayed; not for collision avoidance.</small>`;
+};
+
+const getAISStatusMessage = (source: AISSource, state: AISBackendState | null): string => {
+  if (!state) return 'Waiting for local navigation backend.';
+  if (source === 'local') {
+    if (state.localTargetCount > 0) {
+      return `${state.localTargetCount} local target${state.localTargetCount === 1 ? '' : 's'} received.`;
+    }
+    return state.localNmeaPort === null
+      ? 'Local AIS listener is disabled (NMEA_UDP_PORT=0).'
+      : `Waiting for VHF AIS data on UDP port ${state.localNmeaPort}.`;
+  }
+  if (!state.internetConfigured) return 'Set AISSTREAM_API_KEY on the server to enable Internet AIS.';
+  if (state.internetError) return state.internetError;
+  if (!state.internetConnected) return 'Connecting to AISstream…';
+  return state.internetTargetCount > 0
+    ? `${state.internetTargetCount} Internet target${state.internetTargetCount === 1 ? '' : 's'} received.`
+    : 'Connected to AISstream; no targets reported in this area yet.';
+};
+
+const getAISDetectedTargetCount = (source: AISSource, state: AISBackendState | null): number => {
+  if (!state || state.source !== source) return 0;
+  return source === 'local' ? state.localTargetCount : state.internetTargetCount;
+};
 
 const getWindBarbSvg = (speedKnots: number, includeOutline = true): string => {
   const roundedSpeed = Math.round(speedKnots / 5) * 5;

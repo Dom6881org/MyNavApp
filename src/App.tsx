@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { useNavigationData, useDashboardLayout } from './hooks';
+import { useAISSettings, useNavigationData, useDashboardLayout } from './hooks';
 import { InstrumentPanel } from './components';
 import SettingsPage from './components/SettingsPage';
 import MapView from './components/MapView';
@@ -13,6 +13,7 @@ const App: React.FC = () => {
     gpsStatus,
     navigationSource,
     backendStatus,
+    aisState,
     hasGPS,
     toggleGPSConnection,
     gpxReplay
@@ -26,6 +27,7 @@ const App: React.FC = () => {
   } = useDashboardLayout();
 
   const [showSettings, setShowSettings] = useState<boolean>(false);
+  const aisSettings = useAISSettings(backendStatus.isConnected, aisState);
 
   // Apply the selected theme to the document.
   React.useEffect(() => {
@@ -143,6 +145,12 @@ const App: React.FC = () => {
               replayTrack={gpxReplay.trackPositions}
               replayTrackIndex={gpxReplay.trackIndex}
               onWindGridRequest={requestWindGrid}
+              aisTargets={aisState?.source === aisSettings.source ? aisState.targets : []}
+              aisState={aisState}
+              showAIS={aisSettings.isVisible}
+              aisSource={aisSettings.source}
+              onAISSourceChange={aisSettings.setSource}
+              onAISVisibilityChange={aisSettings.setIsVisible}
               size={{ width: '100%', height: '100%' }}
             />
           </div>

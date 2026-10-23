@@ -69,6 +69,113 @@
   pointer-events: none;
 }
 
+.ais-map-controls {
+  position: absolute;
+  z-index: 750;
+  right: 0.75rem;
+  bottom: 0.75rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+  width: min(15rem, calc(100% - 1.5rem));
+  padding: 0.65rem;
+  border: 1px solid rgba(175, 210, 221, 0.32);
+  border-radius: 8px;
+  background: rgba(10, 24, 35, 0.88);
+  box-shadow: 0 3px 12px rgba(0, 0, 0, 0.28);
+  color: #f4f8fb;
+  font-size: 0.75rem;
+}
+
+.ais-map-source {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  color: #c4d8df;
+  font-size: 0.7rem;
+  font-weight: 650;
+}
+
+.ais-map-source select {
+  width: 100%;
+  min-height: 2rem;
+  padding: 0.25rem 0.4rem;
+  border: 1px solid rgba(175, 210, 221, 0.38);
+  border-radius: 5px;
+  background: #102532;
+  color: #f4f8fb;
+  font: inherit;
+}
+
+.ais-map-visibility {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  cursor: pointer;
+}
+
+.ais-map-visibility input {
+  accent-color: #1f9caa;
+}
+
+.ais-map-status,
+.ais-map-coverage {
+  color: #c4d8df;
+  font-size: 0.68rem;
+  line-height: 1.35;
+}
+
+.ais-map-target-count {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  color: #c4d8df;
+  font-size: 0.7rem;
+}
+
+.ais-map-target-count strong {
+  color: #ffd166;
+  font-size: 1rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.ais-map-zoom {
+  align-self: flex-start;
+  padding: 0.3rem 0.5rem;
+  border: 1px solid rgba(255, 209, 102, 0.65);
+  border-radius: 5px;
+  background: rgba(255, 209, 102, 0.12);
+  color: #ffe3a1;
+  cursor: pointer;
+  font: inherit;
+  font-size: 0.68rem;
+  font-weight: 650;
+}
+
+.ais-map-zoom:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
+.ais-map-source select:focus-visible,
+.ais-map-visibility input:focus-visible,
+.ais-map-zoom:focus-visible {
+  outline: 2px solid #74e3e5;
+  outline-offset: 2px;
+}
+
+.ais-vessel-marker {
+  background: transparent;
+  border: 0;
+}
+
+.ais-vessel-marker-icon {
+  width: 28px;
+  height: 28px;
+  filter: drop-shadow(0 1px 3px rgba(0, 0, 0, 0.9));
+}
+
 .wind-map-readout strong {
   color: #59d9ff;
   font-size: 0.68rem;
@@ -1247,6 +1354,22 @@ html {
   color: #ffc46b;
   font-size: 0.62rem;
   white-space: nowrap;
+}
+
+@media (max-width: 600px) {
+  .map-orientation-control {
+    right: 0.5rem;
+    left: auto;
+    flex-direction: column;
+    max-width: 5rem;
+    overflow: visible;
+    transform: none;
+  }
+
+  .map-orientation-control button {
+    padding: 0.3rem 0.25rem;
+    font-size: 0.58rem;
+  }
 }
 
 .main-layout-instruments-top .map-view > .instrument-header {

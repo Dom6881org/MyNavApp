@@ -12,18 +12,33 @@ from pathlib import Path
 from urllib.parse import unquote, urlsplit
 from typing import Any
 
+from dotenv import load_dotenv
+
+from server.ais import LocalAISDecoder, parse_internet_message
 from server.nmea import parse_nmea_sentence
+from websockets.sync.client import connect as connect_websocket
 
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
+
+
+def _load_local_environment(project_root: Path) -> None:
+    load_dotenv(project_root / ".env", override=False)
+
+
+_load_local_environment(PROJECT_ROOT)
 WEB_ROOT = PROJECT_ROOT / "dist"
 HOST = os.environ.get("HOST", "127.0.0.1")
 PORT = int(os.environ.get("PORT", "3001"))
 NMEA_PORT = int(os.environ.get("NMEA_UDP_PORT", "10111"))
 NMEA_HOST = os.environ.get("NMEA_UDP_HOST", "0.0.0.0")
+AISSTREAM_API_KEY = os.environ.get("AISSTREAM_API_KEY", "").strip()
 IS_PRODUCTION = os.environ.get("NODE_ENV") == "production"
 NMEA_FRESHNESS_MS = 5000
 BROWSER_FRESHNESS_MS = 10_000
+AIS_FRESHNESS_MS = 10 * 60_000
+AIS_TARGET_LIMIT = 1500
+AIS_REPLAY_POSITION_FRESHNESS_MS = 5_000
 
 EMPTY_FIELDS = {
     "position": None,
@@ -42,6 +57,13 @@ nmea_listening = False
 event_clients: set[queue.Queue[str]] = set()
 last_broadcast_message = ""
 stop_event = threading.Event()
+ais_targets: dict[str, dict[str, dict[str, Any]]] = {"local": {}, "internet": {}}
+ais_source = "local"
+ais_visible = True
+ais_internet_connected = False
+ais_internet_error: str | None = None
+ais_replay_position: dict[str, Any] | None = None
+local_ais_decoder = LocalAISDecoder()
 
 
 def _merge_speed(primary: dict[str, Any] | None, fallback: dict[str, Any] | None) -> dict[str, Any] | None:
@@ -89,7 +111,208 @@ def combine_fields() -> dict[str, Any]:
         }
         source = "nmea" if nmea_connected else "browser" if browser_fresh else "none"
         updated_at = last_nmea_message_at if nmea_connected else browser_navigation["receivedAt"] if browser_fresh and browser_navigation else None
-        return {"source": source, "nmeaConnected": nmea_connected, "updatedAt": updated_at, "navigation": navigation}
+        selected_targets = [
+            target for target in ais_targets[ais_source].values()
+            if now - target["updatedAt"] <= AIS_FRESHNESS_MS
+        ]
+        selected_targets.sort(key=lambda target: target["updatedAt"], reverse=True)
+        ais = {
+            "source": ais_source,
+            "localNmeaPort": NMEA_PORT if nmea_listening else None,
+            "targets": selected_targets[:AIS_TARGET_LIMIT],
+            "localTargetCount": sum(
+                now - target["updatedAt"] <= AIS_FRESHNESS_MS for target in ais_targets["local"].values()
+            ),
+            "internetTargetCount": sum(
+                now - target["updatedAt"] <= AIS_FRESHNESS_MS for target in ais_targets["internet"].values()
+            ),
+            "internetConfigured": bool(AISSTREAM_API_KEY),
+            "internetConnected": ais_internet_connected,
+            "internetError": ais_internet_error,
+        }
+        return {
+            "source": source,
+            "nmeaConnected": nmea_connected,
+            "updatedAt": updated_at,
+            "navigation": navigation,
+            "ais": ais,
+        }
+
+
+def _upsert_ais_target(update: dict[str, Any]) -> None:
+    source = update["source"]
+    with state_lock:
+        targets = ais_targets[source]
+        existing = targets.get(update["mmsi"], {})
+        if "latitude" not in update and "latitude" not in existing:
+            return
+        target = {
+            "mmsi": update["mmsi"],
+            "name": None,
+            "latitude": existing.get("latitude"),
+            "longitude": existing.get("longitude"),
+            "sog": None,
+            "cog": None,
+            "heading": None,
+            "navigationalStatus": None,
+            **existing,
+            **update,
+        }
+        targets[update["mmsi"]] = target
+        if len(targets) > AIS_TARGET_LIMIT * 2:
+            oldest = sorted(targets, key=lambda mmsi: targets[mmsi]["updatedAt"])
+            for mmsi in oldest[:len(targets) - AIS_TARGET_LIMIT]:
+                del targets[mmsi]
+
+
+def _aisstream_subscription(position: dict[str, float]) -> dict[str, Any]:
+    latitude = position["latitude"]
+    longitude = position["longitude"]
+    lat_delta = 0.25
+    lon_delta = min(180.0, lat_delta / max(0.001, abs(math.cos(math.radians(latitude)))))
+    south = max(-90, latitude - lat_delta)
+    north = min(90, latitude + lat_delta)
+    west = longitude - lon_delta
+    east = longitude + lon_delta
+    if west < -180:
+        bounding_boxes = [
+            [[south, west + 360], [north, 180]],
+            [[south, -180], [north, east]],
+        ]
+    elif east > 180:
+        bounding_boxes = [
+            [[south, west], [north, 180]],
+            [[south, -180], [north, east - 360]],
+        ]
+    else:
+        bounding_boxes = [[[south, west], [north, east]]]
+    return {
+        "APIKey": AISSTREAM_API_KEY,
+        "BoundingBoxes": bounding_boxes,
+        "FilterMessageTypes": [
+            "PositionReport",
+            "StandardClassBPositionReport",
+            "ExtendedClassBPositionReport",
+            "LongRangeAisBroadcastMessage",
+            "ShipStaticData",
+            "StaticDataReport",
+        ],
+    }
+
+
+def _current_ais_position() -> dict[str, float] | None:
+    now = int(time.time() * 1000)
+    with state_lock:
+        replay_position = ais_replay_position
+        if (
+            replay_position
+            and now - replay_position["receivedAt"] <= AIS_REPLAY_POSITION_FRESHNESS_MS
+        ):
+            position = replay_position["position"]
+            if _is_position(position):
+                return {"latitude": position["latitude"], "longitude": position["longitude"]}
+    snapshot = combine_fields()
+    position = snapshot["navigation"]["position"]
+    if position and _is_position(position):
+        return {"latitude": position["latitude"], "longitude": position["longitude"]}
+    return None
+
+
+def _valid_ais_replay_position_update(value: Any) -> bool:
+    return (
+        isinstance(value, dict)
+        and "position" in value
+        and (value["position"] is None or _is_position(value["position"]))
+    )
+
+
+def _set_ais_connection(connected: bool, error: str | None = None) -> None:
+    global ais_internet_connected, ais_internet_error
+    with state_lock:
+        changed = connected != ais_internet_connected or error != ais_internet_error
+        ais_internet_connected = connected
+        ais_internet_error = error
+    if changed:
+        broadcast_navigation()
+
+
+def _aisstream_worker() -> None:
+    reconnect_delay = 2
+    while not stop_event.is_set():
+        with state_lock:
+            source = ais_source
+            visible = ais_visible
+        if source != "internet" or not visible:
+            _set_ais_connection(False)
+            stop_event.wait(1)
+            continue
+        if not AISSTREAM_API_KEY:
+            _set_ais_connection(False, "Set AISSTREAM_API_KEY to enable Internet AIS.")
+            stop_event.wait(3)
+            continue
+        position = _current_ais_position()
+        if position is None:
+            _set_ais_connection(False, "Waiting for a GPS position to select the AISstream coverage area.")
+            stop_event.wait(2)
+            continue
+        try:
+            with connect_websocket(
+                "wss://stream.aisstream.io/v0/stream",
+                compression="deflate",
+                open_timeout=10,
+                ping_interval=20,
+                ping_timeout=20,
+                max_size=1_048_576,
+            ) as websocket:
+                websocket.send(json.dumps(_aisstream_subscription(position), separators=(",", ":")))
+                _set_ais_connection(True)
+                reconnect_delay = 2
+                last_subscription_position = position
+                while not stop_event.is_set():
+                    with state_lock:
+                        if ais_source != "internet":
+                            break
+                    current_position = _current_ais_position()
+                    if current_position and (
+                        abs(current_position["latitude"] - last_subscription_position["latitude"]) >= 0.1
+                        or abs(current_position["longitude"] - last_subscription_position["longitude"]) >= 0.1
+                    ):
+                        websocket.send(json.dumps(_aisstream_subscription(current_position), separators=(",", ":")))
+                        last_subscription_position = current_position
+                    try:
+                        raw_message = websocket.recv(timeout=1)
+                    except TimeoutError:
+                        continue
+                    value = json.loads(raw_message)
+                    if isinstance(value, dict) and value.get("MessageType") == "SubscriptionConfirmation":
+                        if not value.get("Message", {}).get("CompressionEnabled"):
+                            raise RuntimeError("AISstream did not negotiate WebSocket compression.")
+                        continue
+                    update = parse_internet_message(value)
+                    if update:
+                        _upsert_ais_target(update)
+                        broadcast_navigation()
+        except Exception as error:
+            if stop_event.is_set():
+                break
+            message = f"AISstream connection failed ({type(error).__name__})."
+            print(message)
+            _set_ais_connection(False, message)
+            stop_event.wait(reconnect_delay)
+            reconnect_delay = min(reconnect_delay * 2, 60)
+        else:
+            _set_ais_connection(False)
+
+
+def _expire_ais_targets() -> None:
+    while not stop_event.wait(5):
+        cutoff = int(time.time() * 1000) - AIS_FRESHNESS_MS
+        with state_lock:
+            for targets in ais_targets.values():
+                expired = [mmsi for mmsi, target in targets.items() if target["updatedAt"] < cutoff]
+                for mmsi in expired:
+                    del targets[mmsi]
+        broadcast_navigation()
 
 
 def broadcast_navigation() -> None:
@@ -166,6 +389,12 @@ class NavigationHTTPServer(ThreadingHTTPServer):
 class RequestHandler(BaseHTTPRequestHandler):
     protocol_version = "HTTP/1.1"
 
+    def handle(self) -> None:
+        try:
+            super().handle()
+        except (BrokenPipeError, ConnectionAbortedError, ConnectionResetError):
+            self.close_connection = True
+
     def log_message(self, format_string: str, *args: Any) -> None:
         print(f"{self.address_string()} - {format_string % args}")
 
@@ -210,8 +439,9 @@ class RequestHandler(BaseHTTPRequestHandler):
             self._serve_static(path)
 
     def do_POST(self) -> None:
-        if urlsplit(self.path).path != "/api/navigation/browser":
-            self._send_json(404, {"error": "API route not found."} if urlsplit(self.path).path.startswith("/api/") else {"error": "Not found."})
+        path = urlsplit(self.path).path
+        if path not in ("/api/navigation/browser", "/api/ais/settings", "/api/ais/replay-position"):
+            self._send_json(404, {"error": "API route not found."} if path.startswith("/api/") else {"error": "Not found."})
             return
         try:
             length = int(self.headers.get("Content-Length", "0"))
@@ -227,6 +457,38 @@ class RequestHandler(BaseHTTPRequestHandler):
             value = json.loads(self.rfile.read(length))
         except (json.JSONDecodeError, UnicodeDecodeError):
             self._send_json(400, {"error": "Malformed JSON request body."})
+            return
+        if path == "/api/ais/replay-position":
+            if not _valid_ais_replay_position_update(value):
+                self._send_json(400, {"error": "Invalid AIS replay position."})
+                return
+            global ais_replay_position
+            with state_lock:
+                position = value["position"]
+                ais_replay_position = (
+                    {"position": position, "receivedAt": int(time.time() * 1000)}
+                    if position is not None else None
+                )
+            self._send_json(202, {"ok": True})
+            return
+        if path == "/api/ais/settings":
+            if (
+                not isinstance(value, dict)
+                or value.get("source") not in ("local", "internet")
+                or not isinstance(value.get("visible"), bool)
+            ):
+                self._send_json(400, {"error": "Invalid AIS source."})
+                return
+            global ais_source, ais_visible, ais_internet_error
+            with state_lock:
+                if value["source"] != ais_source:
+                    ais_targets["internet"].clear()
+                ais_source = value["source"]
+                ais_visible = value["visible"]
+                if ais_source == "local":
+                    ais_internet_error = None
+            broadcast_navigation()
+            self._send_json(202, combine_fields())
             return
         if not _valid_browser_update(value):
             self._send_json(400, {"error": "Invalid browser navigation payload."})
@@ -320,6 +582,10 @@ def _nmea_listener() -> None:
                     raise
                 break
             for line in message.decode("utf-8", errors="replace").splitlines():
+                ais_update = local_ais_decoder.decode_line(line.strip())
+                if ais_update:
+                    _upsert_ais_target(ais_update)
+                    broadcast_navigation()
                 update = parse_nmea_sentence(line)
                 if not update:
                     continue
@@ -357,6 +623,8 @@ def main() -> None:
 
     if NMEA_PORT:
         threading.Thread(target=_nmea_listener, name="nmea-udp", daemon=True).start()
+    threading.Thread(target=_aisstream_worker, name="aisstream", daemon=True).start()
+    threading.Thread(target=_expire_ais_targets, name="ais-expiry", daemon=True).start()
     print(f"Navigation backend listening on http://{HOST}:{PORT}")
     print(f"NMEA UDP {'listening on ' + NMEA_HOST + ':' + str(NMEA_PORT) if NMEA_PORT else 'disabled'}")
 
