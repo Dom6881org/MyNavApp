@@ -1034,23 +1034,21 @@ html {
 }
 
 .main-layout-instruments-top .instruments-container {
-  display: flex;
-  flex-direction: row;
-  flex-wrap: nowrap;
+  display: grid;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  grid-template-rows: 184px;
   gap: 0.75rem;
-  padding: 0.8rem 1rem 1rem;
-  overflow-x: auto;
+  padding: 0.65rem 1rem 0.75rem;
+  overflow: visible;
   overflow-y: hidden;
-  scrollbar-color: rgba(87, 190, 211, 0.5) transparent;
-  scrollbar-width: thin;
 }
 
 .main-layout-instruments-top .instrument-wrapper {
   position: relative;
-  flex: 1 0 190px;
-  min-width: 190px;
-  min-height: 174px;
-  max-height: 186px;
+  grid-column: span 2;
+  min-width: 0;
+  min-height: 0;
+  max-height: none;
   border: 1px solid rgba(115, 179, 199, 0.2);
   border-radius: 12px;
   background:
@@ -1065,15 +1063,30 @@ html {
   box-shadow: 0 10px 26px rgba(0, 0, 0, 0.28), 0 0 18px rgba(32, 169, 192, 0.08);
 }
 
+.main-layout-instruments-top .instrument-row-top {
+  grid-row: 1;
+}
+
+.main-layout-instruments-top .instrument-row-bottom {
+  grid-row: 1;
+}
+
+.main-layout-instruments-top .instrument-wrapper-depth {
+  grid-column: span 2;
+}
+
 .main-layout-instruments-top .instrument-wrapper-gps {
-  flex-grow: 1.4;
-  flex-basis: 260px;
-  min-width: 250px;
+  grid-column: span 4;
+}
+
+.main-layout-instruments-top .instruments-sidebar-bottom {
+  border-top: 1px solid rgba(115, 179, 199, 0.2);
+  border-bottom: 0;
 }
 
 .main-layout-instruments-top .instrument-card-header {
-  min-height: 35px;
-  padding: 0.6rem 0.8rem 0.3rem;
+  min-height: 32px;
+  padding: 0.45rem 0.8rem 0.2rem;
   border: 0;
 }
 
@@ -1091,7 +1104,7 @@ html {
 }
 
 .main-layout-instruments-top .instrument-panel-inner {
-  padding: 0 0.8rem 0.75rem;
+  padding: 0 0.65rem 0.5rem;
 }
 
 .main-layout-instruments-top .instrument-panel .instrument-header {
@@ -1220,8 +1233,8 @@ html {
   position: absolute;
   top: -2px;
   left: 50%;
-  width: min(78%, 158px);
-  height: 88px;
+  width: min(86%, 210px);
+  height: 106px;
   overflow: visible;
   transform: translateX(-50%);
 }
@@ -1257,14 +1270,14 @@ html {
   justify-content: center;
   align-items: baseline;
   gap: 0.35rem;
-  margin-top: 1.25rem;
+  margin-top: 1.45rem;
   color: #f3fbfd;
   text-align: center;
   font-variant-numeric: tabular-nums;
 }
 
 .speed-primary-reading strong {
-  font-size: clamp(1.7rem, 2vw, 2.15rem);
+  font-size: clamp(1.9rem, 2.2vw, 2.35rem);
   font-weight: 600;
   letter-spacing: -0.06em;
   line-height: 1;
@@ -1319,8 +1332,8 @@ html {
 
 .compass-dial {
   position: relative;
-  width: min(100%, 174px);
-  height: 78px;
+  width: min(100%, 210px);
+  height: 96px;
   flex: 0 0 auto;
 }
 
@@ -1424,6 +1437,21 @@ html {
   font-variant-numeric: tabular-nums;
 }
 
+.instrument-visibility-option {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 0.45rem 0;
+  color: var(--text-primary);
+  cursor: pointer;
+}
+
+.instrument-visibility-option input {
+  width: 1rem;
+  height: 1rem;
+  accent-color: var(--accent-color);
+}
+
 .main-layout-instruments-top .wind-instrument {
   display: flex;
   flex-direction: row;
@@ -1434,7 +1462,7 @@ html {
 
 .wind-dial {
   position: relative;
-  width: min(94px, 48%);
+  width: min(132px, 48%);
   aspect-ratio: 1;
   flex: 0 0 auto;
   border: 1px solid rgba(122, 172, 190, 0.3);
@@ -1561,15 +1589,8 @@ html {
 
 @media (max-width: 900px) {
   .main-layout-instruments-top .instruments-container {
+    grid-template-rows: 176px;
     padding: 0.65rem 0.75rem 0.8rem;
-  }
-
-  .main-layout-instruments-top .instrument-wrapper {
-    flex-basis: 205px;
-  }
-
-  .main-layout-instruments-top .instrument-wrapper-gps {
-    flex-basis: 270px;
   }
 
   .main-layout-instruments-top .map-container {
@@ -1609,27 +1630,50 @@ html {
   }
 
   .main-layout-instruments-top .instruments-container {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    grid-template-rows: 168px;
     gap: 0.55rem;
     padding: 0.55rem 0.65rem 0.7rem;
-    scroll-snap-type: x mandatory;
   }
 
-  .main-layout-instruments-top .instrument-wrapper,
-  .main-layout-instruments-top .instrument-wrapper-gps {
+  .main-layout-instruments-top .instrument-grid-top {
+    display: flex;
+    flex-wrap: nowrap;
+    align-items: stretch;
+    height: 168px;
+    overflow-x: auto;
+    overflow-y: hidden;
+    scroll-snap-type: x mandatory;
+    scrollbar-color: rgba(87, 190, 211, 0.5) transparent;
+    scrollbar-width: thin;
+  }
+
+  .main-layout-instruments-top .instrument-wrapper {
+    grid-column: span 1;
+    min-height: 0;
+    max-height: none;
+  }
+
+  .main-layout-instruments-top .instrument-grid-top .instrument-wrapper {
     flex: 0 0 205px;
-    min-width: 205px;
-    min-height: 158px;
-    max-height: 158px;
     scroll-snap-align: start;
+  }
+
+  .main-layout-instruments-top .instrument-grid-bottom {
+    grid-template-rows: 156px;
+  }
+
+  .main-layout-instruments-top .instrument-wrapper-gps {
+    grid-column: span 2;
   }
 
   .main-layout-instruments-top .instrument-card-header {
     min-height: 30px;
-    padding: 0.48rem 0.7rem 0.2rem;
+    padding: 0.42rem 0.7rem 0.15rem;
   }
 
   .main-layout-instruments-top .instrument-panel-inner {
-    padding: 0 0.7rem 0.55rem;
+    padding: 0 0.55rem 0.4rem;
   }
 
   .main-layout-instruments-top .map-container {
@@ -1649,6 +1693,19 @@ html {
   .speed-primary-reading strong {
     font-size: 1.8rem;
   }
+
+  .speed-gauge {
+    width: min(86%, 190px);
+    height: 98px;
+  }
+
+  .compass-dial {
+    height: 88px;
+  }
+
+  .wind-dial {
+    width: min(112px, 46%);
+  }
 }
 
 @media (max-height: 700px) {
@@ -1665,13 +1722,9 @@ html {
   }
 
   .main-layout-instruments-top .instruments-container {
+    grid-template-rows: 160px;
     padding-top: 0.5rem;
     padding-bottom: 0.6rem;
-  }
-
-  .main-layout-instruments-top .instrument-wrapper {
-    min-height: 156px;
-    max-height: 156px;
   }
 
   .main-layout-instruments-top .map-view > div:last-child > span {
@@ -1705,5 +1758,71 @@ html {
 
   .wind-dial {
     width: min(78px, 42%);
+  }
+}
+
+@media (min-width: 1100px) {
+  .main-layout.main-layout-instruments-top {
+    display: grid;
+    grid-template-columns: 290px minmax(0, 1fr);
+    grid-template-rows: minmax(440px, 1fr) auto;
+    overflow: auto;
+  }
+
+  .main-layout-instruments-top > .instruments-sidebar:not(.instruments-sidebar-bottom) {
+    grid-column: 1;
+    grid-row: 1;
+    width: auto;
+    height: 100%;
+    border-right: 1px solid rgba(115, 179, 199, 0.2);
+    border-bottom: 0;
+  }
+
+  .main-layout-instruments-top .instrument-grid-top {
+    height: 100%;
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: repeat(3, minmax(120px, 1fr));
+    gap: 0.65rem;
+    padding: 0.75rem;
+  }
+
+  .main-layout-instruments-top .instrument-grid-top .instrument-wrapper {
+    grid-column: 1;
+    min-height: 130px;
+  }
+
+  .main-layout-instruments-top .instrument-grid-top .instrument-wrapper-speed {
+    grid-row: 1;
+  }
+
+  .main-layout-instruments-top .instrument-grid-top .instrument-wrapper-wind {
+    grid-row: 2;
+  }
+
+  .main-layout-instruments-top .instrument-grid-top .instrument-wrapper-compass {
+    grid-row: 3;
+  }
+
+  .main-layout-instruments-top > .map-container {
+    grid-column: 2;
+    grid-row: 1;
+    min-height: 440px;
+    padding: 0.75rem 0.85rem;
+  }
+
+  .main-layout-instruments-top > .instruments-sidebar-bottom {
+    grid-column: 2;
+    grid-row: 2;
+    width: auto;
+    border-top: 1px solid rgba(115, 179, 199, 0.2);
+  }
+
+  .main-layout-instruments-top .instrument-grid-bottom {
+    grid-template-rows: 160px;
+    padding: 0.5rem 0.75rem;
+  }
+
+  .main-layout-instruments-top .compass-dial {
+    height: 80px;
   }
 }

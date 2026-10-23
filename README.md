@@ -5,7 +5,7 @@ A personal dashboard for viewing your vessel's navigation instruments.
 ## Features
 
 - **GPS**: Position, fix time, accuracy, SOG and COG when provided or calculated from browser GPS data
-- **Marine chart**: A chart-first layout with a swipeable strip of graphical instruments, OpenStreetMap base tiles, OpenSeaMap navigation marks, a past-position trail, and north-up, heading-up or course-up map orientation
+- **Marine chart**: A chart-first layout with speed, wind and course instruments beside the map on wide screens and above it on mobile, plus depth and GPS below the chart. Depth and GPS can be hidden independently in Settings. Includes OpenStreetMap base tiles, OpenSeaMap navigation marks, a past-position trail, and north-up, heading-up or course-up map orientation
 - **Wind**: The instrument shows apparent wind speed (AWS) and angle (AWA), at 0 until an anemometer is connected. Hover over map wind barbs for Open-Meteo forecast speed, direction and gusts at that location. The local forecast updates every 15 minutes; map forecasts update after movement/zoom, at most once per minute. Nearby points may show the same forecast because weather models have limited resolution
 - **Depth**: Shown as unavailable until a compatible depth sounder is connected
 

@@ -15,6 +15,7 @@ interface SettingsPageProps {
   onToggleGPSConnection: () => void;
   onThemeChange: (theme: 'light' | 'dark' | 'night') => void;
   onUnitChange: (unitType: keyof DashboardLayout['units'], value: any) => void;
+  onToggleInstrumentVisibility: (id: string) => void;
   onClose?: () => void;
 }
 
@@ -26,6 +27,7 @@ const SettingsPage: React.FC<SettingsPageProps> = ({
   onToggleGPSConnection,
   onThemeChange,
   onUnitChange,
+  onToggleInstrumentVisibility,
   onClose
 }) => {
   return (
@@ -61,6 +63,7 @@ const SettingsPage: React.FC<SettingsPageProps> = ({
           onToggleGPSConnection={onToggleGPSConnection}
           onThemeChange={onThemeChange}
           onUnitChange={onUnitChange}
+          onToggleInstrumentVisibility={onToggleInstrumentVisibility}
         />
       </div>
     </div>

@@ -19,7 +19,8 @@ const App: React.FC = () => {
   const {
     layout,
     setTheme,
-    setUnit
+    setUnit,
+    toggleInstrumentVisibility
   } = useDashboardLayout();
 
   const [showSettings, setShowSettings] = useState<boolean>(false);
@@ -28,6 +29,29 @@ const App: React.FC = () => {
   React.useEffect(() => {
     document.documentElement.className = `theme-${layout.theme}`;
   }, [layout.theme]);
+
+  const renderInstrumentCards = (types: string[], row: 'top' | 'bottom') => layout.instruments
+    .filter(instrument => types.includes(instrument.type) && instrument.visible)
+    .map(instrument => (
+      <div
+        key={instrument.id}
+        className={`instrument-wrapper instrument-wrapper-${instrument.type} instrument-row-${row}`}
+      >
+        <div className="instrument-card-header">
+          <span className="instrument-title">{getInstrumentTitle(instrument.type)}</span>
+          {instrument.type === 'depth' && navigationData.depth?.alarm && (
+            <span className="instrument-wrapper-alarm" role="status">ALARM</span>
+          )}
+        </div>
+        <div className="instrument-content">
+          <InstrumentPanel
+            data={navigationData}
+            config={{ ...instrument, visible: true }}
+            units={layout.units}
+          />
+        </div>
+      </div>
+    ));
 
   return (
     <div className="app">
@@ -91,47 +115,15 @@ const App: React.FC = () => {
         </div>
       </header>
 
-      {/* Main content - Split layout: instruments on left, map on right */}
+      {/* Main content - primary instruments, chart, then secondary instruments */}
       <main className="app-main">
         <div className="main-layout main-layout-instruments-top">
-          {/* Instrument strip */}
           <aside className="instruments-sidebar">
-            <div className="instruments-container instrument-strip">
-              {layout.instruments
-                .filter(instr => instr.type !== 'map')
-                .map(instrument => {
-                  return (
-                    <div 
-                      key={instrument.id}
-                      className={`instrument-wrapper instrument-wrapper-${instrument.type}`}
-                    >
-                      {/* Instrument heading */}
-                      <div className="instrument-card-header">
-                        <span className="instrument-title">
-                          {getInstrumentTitle(instrument.type)}
-                        </span>
-                        {instrument.type === 'depth' && navigationData.depth?.alarm && (
-                          <span className="instrument-wrapper-alarm" role="status">
-                            ALARM
-                          </span>
-                        )}
-                      </div>
-                      
-                      {/* Instrument content */}
-                      <div className="instrument-content">
-                        <InstrumentPanel
-                          data={navigationData}
-                          config={{ ...instrument, visible: true }}
-                          units={layout.units}
-                        />
-                      </div>
-                    </div>
-                  );
-                })}
+            <div className="instruments-container instrument-grid instrument-grid-top">
+              {renderInstrumentCards(['speed', 'compass', 'wind'], 'top')}
             </div>
           </aside>
           
-          {/* Primary chart */}
           <div className="map-container">
             <MapView
               data={navigationData}
@@ -142,6 +134,16 @@ const App: React.FC = () => {
               size={{ width: '100%', height: '100%' }}
             />
           </div>
+
+          {layout.instruments.some(instrument =>
+            ['depth', 'gps'].includes(instrument.type) && instrument.visible
+          ) && (
+            <aside className="instruments-sidebar instruments-sidebar-bottom">
+              <div className="instruments-container instrument-grid instrument-grid-bottom">
+                {renderInstrumentCards(['depth', 'gps'], 'bottom')}
+              </div>
+            </aside>
+          )}
         </div>
       </main>
 
@@ -157,6 +159,7 @@ const App: React.FC = () => {
               onToggleGPSConnection={toggleGPSConnection}
               onThemeChange={setTheme}
               onUnitChange={setUnit}
+              onToggleInstrumentVisibility={toggleInstrumentVisibility}
               onClose={() => setShowSettings(false)}
             />
           </div>
