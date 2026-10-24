@@ -107,6 +107,7 @@ const MapViewSimple: React.FC<MapViewSimpleProps> = ({
   const [mapOrientation, setMapOrientation] = useState<MapOrientation>('north');
   const [activeMapTool, setActiveMapTool] = useState<MapToolPanel>(null);
   const [showWindLayer, setShowWindLayer] = useState(true);
+  const [followVessel, setFollowVessel] = useState(true);
   const canOpenSettings = Boolean(
     layout && gpsStatus && onThemeChange && onUnitChange && onToggleGPSConnection
   );
@@ -312,6 +313,21 @@ const MapViewSimple: React.FC<MapViewSimpleProps> = ({
       if (!mapInstanceRef.current) setLeafletError(true);
     }
   }, [leafletLoaded, rotationAvailable, rotationUnavailable, data, leafletError]);
+
+  // Dragging the map (user action only) stops following the vessel until "center" is clicked.
+  useEffect(() => {
+    if (!mapInstance) return;
+    const stopFollowing = () => setFollowVessel(false);
+    mapInstance.map.on('dragstart', stopFollowing);
+    return () => {
+      mapInstance.map.off('dragstart', stopFollowing);
+    };
+  }, [mapInstance]);
+
+  useEffect(() => {
+    if (!mapInstance || !followVessel || !data.position) return;
+    mapInstance.map.setView([data.position.latitude, data.position.longitude], mapInstance.map.getZoom(), { animate: false });
+  }, [mapInstance, followVessel, data.position]);
 
   useEffect(() => {
     if (!mapInstance || !rotationAvailable || !leafletLoaded || leafletError || !data.position) return;
@@ -602,7 +618,8 @@ const MapViewSimple: React.FC<MapViewSimpleProps> = ({
           <div className="map-tools-toolbar" role="group" aria-label="Map information">
             {data.position && (
               <button
-                className="map-tool-button recenter-map-button"
+                className={`map-tool-button recenter-map-button ${followVessel ? 'layer-visible' : ''}`}
+                aria-pressed={followVessel}
                 type="button"
                 aria-label="Center map on vessel"
                 title="Center map on vessel"
@@ -616,6 +633,7 @@ const MapViewSimple: React.FC<MapViewSimpleProps> = ({
                       position.longitude
                     ]);
                   }
+                  setFollowVessel(true);
                 }}
               >
                 <svg viewBox="0 0 24 24" aria-hidden="true">
