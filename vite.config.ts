@@ -2,6 +2,7 @@ import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 import { readFile } from 'node:fs/promises'
 import { fileURLToPath } from 'node:url'
+import pkg from './package.json' with { type: 'json' }
 
 const gpxReplayMiddleware = () => ({
   name: 'local-gpx-replay',
@@ -42,6 +43,9 @@ const gpxReplayMiddleware = () => ({
 // https://vitejs.dev/config/
 export default defineConfig({
   plugins: [react(), gpxReplayMiddleware()],
+  define: {
+    __APP_VERSION__: JSON.stringify(pkg.version)
+  },
   server: {
     host: process.env.VITE_HOST ?? '127.0.0.1',
     proxy: {

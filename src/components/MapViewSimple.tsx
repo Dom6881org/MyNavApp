@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { AISBackendState, AISSource, AISTarget, DashboardLayout, NavigationData, Position, UnitChangeHandler, WindData } from '../types';
 import ControlPanel from './ControlPanel';
 import MapPositionReadout from './MapPositionReadout';
+import AppLogo from './AppLogo';
 
 // Extend Window interface for Leaflet
 declare global {
@@ -49,6 +50,7 @@ interface MapViewSimpleProps {
   navigationSource?: 'replay' | 'nmea' | 'browser' | 'none';
   hasGPS?: boolean;
   isGPSEnabled?: boolean;
+  backendStatus?: { isConnected: boolean; error?: string | null };
   size?: { width: number | string; height: number | string };
 }
 
@@ -62,7 +64,13 @@ const ORIENTATION_LABELS: Record<MapOrientation, string> = {
 const ORIENTATION_BADGES: Record<MapOrientation, string> = { north: 'N', heading: 'H', course: 'C' };
 const nextOrientation = (current: MapOrientation): MapOrientation =>
   ORIENTATION_ORDER[(ORIENTATION_ORDER.indexOf(current) + 1) % ORIENTATION_ORDER.length];
-type MapToolPanel = 'ais' | 'weather' | 'gps' | 'replay' | 'settings' | null;
+type MapToolPanel = 'ais' | 'weather' | 'gps' | 'replay' | 'settings' | 'about' | null;
+const NAVIGATION_SOURCE_LABELS: Record<NonNullable<MapViewSimpleProps['navigationSource']>, string> = {
+  replay: 'GPX replay',
+  nmea: 'NMEA (backend)',
+  browser: 'Browser GPS',
+  none: 'No position source'
+};
 type GPSStatus = {
   isConnected: boolean;
   error: string | null;
@@ -95,6 +103,7 @@ const MapViewSimple: React.FC<MapViewSimpleProps> = ({
   navigationSource = 'none',
   hasGPS = true,
   isGPSEnabled = true,
+  backendStatus,
   size
 }) => {
   const mapRef = useRef<HTMLDivElement>(null);
@@ -616,6 +625,17 @@ const MapViewSimple: React.FC<MapViewSimpleProps> = ({
         )}
         <div className="map-tools" onMouseDown={event => event.stopPropagation()}>
           <div className="map-tools-toolbar" role="group" aria-label="Map information">
+            <button
+              className={`map-tool-button map-logo-button ${activeMapTool === 'about' ? 'active' : ''}`}
+              type="button"
+              aria-label="About MyNavApp"
+              title="About MyNavApp"
+              aria-expanded={activeMapTool === 'about'}
+              aria-controls="map-about-panel"
+              onClick={() => setActiveMapTool(activeMapTool === 'about' ? null : 'about')}
+            >
+              <AppLogo />
+            </button>
             {data.position && (
               <button
                 className={`map-tool-button recenter-map-button ${followVessel ? 'layer-visible' : ''}`}
@@ -804,6 +824,18 @@ const MapViewSimple: React.FC<MapViewSimpleProps> = ({
                 onThemeChange={onThemeChange}
                 onUnitChange={onUnitChange}
               />
+            </section>
+          )}
+          {activeMapTool === 'about' && (
+            <section id="map-about-panel" className="map-tool-panel map-about-panel" aria-label="About MyNavApp">
+              <strong>MyNavApp <small>v{__APP_VERSION__}</small></strong>
+              <span>Personal marine navigation dashboard</span>
+              <span className={backendStatus?.isConnected ? 'about-ok' : 'about-warning'} title={backendStatus?.error ?? undefined}>
+                Backend: {backendStatus?.isConnected ? 'connected' : 'offline'}
+              </span>
+              <span>Position source: {NAVIGATION_SOURCE_LABELS[navigationSource]}</span>
+              <span>Charts: OpenStreetMap · OpenSeaMap</span>
+              <span>Weather: Open-Meteo forecast</span>
             </section>
           )}
           {activeMapTool === 'gps' && (

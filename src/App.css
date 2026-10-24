@@ -2586,25 +2586,22 @@ html {
 }
 
 
-/* App header: compact logo instead of a text title */
-.app .app-header {
-  padding: 0.4rem 1rem;
-  gap: 0.75rem;
-  flex-wrap: nowrap;
-  flex-direction: row;
-  align-items: center;
+/* Logo button in the map toolbar opens the About panel */
+.map-tool-button.map-logo-button,
+.map-tool-button.map-logo-button:not(.layer-visible) {
+  padding: 0.15rem;
+  background: transparent;
+  border-color: transparent;
 }
 
-.app .app-header .header-title {
-  flex: 0 0 auto;
-  width: auto;
-  min-width: 0;
+.map-logo-button:hover,
+.map-logo-button.active {
+  border-color: #74e3e5;
 }
 
-.app .app-header h1 {
-  display: flex;
-  margin: 0;
-  line-height: 0;
+.map-logo-button .app-logo {
+  width: 100%;
+  height: 100%;
 }
 
 .app-logo {
@@ -2613,7 +2610,27 @@ html {
   filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.3));
 }
 
-.app .app-header .header-info {
-  width: auto;
-  margin-left: auto;
+.map-about-panel {
+  display: grid;
+  gap: 0.35rem;
+}
+
+.map-about-panel strong {
+  color: #74e3e5;
+  letter-spacing: 0.06em;
+}
+
+.map-about-panel strong small {
+  margin-left: 0.35rem;
+  color: #8da5ae;
+  font-weight: 400;
+  letter-spacing: 0;
+}
+
+.map-about-panel .about-ok {
+  color: #9af0bd;
+}
+
+.map-about-panel .about-warning {
+  color: #ffc46b;
 }

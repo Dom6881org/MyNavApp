@@ -2,7 +2,6 @@ import React from 'react';
 import { useAISSettings, useNavigationData, useDashboardLayout } from './hooks';
 import { InstrumentPanel } from './components';
 import MapView from './components/MapView';
-import AppLogo from './components/AppLogo';
 import './App.css';
 
 const App: React.FC = () => {
@@ -57,21 +56,6 @@ const App: React.FC = () => {
 
   return (
     <div className="app">
-      <header className="app-header">
-        <div className="header-title">
-          <h1><AppLogo /></h1>
-        </div>
-        
-        <div className="header-info">
-          <span
-            className={`backend-status ${backendStatus.isConnected ? 'connected' : 'disconnected'}`}
-            title={backendStatus.error ?? 'Local navigation backend connection'}
-          >
-            {backendStatus.isConnected ? 'API local' : 'API hors ligne'}
-          </span>
-        </div>
-      </header>
-
       {/* Main content - primary instruments, chart, then secondary instruments */}
       <main className="app-main">
         <div className="main-layout main-layout-instruments-top">
@@ -104,6 +88,7 @@ const App: React.FC = () => {
               navigationSource={navigationSource}
               hasGPS={hasGPS}
               isGPSEnabled={isGPSEnabled}
+              backendStatus={backendStatus}
               size={{ width: '100%', height: '100%' }}
             />
           </div>
@@ -119,10 +104,6 @@ const App: React.FC = () => {
           )}
         </div>
       </main>
-
-      <footer className="app-footer">
-        <p>MyNavApp · Personal Marine Navigation Dashboard</p>
-      </footer>
     </div>
   );
 };
