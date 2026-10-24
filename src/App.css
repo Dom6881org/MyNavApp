@@ -2613,6 +2613,8 @@ html {
 .map-about-panel {
   display: grid;
   gap: 0.35rem;
+  top: 0;
+  transform: none;
 }
 
 .map-about-panel strong {
@@ -2633,4 +2635,124 @@ html {
 
 .map-about-panel .about-warning {
   color: #ffc46b;
+}
+
+.theme-light .map-about-panel {
+  border-color: rgba(16, 32, 42, 0.16);
+  background: rgba(255, 255, 255, 0.96);
+  color: #1a2733;
+}
+
+.theme-light .map-about-panel strong {
+  color: #0b78a8;
+}
+
+.theme-light .map-about-panel strong small {
+  color: #5d7380;
+}
+
+.theme-light .map-about-panel .about-ok {
+  color: #1b7a43;
+}
+
+.theme-light .map-about-panel .about-warning {
+  color: #b35c00;
+}
+
+.theme-night .map-about-panel {
+  border-color: rgba(0, 255, 0, 0.3);
+  background: rgba(4, 12, 6, 0.94);
+  color: #7dff7d;
+}
+
+.theme-night .map-about-panel strong,
+.theme-night .map-about-panel .about-ok {
+  color: #00ff00;
+}
+
+/* Map toolbar themes */
+.theme-light .map-tools-toolbar {
+  border: 1px solid rgba(16, 32, 42, 0.16);
+  background: rgba(255, 255, 255, 0.94);
+  box-shadow: 0 3px 12px rgba(16, 32, 42, 0.2);
+}
+
+.theme-light .map-tool-button {
+  border-color: rgba(16, 32, 42, 0.2);
+  background: #eef4f7;
+  color: #1a2733;
+}
+
+.theme-light .map-tool-button:hover,
+.theme-light .map-tool-button.layer-visible {
+  border-color: #0b78a8;
+  background: #d3ebf5;
+  color: #0b5f86;
+}
+
+.theme-light .map-tool-button:not(.layer-visible) {
+  background: #f4f7f9;
+  color: #6b8190;
+}
+
+.theme-light .map-tool-button.recenter-map-button:not(.layer-visible) {
+  color: #1b7a43;
+}
+
+.theme-light .map-tool-button.replay-active {
+  border-color: #c78a00;
+  background: #fff1c9;
+  color: #7a5200;
+}
+
+.theme-light .gps-map-button.gps-connected {
+  border-color: #1b7a43;
+  color: #1b7a43;
+}
+
+.theme-light .gps-map-button.gps-disconnected {
+  color: #b35c00;
+}
+
+.theme-light .map-tool-details,
+.theme-light .map-tool-count,
+.theme-light .gps-map-indicator {
+  border-color: #ffffff;
+}
+
+.theme-light .map-tool-details {
+  background: #c5d8e0;
+}
+
+.theme-light .map-tool-details:hover,
+.theme-light .map-tool-details.active {
+  background: #8fd3e8;
+}
+
+.theme-light .map-tool-button:focus-visible,
+.theme-light .map-tool-details:focus-visible {
+  outline-color: #0b78a8;
+}
+
+.theme-night .map-tools-toolbar {
+  border: 1px solid rgba(0, 255, 0, 0.3);
+  background: rgba(4, 12, 6, 0.92);
+}
+
+.theme-night .map-tool-button {
+  border-color: rgba(0, 255, 0, 0.3);
+  background: #061208;
+  color: #7dff7d;
+}
+
+.theme-night .map-tool-button:hover,
+.theme-night .map-tool-button.layer-visible {
+  border-color: #00ff00;
+  background: #0d2a10;
+  color: #00ff00;
+}
+
+.theme-night .map-tool-button:not(.layer-visible) {
+  background: #040a05;
+  color: #3f9f3f;
 }
