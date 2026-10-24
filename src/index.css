@@ -490,58 +490,6 @@ html, body {
   color: var(--text-secondary);
 }
 
-/* GPS Display */
-.gps-container {
-  display: flex;
-  flex-direction: column;
-  gap: 1rem;
-  padding: 0.5rem;
-}
-
-.gps-coordinates {
-  display: flex;
-  flex-direction: column;
-  gap: 0.5rem;
-}
-
-.coordinate {
-  display: flex;
-  gap: 0.5rem;
-}
-
-.coordinate-label {
-  color: var(--text-secondary);
-  font-size: 0.9rem;
-}
-
-.coordinate-value {
-  font-family: monospace;
-  font-size: 0.9rem;
-  color: var(--accent-color);
-}
-
-.gps-time {
-  display: flex;
-  flex-direction: column;
-  gap: 0.5rem;
-}
-
-.time-item {
-  display: flex;
-  gap: 0.5rem;
-}
-
-.time-label {
-  color: var(--text-secondary);
-  font-size: 0.9rem;
-}
-
-.time-value {
-  font-family: monospace;
-  font-size: 0.9rem;
-  color: var(--text-primary);
-}
-
 .app-footer {
   background: var(--bg-secondary);
   padding: 1rem 2rem;

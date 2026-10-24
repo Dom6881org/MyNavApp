@@ -71,17 +71,19 @@ export const useNavigationData = () => {
     gpsAccuracy: activeSample?.accuracy ?? nmeaNavigation?.gpsAccuracy ?? backendNavigation?.gpsAccuracy ?? gpsData.status.accuracy
   };
 
+  const { start: startReplay, stop: stopReplay } = replay;
+
   const startGpxReplay = useCallback(async () => {
     disableGPS();
-    const started = await replay.start();
+    const started = await startReplay();
     if (!started) enableGPS();
     return started;
-  }, [disableGPS, enableGPS, replay.start]);
+  }, [disableGPS, enableGPS, startReplay]);
 
   const stopGpxReplay = useCallback(() => {
-    replay.stop();
+    stopReplay();
     enableGPS();
-  }, [enableGPS, replay.stop]);
+  }, [enableGPS, stopReplay]);
 
   const toggleGPS = useCallback(() => {
     if (replay.isActive) {

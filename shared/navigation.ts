@@ -110,7 +110,7 @@ export interface AISBackendState {
   internetError: string | null;
 }
 
-export type InstrumentType = 'speed' | 'wind' | 'compass' | 'depth' | 'gps' | 'map' | 'all';
+export type InstrumentType = 'speed' | 'wind' | 'compass' | 'depth' | 'map' | 'all';
 
 export interface InstrumentConfig {
   id: string;
@@ -130,3 +130,8 @@ export interface DashboardLayout {
     temperature: 'celsius' | 'fahrenheit';
   };
 }
+
+export type UnitChangeHandler = <K extends keyof DashboardLayout['units']>(
+  unitType: K,
+  value: DashboardLayout['units'][K]
+) => void;

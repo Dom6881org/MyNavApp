@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { DashboardLayout, InstrumentType } from '../types';
+import { DashboardLayout, InstrumentType, UnitChangeHandler } from '../types';
 
 const DEFAULT_LAYOUT: DashboardLayout = {
   instruments: [
@@ -7,7 +7,6 @@ const DEFAULT_LAYOUT: DashboardLayout = {
     { id: 'compass', type: 'compass', title: 'Course', visible: true, position: { x: 2, y: 0 }, size: { width: 2, height: 2 } },
     { id: 'wind', type: 'wind', title: 'Wind', visible: true, position: { x: 0, y: 2 }, size: { width: 2, height: 2 } },
     { id: 'depth', type: 'depth', title: 'Depth', visible: true, position: { x: 2, y: 2 }, size: { width: 2, height: 2 } },
-    { id: 'gps', type: 'gps', title: 'GPS', visible: true, position: { x: 0, y: 4 }, size: { width: 4, height: 2 } },
     { id: 'map', type: 'map', title: 'Map', visible: false, position: { x: 0, y: 0 }, size: { width: 2, height: 2 } }
   ],
   theme: 'dark',
@@ -22,7 +21,16 @@ const DEFAULT_LAYOUT: DashboardLayout = {
 export const useDashboardLayout = () => {
   const [layout, setLayout] = useState<DashboardLayout>(() => {
     const saved = localStorage.getItem('dashboardLayout');
-    return saved ? JSON.parse(saved) : DEFAULT_LAYOUT;
+    if (!saved) return DEFAULT_LAYOUT;
+
+    const parsed: DashboardLayout = JSON.parse(saved);
+    // The GPS card was removed: drop it from layouts saved by earlier versions.
+    return {
+      ...parsed,
+      instruments: parsed.instruments
+        .filter(instr => (instr.type as string) !== 'gps')
+        .map(instr => instr.type === 'depth' ? { ...instr, visible: true } : instr)
+    };
   });
 
   const [selectedInstrument, setSelectedInstrument] = useState<string | null>(null);
@@ -31,20 +39,11 @@ export const useDashboardLayout = () => {
     localStorage.setItem('dashboardLayout', JSON.stringify(layout));
   }, [layout]);
 
-  const toggleInstrumentVisibility = (id: string) => {
-    setLayout(prev => ({
-      ...prev,
-      instruments: prev.instruments.map(instr =>
-        instr.id === id ? { ...instr, visible: !instr.visible } : instr
-      )
-    }));
-  };
-
-  const setTheme = (theme: 'light' | 'dark' | 'night') => {
+  const setTheme =  (theme: 'light' | 'dark' | 'night') => {
     setLayout(prev => ({ ...prev, theme }));
   };
 
-  const setUnit = (unitType: keyof DashboardLayout['units'], value: any) => {
+  const setUnit: UnitChangeHandler = (unitType, value) => {
     setLayout(prev => ({
       ...prev,
       units: { ...prev.units, [unitType]: value }
@@ -98,7 +97,6 @@ export const useDashboardLayout = () => {
     layout,
     selectedInstrument,
     setSelectedInstrument,
-    toggleInstrumentVisibility,
     setTheme,
     setUnit,
     moveInstrument,

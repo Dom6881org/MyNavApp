@@ -1,20 +1,28 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { AISBackendState, AISSource, AISTarget, DashboardLayout, NavigationData, Position } from '../types';
+import { AISBackendState, AISSource, AISTarget, DashboardLayout, NavigationData, Position, UnitChangeHandler, WindData } from '../types';
 import ControlPanel from './ControlPanel';
+import MapPositionReadout from './MapPositionReadout';
 
 // Extend Window interface for Leaflet
 declare global {
   interface Window {
-    L: any;
+    L: LeafletObject;
   }
 }
+
+// Leaflet is loaded from a CDN script without bundled typings.
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+type LeafletObject = any;
+
+const TOOLTIP_CLASS = 'nav-tooltip';
+const POPUP_OPTIONS = { className: 'nav-popup', closeButton: false, minWidth: 170 };
 
 interface MapViewSimpleProps {
   data: NavigationData;
   isReplay?: boolean;
   replayTrack?: Position[];
   replayTrackIndex?: number;
-  onWindGridRequest?: (points: Position[]) => void;
+  onWindGridRequest?: (visible: Position[], prefetch?: Position[]) => void;
   aisTargets?: AISTarget[];
   aisState?: AISBackendState | null;
   showAIS?: boolean;
@@ -23,8 +31,7 @@ interface MapViewSimpleProps {
   onAISVisibilityChange?: (visible: boolean) => void;
   layout?: DashboardLayout;
   onThemeChange?: (theme: 'light' | 'dark' | 'night') => void;
-  onUnitChange?: (unitType: keyof DashboardLayout['units'], value: any) => void;
-  onToggleInstrumentVisibility?: (id: string) => void;
+  onUnitChange?: UnitChangeHandler;
   onToggleGPSConnection?: () => void;
   showReplayControls?: boolean;
   gpxReplay?: {
@@ -72,7 +79,6 @@ const MapViewSimple: React.FC<MapViewSimpleProps> = ({
   layout,
   onThemeChange,
   onUnitChange,
-  onToggleInstrumentVisibility,
   onToggleGPSConnection,
   showReplayControls = false,
   gpxReplay,
@@ -83,8 +89,8 @@ const MapViewSimple: React.FC<MapViewSimpleProps> = ({
   size
 }) => {
   const mapRef = useRef<HTMLDivElement>(null);
-  const mapInstanceRef = useRef<any>(null);
-  const [mapInstance, setMapInstance] = useState<any>(null);
+  const mapInstanceRef = useRef<LeafletObject>(null);
+  const [mapInstance, setMapInstance] = useState<LeafletObject>(null);
   const [leafletLoaded, setLeafletLoaded] = useState<boolean>(false);
   const [rotationAvailable, setRotationAvailable] = useState<boolean>(false);
   const [rotationUnavailable, setRotationUnavailable] = useState<boolean>(false);
@@ -93,10 +99,10 @@ const MapViewSimple: React.FC<MapViewSimpleProps> = ({
   const [activeMapTool, setActiveMapTool] = useState<MapToolPanel>(null);
   const [showWindLayer, setShowWindLayer] = useState(true);
   const canOpenSettings = Boolean(
-    layout && gpsStatus && onThemeChange && onUnitChange &&
-    onToggleInstrumentVisibility && onToggleGPSConnection
+    layout && gpsStatus && onThemeChange && onUnitChange && onToggleGPSConnection
   );
-  const aisMarkersRef = useRef<Map<string, any>>(new Map());
+  const aisMarkersRef = useRef<Map<string, LeafletObject>>(new Map());
+  const lastBearingRef = useRef<number | null>(null);
   const visibleAISTargets = useMemo(() => aisTargets.filter(target =>
     Number.isFinite(target.latitude) && Number.isFinite(target.longitude) &&
     target.latitude >= -90 && target.latitude <= 90 &&
@@ -107,6 +113,8 @@ const MapViewSimple: React.FC<MapViewSimpleProps> = ({
   useEffect(() => {
     let disposed = false;
     let checkInterval: number | undefined;
+    // Assigned after the callbacks above, which may run first, so it cannot be a const.
+    // eslint-disable-next-line prefer-const
     let timeoutId: number | undefined;
     const script = document.getElementById('leaflet-js') as HTMLScriptElement | null;
     let rotationScript: HTMLScriptElement | null = null;
@@ -265,11 +273,12 @@ const MapViewSimple: React.FC<MapViewSimpleProps> = ({
           rotateWithView: true
         }).addTo(map);
         
-        marker.bindPopup(`<b>Vessel position</b><br>LAT: ${data.position.latitude.toFixed(6)}°<br>LON: ${data.position.longitude.toFixed(6)}°`);
+        marker.bindPopup(getVesselPopup(data.position), POPUP_OPTIONS);
         marker.bindTooltip(getVesselTooltip(data), {
           direction: 'top',
-          offset: [0, -18],
-          opacity: 0.95
+          offset: [0, -14],
+          opacity: 1,
+          className: TOOLTIP_CLASS
         });
         
         const instance = {
@@ -287,29 +296,33 @@ const MapViewSimple: React.FC<MapViewSimpleProps> = ({
         const boatPosition = L.latLng(data.position.latitude, data.position.longitude);
 
         instance.marker.setLatLng(boatPosition);
-        instance.marker.setPopupContent(
-          `<b>Vessel position</b><br>LAT: ${data.position.latitude.toFixed(6)}°<br>LON: ${data.position.longitude.toFixed(6)}°`
-        );
+        instance.marker.setPopupContent(getVesselPopup(data.position));
       }
     } catch (error) {
       console.error('Map error:', error);
       if (!mapInstanceRef.current) setLeafletError(true);
     }
-  }, [leafletLoaded, rotationAvailable, rotationUnavailable, data.position, leafletError]);
+  }, [leafletLoaded, rotationAvailable, rotationUnavailable, data, leafletError]);
 
   useEffect(() => {
     if (!mapInstance || !rotationAvailable || !leafletLoaded || leafletError || !data.position) return;
 
-    const heading = data.compass?.heading ?? data.compass?.cog ?? 0;
-    const course = data.compass?.cog ?? data.compass?.heading ?? 0;
+    const heading = data.compass?.heading ?? data.compass?.cog ?? null;
+    const course = data.compass?.cog ?? data.compass?.heading ?? null;
     const selectedBearing = mapOrientation === 'heading'
       ? heading
       : mapOrientation === 'course'
         ? course
         : 0;
-    const bearing = (360 - selectedBearing) % 360;
 
-    mapInstance.map.setBearing(bearing);
+    // Keep the last known bearing while the boat has no heading/course (e.g. stopped) instead of snapping back to north.
+    if (selectedBearing === null) {
+      if (lastBearingRef.current === null || mapOrientation === 'north') return;
+    } else {
+      lastBearingRef.current = (360 - selectedBearing) % 360;
+    }
+
+    mapInstance.map.setBearing(lastBearingRef.current ?? 0);
   }, [mapInstance, rotationAvailable, leafletLoaded, leafletError, mapOrientation, data.position, data.compass?.heading, data.compass?.cog]);
 
   useEffect(() => {
@@ -385,9 +398,7 @@ const MapViewSimple: React.FC<MapViewSimpleProps> = ({
       const heading = data.compass?.heading ?? data.compass?.cog ?? 0;
       mapInstance.marker.setIcon(createBoatIcon(L, heading));
       mapInstance.marker.options.title = `Vessel · ${getHeadingSource(data.compass?.heading)} ${heading.toFixed(0)}°`;
-      mapInstance.marker.setPopupContent(
-        `<b>Vessel position</b><br>LAT: ${lat.toFixed(6)}°<br>LON: ${lng.toFixed(6)}°`
-      );
+      mapInstance.marker.setPopupContent(getVesselPopup(data.position));
       mapInstance.marker.setTooltipContent(getVesselTooltip(data));
     }
   }, [mapInstance, leafletLoaded, leafletError, data]);
@@ -435,9 +446,10 @@ const MapViewSimple: React.FC<MapViewSimpleProps> = ({
         newMarker.bindTooltip(getAISTargetTooltip(target, aisSource), {
           direction: 'top',
           sticky: true,
-          opacity: 0.95
+          opacity: 1,
+          className: TOOLTIP_CLASS
         });
-        newMarker.bindPopup(getAISTargetPopup(target, aisSource));
+        newMarker.bindPopup(getAISTargetPopup(target, aisSource), POPUP_OPTIONS);
         newMarker.aisTarget = target;
         newMarker.addTo(mapInstance.aisLayer);
         aisMarkersRef.current.set(target.mmsi, newMarker);
@@ -450,21 +462,29 @@ const MapViewSimple: React.FC<MapViewSimpleProps> = ({
 
     const map = mapInstance.map;
     let debounceId: number | undefined;
+    const buildLattice = (bounds: { getSouth(): number; getNorth(): number; getWest(): number; getEast(): number }, zoom: number): Position[] => {
+      const step = 202.5 / 2 ** zoom;
+      const south = Math.max(bounds.getSouth(), -85);
+      const north = Math.min(bounds.getNorth(), 85);
+      const points: Position[] = [];
+      for (let lat = Math.ceil(south / step); lat <= Math.floor(north / step); lat++) {
+        for (let lng = Math.ceil(bounds.getWest() / step); lng <= Math.floor(bounds.getEast() / step); lng++) {
+          points.push({ latitude: lat * step, longitude: lng * step });
+        }
+      }
+      return points;
+    };
     const requestVisibleGrid = () => {
       if (debounceId !== undefined) window.clearTimeout(debounceId);
       debounceId = window.setTimeout(() => {
-        const { x: width, y: height } = map.getSize();
-        const spacing = 144;
-        const points: Position[] = [];
-
-        for (let y = spacing / 2; y < height; y += spacing) {
-          for (let x = spacing / 2; x < width; x += spacing) {
-            const latLng = map.containerPointToLatLng([x, y]);
-            points.push({ latitude: latLng.lat, longitude: latLng.lng });
-          }
-        }
-
-        onWindGridRequest(points);
+        // The lattice is anchored to geographic coordinates so cached points stay valid when panning.
+        const zoom = Math.min(Math.max(Math.floor(map.getZoom()), 0), 18);
+        const visible = buildLattice(map.getBounds().pad(0.1), zoom);
+        const prefetch = [
+          ...buildLattice(map.getBounds().pad(0.4), zoom),
+          ...(zoom > 0 ? buildLattice(map.getBounds().pad(0.4), zoom - 1) : [])
+        ];
+        onWindGridRequest(visible, prefetch);
       }, 350);
     };
 
@@ -494,19 +514,13 @@ const MapViewSimple: React.FC<MapViewSimpleProps> = ({
           iconAnchor: [24, 24]
         });
         const direction = getWindDirectionText(point.wind.direction);
-        const tooltip = [
-          '<strong>Wind forecast · Open-Meteo</strong>',
-          `Speed: ${point.wind.speed.toFixed(1)} kn`,
-          `Direction: from ${direction} ${point.wind.direction.toFixed(0)}°`,
-          `Gusts: ${point.wind.gust.toFixed(1)} kn`
-        ].join('<br>');
         L.marker([point.position.latitude, point.position.longitude], {
           icon: barbIcon,
           zIndexOffset: 500,
           rotateWithView: true,
           title: `Wind from ${direction}, ${point.wind.speed.toFixed(1)} knots`
         })
-          .bindTooltip(tooltip, { direction: 'top', sticky: true, opacity: 0.95 })
+          .bindTooltip(getWindTooltip(point.wind), { direction: 'top', sticky: true, opacity: 1, className: TOOLTIP_CLASS })
           .addTo(flowLayer);
       }
     };
@@ -596,6 +610,9 @@ const MapViewSimple: React.FC<MapViewSimpleProps> = ({
               </button>
             ))}
           </div>
+        )}
+        {!leafletError && leafletLoaded && data.position && (
+          <MapPositionReadout position={data.position} gpsTime={data.gpsTime} />
         )}
         <div className="map-tools" onMouseDown={event => event.stopPropagation()}>
           <div className="map-tools-toolbar" role="group" aria-label="Map information">
@@ -741,7 +758,7 @@ const MapViewSimple: React.FC<MapViewSimpleProps> = ({
             </div>
           </div>
           {activeMapTool === 'settings' && layout && gpsStatus &&
-            onThemeChange && onUnitChange && onToggleInstrumentVisibility && onToggleGPSConnection && (
+            onThemeChange && onUnitChange && onToggleGPSConnection && (
             <section id="map-settings-panel" className="map-tool-panel map-settings-panel" aria-label="Settings">
               <div className="map-settings-heading">
                 <strong>SETTINGS</strong>
@@ -762,7 +779,6 @@ const MapViewSimple: React.FC<MapViewSimpleProps> = ({
                 onToggleGPSConnection={onToggleGPSConnection}
                 onThemeChange={onThemeChange}
                 onUnitChange={onUnitChange}
-                onToggleInstrumentVisibility={onToggleInstrumentVisibility}
               />
             </section>
           )}
@@ -947,8 +963,8 @@ const MapViewSimple: React.FC<MapViewSimpleProps> = ({
           </div>
           <div className="map-global-legend-item">
             <svg width="18" height="18" viewBox="0 0 48 48" aria-hidden="true">
-              <path d="M24 3 L40 38 Q24 47 8 38 Z" fill="#f4f8fb" stroke="#10202a" strokeWidth="4" />
-              <path d="M24 8 L24 35" stroke="#19d3c5" strokeWidth="3" />
+              <path d="M24 3 C30 12 33 24 32 37 Q31.500 43 27 44 L21 44 Q16.500 43 16 37 C15 24 18 12 24 3 Z" fill="#f4f8fb" stroke="#10202a" strokeWidth="2.500" strokeLinejoin="round" />
+              <path d="M24 9 C27 16 28.500 24 28 33 L20 33 C19.500 24 21 16 24 9 Z" fill="#19d3c5" fillOpacity="0.85" />
             </svg>
             <span>Vessel · HDG</span>
           </div>
@@ -998,23 +1014,28 @@ const getVesselTooltip = (data: NavigationData): string => {
       ? 'COG'
       : 'Course';
 
-  return `<strong>Vessel</strong><br>SOG: ${speed.toFixed(1)} kn<br>${courseLabel}: ${course.toFixed(0)}°`;
+  return buildInfoCard('Vessel', [
+    ['SOG', `${speed.toFixed(1)} kn`],
+    [courseLabel, `${course.toFixed(0)}°`]
+  ], undefined, 'nav-card-vessel');
 };
 
-const createBoatIcon = (leaflet: any, heading: number) => leaflet.divIcon({
+const BOAT_SVG = '<svg class="boat-marker-icon" viewBox="0 0 48 48" aria-hidden="true" style="transform:rotate(__HEADING__deg)"><path d="M24 3 C30 12 33 24 32 37 Q31.500 43 27 44 L21 44 Q16.500 43 16 37 C15 24 18 12 24 3 Z" fill="#f4f8fb" stroke="#10202a" stroke-width="2.500" stroke-linejoin="round"/><path d="M24 9 C27 16 28.500 24 28 33 L20 33 C19.500 24 21 16 24 9 Z" fill="#19d3c5" fill-opacity="0.85"/><rect x="20.500" y="26" width="7" height="9" rx="1.800" fill="#10202a" fill-opacity="0.75"/></svg>';
+
+const createBoatIcon = (leaflet: LeafletObject, heading: number) => leaflet.divIcon({
   className: 'boat-marker',
-  html: `<svg class="boat-marker-icon" viewBox="0 0 48 48" aria-hidden="true" style="transform:rotate(${heading}deg)"><path d="M24 3 L40 38 Q24 47 8 38 Z" fill="#f4f8fb" stroke="#10202a" stroke-width="4"/><path d="M24 8 L24 35" stroke="#19d3c5" stroke-width="3" stroke-linecap="round"/></svg>`,
-  iconSize: [36, 36],
-  iconAnchor: [18, 18]
+  html: BOAT_SVG.replace('__HEADING__', String(heading)),
+  iconSize: [28, 28],
+  iconAnchor: [14, 14]
 });
 
-const createAisIcon = (leaflet: any, target: AISTarget) => {
+const createAisIcon = (leaflet: LeafletObject, target: AISTarget) => {
   const heading = target.heading ?? target.cog ?? 0;
   return leaflet.divIcon({
     className: 'ais-vessel-marker',
-    html: `<svg class="ais-vessel-marker-icon" viewBox="0 0 32 32" aria-hidden="true" style="transform:rotate(${heading}deg)"><path d="M16 2 L26 25 L16 21 L6 25 Z" fill="#ffd166" stroke="#10202a" stroke-width="2"/><path d="M16 7 L16 21" stroke="#fff4cf" stroke-width="1.5"/></svg>`,
-    iconSize: [28, 28],
-    iconAnchor: [14, 14]
+    html: `<svg class="ais-vessel-marker-icon" viewBox="0 0 48 48" aria-hidden="true" style="transform:rotate(${heading}deg)"><path d="M24 4 C29 13 31 24 30 36 Q29.500 41 26 42 L22 42 Q18.500 41 18 36 C17 24 19 13 24 4 Z" fill="#ffd166" stroke="#10202a" stroke-width="2.500" stroke-linejoin="round"/><path d="M24 12 L24 34" stroke="#fff4cf" stroke-width="2" stroke-linecap="round"/></svg>`,
+    iconSize: [22, 22],
+    iconAnchor: [11, 11]
   });
 };
 
@@ -1026,19 +1047,53 @@ const escapeHtml = (value: string): string => value.replace(/[&<>"']/g, characte
   "'": '&#39;'
 })[character] ?? character);
 
+// Callers pass pre-escaped text; values are plain strings built from numbers or escaped fields.
+const buildInfoCard = (title: string, rows: Array<[string, string]>, note?: string, kind = ''): string => {
+  const body = rows
+    .map(([label, value]) => `<div class="nav-card-row"><span>${label}</span><strong>${value}</strong></div>`)
+    .join('');
+  return `<div class="nav-card ${kind}"><div class="nav-card-title">${title}</div>${body}${note ? `<div class="nav-card-note">${note}</div>` : ''}</div>`;
+};
+
 const getAISTargetTooltip = (target: AISTarget, source: AISSource): string => {
-  const name = escapeHtml(target.name ?? 'Unknown vessel');
   const speed = target.sog === null ? '—' : `${target.sog.toFixed(1)} kn`;
-  return `<strong>${name}</strong><br>MMSI ${escapeHtml(target.mmsi)}<br>SOG ${speed}<br>${source === 'local' ? 'Local VHF AIS' : 'Internet AIS · AISstream'}`;
+  return buildInfoCard(
+    escapeHtml(target.name ?? 'Unknown vessel'),
+    [['MMSI', escapeHtml(target.mmsi)], ['SOG', speed]],
+    source === 'local' ? 'Local VHF AIS' : 'Internet AIS · AISstream',
+    'nav-card-ais'
+  );
 };
 
 const getAISTargetPopup = (target: AISTarget, source: AISSource): string => {
-  const name = escapeHtml(target.name ?? 'Unknown vessel');
   const course = target.cog === null ? '—' : `${target.cog.toFixed(0)}°`;
   const heading = target.heading === null ? '—' : `${target.heading.toFixed(0)}°`;
   const updated = new Date(target.updatedAt).toLocaleTimeString('en-GB');
-  return `<strong>${name}</strong><br>MMSI ${escapeHtml(target.mmsi)}<br>SOG: ${target.sog === null ? '—' : `${target.sog.toFixed(1)} kn}`}<br>COG: ${course} · HDG: ${heading}<br>Source: ${source === 'local' ? 'Local VHF AIS' : 'Internet AIS · AISstream'}<br>Last report: ${updated}<br><small>AIS positions may be delayed; not for collision avoidance.</small>`;
+  return buildInfoCard(
+    escapeHtml(target.name ?? 'Unknown vessel'),
+    [
+      ['MMSI', escapeHtml(target.mmsi)],
+      ['SOG', target.sog === null ? '—' : `${target.sog.toFixed(1)} kn`],
+      ['COG', course],
+      ['HDG', heading],
+      ['Source', source === 'local' ? 'Local VHF' : 'AISstream'],
+      ['Last report', updated]
+    ],
+    'AIS positions may be delayed; not for collision avoidance.',
+    'nav-card-ais'
+  );
 };
+
+const getVesselPopup = (position: Position): string => buildInfoCard('Vessel position', [
+  ['LAT', `${position.latitude.toFixed(6)}°`],
+  ['LON', `${position.longitude.toFixed(6)}°`]
+], undefined, 'nav-card-vessel');
+
+const getWindTooltip = (wind: WindData): string => buildInfoCard('Wind forecast', [
+  ['Speed', `${wind.speed.toFixed(1)} kn`],
+  ['From', `${getWindDirectionText(wind.direction)} ${wind.direction.toFixed(0)}°`],
+  ['Gusts', `${wind.gust.toFixed(1)} kn`]
+], 'Open-Meteo', 'nav-card-wind');
 
 const getAISStatusMessage = (source: AISSource, state: AISBackendState | null): string => {
   if (!state) return 'Waiting for local navigation backend.';

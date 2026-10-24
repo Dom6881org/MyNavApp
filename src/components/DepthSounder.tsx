@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import React from 'react';
 import { DepthData } from '../types';
 
 interface DepthSounderProps {
@@ -16,7 +16,7 @@ const DepthSounder: React.FC<DepthSounderProps> = ({ data, unit, size = 200 }) =
     }
   };
 
-  const displayDepth = useMemo(() => data ? convertDepth(data.depth) : null, [data, unit]);
+  const displayDepth = data ? convertDepth(data.depth) : null;
 
   const getUnitLabel = () => {
     switch (unit) {
@@ -35,7 +35,7 @@ const DepthSounder: React.FC<DepthSounderProps> = ({ data, unit, size = 200 }) =
     return '#00ff88';
   };
 
-  const depthColor = useMemo(() => data ? getDepthColor() : 'var(--text-secondary)', [data, displayDepth]);
+  const depthColor = data ? getDepthColor() : 'var(--text-secondary)';
 
   // Calculate base font size based on container size
   const baseFontSize = size * 0.08;

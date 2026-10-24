@@ -4,7 +4,6 @@ import Speedometer from './Speedometer';
 import Compass from './Compass';
 import WindIndicator from './WindIndicator';
 import DepthSounder from './DepthSounder';
-import GPSDisplay from './GPSDisplay';
 import MapView from './MapView';
 
 interface InstrumentPanelProps {
@@ -42,11 +41,6 @@ const InstrumentPanel: React.FC<InstrumentPanelProps> = ({ data, config, units, 
         );
       case 'depth':
         return <DepthSounder data={data.depth} unit={units.depth} size={instrumentSize} />;
-      case 'gps':
-        return <GPSDisplay 
-          position={data.position} 
-          gpsTime={data.gpsTime} 
-        />;
       case 'map':
         return <MapView data={data} size={{ width: '100%', height: '100%' }} />;
       default:

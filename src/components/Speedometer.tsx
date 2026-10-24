@@ -34,7 +34,7 @@ const Speedometer: React.FC<SpeedometerProps> = ({ data, size = 200 }) => {
         role="img"
         aria-label={`Speed over water ${displaySTW.toFixed(1)} knots; speed over ground ${displaySOG.toFixed(1)} knots`}
       >
-        <path className="speed-gauge-track" d="M 44.75 129.25 A 64 64 0 1 0 135.25 129.25" />
+        <path className="speed-gauge-track" d="M 44.75 129.25 A 64 64 0 1 1 135.25 129.25" />
         {ticks.map(tick => (
           <g key={tick.value}>
             <line

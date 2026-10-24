@@ -1,5 +1,5 @@
 import React from 'react';
-import { DashboardLayout } from '../types';
+import { DashboardLayout, UnitChangeHandler } from '../types';
 
 interface ControlPanelProps {
   layout: DashboardLayout;
@@ -13,8 +13,7 @@ interface ControlPanelProps {
   hasGPS: boolean;
   onToggleGPSConnection: () => void;
   onThemeChange: (theme: 'light' | 'dark' | 'night') => void;
-  onUnitChange: (unitType: keyof DashboardLayout['units'], value: any) => void;
-  onToggleInstrumentVisibility: (id: string) => void;
+  onUnitChange: UnitChangeHandler;
 }
 
 const ControlPanel: React.FC<ControlPanelProps> = ({
@@ -24,11 +23,8 @@ const ControlPanel: React.FC<ControlPanelProps> = ({
   hasGPS,
   onToggleGPSConnection,
   onThemeChange,
-  onUnitChange,
-  onToggleInstrumentVisibility
+  onUnitChange
 }) => {
-  const depthInstrument = layout.instruments.find(instrument => instrument.type === 'depth');
-  const gpsInstrument = layout.instruments.find(instrument => instrument.type === 'gps');
 
   return (
     <div className="control-panel">
@@ -54,26 +50,6 @@ const ControlPanel: React.FC<ControlPanelProps> = ({
                 : 'Allow location access and wait for a GPS fix.'}
           </div>
         </div>
-      </div>
-
-      <div className="control-section">
-        <h3>Instruments</h3>
-        <label className="instrument-visibility-option">
-          <input
-            type="checkbox"
-            checked={depthInstrument?.visible ?? true}
-            onChange={() => depthInstrument && onToggleInstrumentVisibility(depthInstrument.id)}
-          />
-          <span>Show depth</span>
-        </label>
-        <label className="instrument-visibility-option">
-          <input
-            type="checkbox"
-            checked={gpsInstrument?.visible ?? true}
-            onChange={() => gpsInstrument && onToggleInstrumentVisibility(gpsInstrument.id)}
-          />
-          <span>Show GPS</span>
-        </label>
       </div>
 
       <div className="control-section">

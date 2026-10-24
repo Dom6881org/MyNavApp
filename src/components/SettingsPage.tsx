@@ -1,5 +1,5 @@
 import React from 'react';
-import { DashboardLayout } from '../types';
+import { DashboardLayout, UnitChangeHandler } from '../types';
 import ControlPanel from './ControlPanel';
 
 interface SettingsPageProps {
@@ -14,8 +14,7 @@ interface SettingsPageProps {
   hasGPS: boolean;
   onToggleGPSConnection: () => void;
   onThemeChange: (theme: 'light' | 'dark' | 'night') => void;
-  onUnitChange: (unitType: keyof DashboardLayout['units'], value: any) => void;
-  onToggleInstrumentVisibility: (id: string) => void;
+  onUnitChange: UnitChangeHandler;
   onClose?: () => void;
 }
 
@@ -27,7 +26,6 @@ const SettingsPage: React.FC<SettingsPageProps> = ({
   onToggleGPSConnection,
   onThemeChange,
   onUnitChange,
-  onToggleInstrumentVisibility,
   onClose
 }) => {
   return (
@@ -63,7 +61,6 @@ const SettingsPage: React.FC<SettingsPageProps> = ({
           onToggleGPSConnection={onToggleGPSConnection}
           onThemeChange={onThemeChange}
           onUnitChange={onUnitChange}
-          onToggleInstrumentVisibility={onToggleInstrumentVisibility}
         />
       </div>
     </div>

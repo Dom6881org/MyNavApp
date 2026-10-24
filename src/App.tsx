@@ -21,8 +21,7 @@ const App: React.FC = () => {
   const {
     layout,
     setTheme,
-    setUnit,
-    toggleInstrumentVisibility
+    setUnit
   } = useDashboardLayout();
 
   const aisSettings = useAISSettings(backendStatus.isConnected, aisState);
@@ -77,7 +76,7 @@ const App: React.FC = () => {
         <div className="main-layout main-layout-instruments-top">
           <aside className="instruments-sidebar">
             <div className="instruments-container instrument-grid instrument-grid-top">
-              {renderInstrumentCards(['speed', 'compass', 'wind'], 'top')}
+              {renderInstrumentCards(['speed', 'compass'], 'top')}
             </div>
           </aside>
           
@@ -97,7 +96,6 @@ const App: React.FC = () => {
               layout={layout}
               onThemeChange={setTheme}
               onUnitChange={setUnit}
-              onToggleInstrumentVisibility={toggleInstrumentVisibility}
               onToggleGPSConnection={toggleGPSConnection}
               showReplayControls={import.meta.env.DEV}
               gpxReplay={gpxReplay}
@@ -110,11 +108,11 @@ const App: React.FC = () => {
           </div>
 
           {layout.instruments.some(instrument =>
-            ['depth', 'gps'].includes(instrument.type) && instrument.visible
+            (instrument.type === 'depth' || instrument.type === 'wind') && instrument.visible
           ) && (
             <aside className="instruments-sidebar instruments-sidebar-bottom">
               <div className="instruments-container instrument-grid instrument-grid-bottom">
-                {renderInstrumentCards(['depth', 'gps'], 'bottom')}
+                {renderInstrumentCards(['wind', 'depth'], 'bottom')}
               </div>
             </aside>
           )}
@@ -134,7 +132,6 @@ const getInstrumentTitle = (type: string): string => {
     case 'compass': return 'COURSE';
     case 'wind': return 'WIND';
     case 'depth': return 'DEPTH';
-    case 'gps': return 'GPS';
     default: return type.toUpperCase();
   }
 };

@@ -34,11 +34,6 @@
   min-height: 200px;
 }
 
-/* GPS display - full width and taller */
-.instrument-panel.gps-display {
-  min-height: 300px;
-}
-
 /* Smooth transitions for all animated elements */
 .instrument * {
   transition: all 0.3s ease;
@@ -655,9 +650,114 @@
 }
 
 .ais-vessel-marker-icon {
-  width: 28px;
-  height: 28px;
-  filter: drop-shadow(0 1px 3px rgba(0, 0, 0, 0.9));
+  width: 22px;
+  height: 22px;
+  filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.8));
+}
+
+/* Information cards used by map tooltips and popups (dark by default, themed below) */
+:root {
+  --card-bg: rgba(14, 26, 38, 0.94);
+  --card-text: #eef5f9;
+  --card-muted: rgba(238, 245, 249, 0.62);
+  --card-border: rgba(255, 255, 255, 0.14);
+  --card-divider: rgba(255, 255, 255, 0.12);
+  --card-shadow: 0 6px 18px rgba(0, 0, 0, 0.45);
+  --card-accent-ais: #ffd166;
+  --card-accent-vessel: #19d3c5;
+  --card-accent-wind: #59d9ff;
+}
+
+.theme-light {
+  --card-bg: rgba(255, 255, 255, 0.96);
+  --card-text: #1a2733;
+  --card-muted: rgba(26, 39, 51, 0.62);
+  --card-border: rgba(16, 32, 42, 0.16);
+  --card-divider: rgba(16, 32, 42, 0.12);
+  --card-shadow: 0 6px 18px rgba(16, 32, 42, 0.22);
+  --card-accent-ais: #b7791f;
+  --card-accent-vessel: #0f8f86;
+  --card-accent-wind: #0b78a8;
+}
+
+.theme-night {
+  --card-bg: rgba(4, 12, 6, 0.95);
+  --card-text: #7dff7d;
+  --card-muted: rgba(125, 255, 125, 0.6);
+  --card-border: rgba(0, 255, 0, 0.3);
+  --card-divider: rgba(0, 255, 0, 0.2);
+  --card-shadow: 0 6px 18px rgba(0, 0, 0, 0.8);
+  --card-accent-ais: #b6ff7a;
+  --card-accent-vessel: #00ff00;
+  --card-accent-wind: #4dff9d;
+}
+
+.leaflet-tooltip.nav-tooltip,
+.leaflet-popup.nav-popup .leaflet-popup-content-wrapper {
+  padding: 0;
+  border: 1px solid var(--card-border);
+  border-radius: 10px;
+  background: var(--card-bg);
+  color: var(--card-text);
+  box-shadow: var(--card-shadow);
+  backdrop-filter: blur(6px);
+}
+
+.leaflet-tooltip.nav-tooltip::before {
+  display: none;
+}
+
+.leaflet-popup.nav-popup .leaflet-popup-content {
+  margin: 0;
+}
+
+.leaflet-popup.nav-popup .leaflet-popup-tip {
+  background: var(--card-bg);
+}
+
+.nav-card {
+  --nav-card-accent: var(--card-accent-wind);
+  min-width: 150px;
+  padding: 0.5rem 0.7rem 0.55rem;
+  border-left: 3px solid var(--nav-card-accent);
+  border-radius: 10px;
+  font-size: 0.74rem;
+  line-height: 1.4;
+}
+
+.nav-card-ais { --nav-card-accent: var(--card-accent-ais); }
+.nav-card-vessel { --nav-card-accent: var(--card-accent-vessel); }
+.nav-card-wind { --nav-card-accent: var(--card-accent-wind); }
+
+.nav-card-title {
+  margin-bottom: 0.3rem;
+  color: var(--nav-card-accent);
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+}
+
+.nav-card-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.nav-card-row span {
+  color: var(--card-muted);
+}
+
+.nav-card-row strong {
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+}
+
+.nav-card-note {
+  margin-top: 0.35rem;
+  padding-top: 0.3rem;
+  border-top: 1px solid var(--card-divider);
+  color: var(--card-muted);
+  font-size: 0.65rem;
 }
 
 .wind-map-readout strong {
@@ -691,10 +791,10 @@
 
 .boat-marker-icon {
   display: block;
-  width: 36px;
-  height: 36px;
+  width: 28px;
+  height: 28px;
   overflow: visible;
-  filter: drop-shadow(0 1px 3px rgba(0, 0, 0, 0.9));
+  filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.8));
 }
 
 .wind-map-barb {
@@ -1117,10 +1217,6 @@ html {
     grid-template-columns: repeat(3, 1fr);
     grid-template-rows: repeat(6, auto);
   }
-  
-  .instrument-panel.gps-display {
-    grid-column: span 3;
-  }
 }
 
 @media (max-width: 900px) {
@@ -1146,20 +1242,12 @@ html {
     grid-template-columns: repeat(2, 1fr);
     grid-template-rows: repeat(6, auto);
   }
-  
-  .instrument-panel.gps-display {
-    grid-column: span 2;
-  }
 }
 
 @media (max-width: 600px) {
   .instruments-grid {
     grid-template-columns: 1fr;
     grid-template-rows: repeat(6, auto);
-  }
-  
-  .instrument-panel.gps-display {
-    grid-column: span 1;
   }
   
   .app-header {
@@ -1360,10 +1448,6 @@ html {
   box-shadow: 0 6px 18px var(--shadow-color), inset 0 1px 0 rgba(255, 255, 255, 0.05);
 }
 
-.instrument-wrapper-gps {
-  min-height: 250px;
-}
-
 .instrument-card-header {
   min-height: 42px;
   padding: 0.65rem 0.85rem;
@@ -1396,6 +1480,10 @@ html {
 .instrument-content {
   display: flex;
   min-height: 0;
+}
+
+.main-layout-instruments-top .instrument-panel {
+  background: transparent;
 }
 
 .instrument-panel {
@@ -1484,85 +1572,8 @@ html {
   font-size: clamp(0.85rem, 1.3vw, 1rem) !important;
 }
 
-.instrument-panel-gps .instrument {
-  display: flex;
-  flex-direction: column;
-  align-items: stretch;
-  justify-content: center;
-  gap: 0.65rem;
-  padding: 0.3rem 0.65rem;
-}
-
-.instrument-panel-gps .gps-coordinate-list {
-  display: flex;
-  align-items: center;
-  justify-content: flex-start;
-  gap: clamp(1rem, 4vw, 2.5rem);
-  min-width: 0;
-  margin: 0 !important;
-}
-
-.instrument-panel-gps .gps-field {
-  display: flex;
-  min-width: 0;
-}
-
-.instrument-panel-gps .gps-coordinate {
-  flex-direction: column;
-  gap: 0.12rem;
-}
-
-.instrument-panel-gps .gps-meta-list,
-.instrument-panel-gps .gps-time-list {
-  display: flex;
-  align-items: center;
-  min-width: 0;
-}
-
-.instrument-panel-gps .gps-meta-list {
-  flex-wrap: wrap;
-  gap: 0.5rem 1rem;
-}
-
-.instrument-panel-gps .gps-time-list {
-  flex-wrap: wrap;
-  gap: 0.35rem 1rem;
-}
-
-.instrument-panel-gps .gps-time {
-  flex-direction: row;
-  align-items: baseline;
-  gap: 0.35rem;
-}
-
-.instrument-panel-gps .gps-field-label {
-  flex: 0 0 auto;
-  color: var(--text-secondary) !important;
-  font-size: 0.65rem !important;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-}
-
-.instrument-panel-gps .gps-field-value {
-  min-width: 0;
-  overflow-wrap: anywhere;
-  color: var(--text-primary) !important;
-  font-size: clamp(0.75rem, 1vw, 0.9rem) !important;
-  font-variant-numeric: tabular-nums;
-}
-
-@media (max-width: 600px) {
-  .instrument-panel-gps .gps-meta-list {
-    align-items: flex-start;
-    flex-direction: column;
-    gap: 0.4rem;
-  }
-
-}
-
 @media (max-width: 900px) {
-  .instrument-wrapper,
-  .instrument-wrapper-gps {
+  .instrument-wrapper {
     flex: 1 1 300px;
     min-width: 200px;
     min-height: 215px;
@@ -1579,29 +1590,15 @@ html {
 }
 
 @media (max-width: 600px) {
-  .instrument-wrapper,
-  .instrument-wrapper-gps {
+  .instrument-wrapper {
     flex: 1 1 100%;
     min-width: 100%;
     min-height: 200px;
   }
 
-  .instrument-wrapper-gps {
-    min-height: 230px;
-  }
-
   .instrument-wrapper.collapsed {
     min-height: 0;
     height: 125px;
-  }
-
-  .instrument-panel-gps .instrument {
-    gap: 0.5rem;
-  }
-
-  .instrument-panel-gps .gps-coordinate-list,
-  .instrument-panel-gps .gps-time-list {
-    gap: 0.35rem 0.65rem;
   }
 }
 
@@ -1635,8 +1632,8 @@ html {
 
 .main-layout-instruments-top .instruments-container {
   display: grid;
-  grid-template-columns: repeat(6, minmax(0, 1fr));
-  grid-template-rows: 184px;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-rows: 160px;
   gap: 0.75rem;
   padding: 0.65rem 1rem 0.75rem;
   overflow: visible;
@@ -1669,14 +1666,6 @@ html {
 
 .main-layout-instruments-top .instrument-row-bottom {
   grid-row: 1;
-}
-
-.main-layout-instruments-top .instrument-wrapper-depth {
-  grid-column: span 2;
-}
-
-.main-layout-instruments-top .instrument-wrapper-gps {
-  grid-column: span 4;
 }
 
 .main-layout-instruments-top .instruments-sidebar-bottom {
@@ -1721,7 +1710,7 @@ html {
 
 .main-layout-instruments-top .map-container {
   min-width: 0;
-  min-height: 0;
+  min-height: 380px;
   padding: 0.8rem 1rem 0.6rem;
   background: transparent;
 }
@@ -1731,6 +1720,64 @@ html {
   border: 1px solid rgba(115, 179, 199, 0.22) !important;
   border-radius: 14px !important;
   box-shadow: 0 12px 36px rgba(0, 0, 0, 0.25);
+}
+
+.map-position-readout {
+  position: absolute;
+  z-index: 750;
+  bottom: 1.9rem;
+  left: 50%;
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  max-width: calc(100% - 9rem);
+  padding: 0.3rem 0.7rem;
+  border: 1px solid rgba(175, 210, 221, 0.32);
+  border-radius: 10px;
+  background: rgba(8, 22, 33, 0.88);
+  box-shadow: 0 3px 12px rgba(0, 0, 0, 0.28);
+  color: #eef5f9;
+  font-size: 0.7rem;
+  font-variant-numeric: tabular-nums;
+  pointer-events: none;
+  transform: translateX(-50%);
+}
+
+.map-position-readout-row {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 0.1rem 0.9rem;
+  white-space: nowrap;
+}
+
+.map-position-readout em {
+  margin-right: 0.25rem;
+  color: #74e3e5;
+  font-size: 0.6rem;
+  font-style: normal;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+}
+
+.theme-light .map-position-readout {
+  border-color: rgba(16, 32, 42, 0.16);
+  background: rgba(255, 255, 255, 0.94);
+  color: #1a2733;
+}
+
+.theme-light .map-position-readout em {
+  color: #0b78a8;
+}
+
+.theme-night .map-position-readout {
+  border-color: rgba(0, 255, 0, 0.3);
+  background: rgba(4, 12, 6, 0.92);
+  color: #7dff7d;
+}
+
+.theme-night .map-position-readout em {
+  color: #00ff00;
 }
 
 .map-orientation-control {
@@ -1852,11 +1899,10 @@ html {
 
 .speed-gauge {
   display: block;
-  flex: 1 1 auto;
+  flex: 1 1 0;
   width: 100%;
   min-height: 0;
-  max-height: 145px;
-  overflow: visible;
+  overflow: hidden;
 }
 
 .speed-gauge-track {
@@ -2234,26 +2280,6 @@ html {
   font-size: 0.76rem;
 }
 
-.main-layout-instruments-top .instrument-panel-gps .instrument {
-  gap: 0.55rem;
-}
-
-.main-layout-instruments-top .instrument-panel-gps .gps-coordinate-list,
-.main-layout-instruments-top .instrument-panel-gps .gps-time-list {
-  gap: 0.35rem 0.8rem;
-}
-
-.main-layout-instruments-top .instrument-panel-gps .gps-field-label {
-  color: #829eac !important;
-  font-size: 0.58rem !important;
-  letter-spacing: 0.1em;
-}
-
-.main-layout-instruments-top .instrument-panel-gps .gps-field-value {
-  color: #edf8fa !important;
-  font-size: 0.73rem !important;
-}
-
 .theme-light .main-layout-instruments-top .instruments-sidebar {
   background: linear-gradient(180deg, #e5eff2, #dce8ec);
 }
@@ -2272,8 +2298,7 @@ html {
 .theme-light .main-layout-instruments-top .instrument-card-header .instrument-title,
 .theme-light .speed-reading strong,
 .theme-light .course-secondary-readings strong,
-.theme-light .wind-readings strong,
-.theme-light .main-layout-instruments-top .instrument-panel-gps .gps-field-value {
+.theme-light .wind-readings strong {
   color: #183847 !important;
 }
 
@@ -2393,14 +2418,13 @@ html {
   color: #176b79;
 }
 
-.theme-light .speed-reading small,
-.theme-light .main-layout-instruments-top .instrument-panel-gps .gps-field-label {
+.theme-light .speed-reading small {
   color: #587783 !important;
 }
 
 @media (max-width: 900px) {
   .main-layout-instruments-top .instruments-container {
-    grid-template-rows: 176px;
+    grid-template-rows: 160px;
     padding: 0.65rem 0.75rem 0.8rem;
   }
 
@@ -2460,16 +2484,14 @@ html {
     scroll-snap-align: start;
   }
 
-  .main-layout-instruments-top .instrument-grid-top .instrument-wrapper-wind {
-    flex-basis: 300px;
+  .main-layout-instruments-top .instrument-grid-top .instrument-wrapper {
+    flex-basis: 0;
+    flex-grow: 1;
   }
 
   .main-layout-instruments-top .instrument-grid-bottom {
-    grid-template-rows: 156px;
-  }
-
-  .main-layout-instruments-top .instrument-wrapper-gps {
-    grid-column: span 2;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-template-rows: 168px;
   }
 
   .main-layout-instruments-top .instrument-card-header {
@@ -2548,68 +2570,56 @@ html {
   }
 }
 
-@media (min-width: 1100px) {
+@media (min-width: 900px) and (min-aspect-ratio: 1/1) {
   .main-layout.main-layout-instruments-top {
     display: grid;
-    grid-template-columns: 290px minmax(0, 1fr);
-    grid-template-rows: minmax(440px, 1fr) auto;
+    grid-template-columns: 300px minmax(0, 1fr) 300px;
+    grid-template-rows: minmax(520px, 1fr);
     overflow: auto;
+  }
+
+  .main-layout-instruments-top > .instruments-sidebar {
+    width: auto;
+    height: 100%;
+    grid-row: 1;
+    border-bottom: 0;
+    border-top: 0;
   }
 
   .main-layout-instruments-top > .instruments-sidebar:not(.instruments-sidebar-bottom) {
     grid-column: 1;
-    grid-row: 1;
-    width: auto;
-    height: 100%;
     border-right: 1px solid rgba(115, 179, 199, 0.2);
-    border-bottom: 0;
   }
 
-  .main-layout-instruments-top .instrument-grid-top {
+  .main-layout-instruments-top > .instruments-sidebar-bottom {
+    grid-column: 3;
+    border-left: 1px solid rgba(115, 179, 199, 0.2);
+  }
+
+  .main-layout-instruments-top .instrument-grid-top,
+  .main-layout-instruments-top .instrument-grid-bottom {
     height: 100%;
     grid-template-columns: minmax(0, 1fr);
-    grid-template-rows: repeat(3, minmax(120px, 1fr));
-    gap: 0.65rem;
+    grid-template-rows: repeat(2, minmax(190px, 1fr));
+    gap: 0.75rem;
     padding: 0.75rem;
   }
 
-  .main-layout-instruments-top .instrument-grid-top .instrument-wrapper {
+  .main-layout-instruments-top .instrument-grid-top .instrument-wrapper,
+  .main-layout-instruments-top .instrument-grid-bottom .instrument-wrapper {
     grid-column: 1;
-    min-height: 130px;
-  }
-
-  .main-layout-instruments-top .instrument-grid-top .instrument-wrapper-speed {
-    grid-row: 1;
-  }
-
-  .main-layout-instruments-top .instrument-grid-top .instrument-wrapper-compass {
-    grid-row: 2;
-  }
-
-  .main-layout-instruments-top .instrument-grid-top .instrument-wrapper-wind {
-    grid-row: 3;
+    grid-row: auto;
+    min-height: 190px;
   }
 
   .main-layout-instruments-top > .map-container {
     grid-column: 2;
     grid-row: 1;
-    min-height: 440px;
+    min-height: 520px;
     padding: 0.75rem 0.85rem;
   }
 
-  .main-layout-instruments-top > .instruments-sidebar-bottom {
-    grid-column: 2;
-    grid-row: 2;
-    width: auto;
-    border-top: 1px solid rgba(115, 179, 199, 0.2);
-  }
-
-  .main-layout-instruments-top .instrument-grid-bottom {
-    grid-template-rows: 160px;
-    padding: 0.5rem 0.75rem;
-  }
-
   .main-layout-instruments-top .compass-dial {
-    height: 80px;
+    height: 110px;
   }
 }

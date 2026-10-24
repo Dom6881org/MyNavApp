@@ -8,6 +8,8 @@
   },
   "scripts": {
     "dev": "concurrently -k -n backend,frontend \"python -m server.app\" \"vite\"",
+    "dev:lan": "cross-env VITE_HOST=0.0.0.0 npm run dev",
+    "start:lan": "cross-env HOST=0.0.0.0 npm start",
     "build": "tsc && vite build",
     "lint": "eslint . --ext ts,tsx --report-unused-disable-directives --max-warnings 0",
     "preview": "vite preview",
