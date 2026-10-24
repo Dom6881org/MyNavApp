@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { AISBackendState, AISSource, AISTarget, DashboardLayout, NavigationData, Position, UnitChangeHandler, WindData } from '../types';
-import ControlPanel from './ControlPanel';
+import ControlPanel, { MapBaseStyle } from './ControlPanel';
 import MapPositionReadout from './MapPositionReadout';
 import AppLogo from './AppLogo';
 
@@ -117,6 +117,22 @@ const MapViewSimple: React.FC<MapViewSimpleProps> = ({
   const [activeMapTool, setActiveMapTool] = useState<MapToolPanel>(null);
   const [showWindLayer, setShowWindLayer] = useState(true);
   const [followVessel, setFollowVessel] = useState(true);
+  const [mapBaseStyle, setMapBaseStyle] = useState<MapBaseStyle>(() => {
+    try {
+      const stored = localStorage.getItem('mapBaseStyle');
+      return stored === 'muted' || stored === 'faded' ? stored : 'standard';
+    } catch {
+      return 'standard';
+    }
+  });
+  const changeMapBaseStyle = (style: MapBaseStyle) => {
+    setMapBaseStyle(style);
+    try {
+      localStorage.setItem('mapBaseStyle', style);
+    } catch {
+      // Storage unavailable: the choice only lasts for this session.
+    }
+  };
   const canOpenSettings = Boolean(
     layout && gpsStatus && onThemeChange && onUnitChange && onToggleGPSConnection
   );
@@ -603,7 +619,7 @@ const MapViewSimple: React.FC<MapViewSimpleProps> = ({
       
       {/* Map container */}
       <div 
-        className="marine-chart-canvas"
+        className={`marine-chart-canvas map-base-${mapBaseStyle}`}
         ref={mapRef}
         style={{
           width: '100%',
@@ -823,6 +839,8 @@ const MapViewSimple: React.FC<MapViewSimpleProps> = ({
                 onToggleGPSConnection={onToggleGPSConnection}
                 onThemeChange={onThemeChange}
                 onUnitChange={onUnitChange}
+                mapBaseStyle={mapBaseStyle}
+                onMapBaseStyleChange={changeMapBaseStyle}
               />
             </section>
           )}

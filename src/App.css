@@ -789,6 +789,31 @@
   filter: invert(1) hue-rotate(180deg) brightness(0.62) contrast(0.9) saturate(0.55);
 }
 
+/* Chart background: tone down the OSM land base so OpenSeaMap marks stand out (seamark layer is untouched). */
+.map-base-muted .osm-base-tiles {
+  filter: saturate(0.25) contrast(0.65) brightness(1.1);
+}
+
+.map-base-faded .osm-base-tiles {
+  filter: saturate(0.05) contrast(0.4) brightness(1.2);
+}
+
+.theme-dark .map-base-muted .osm-base-tiles {
+  filter: invert(1) hue-rotate(180deg) brightness(0.8) contrast(0.7) saturate(0.3);
+}
+
+.theme-dark .map-base-faded .osm-base-tiles {
+  filter: invert(1) hue-rotate(180deg) brightness(0.7) contrast(0.45) saturate(0.12);
+}
+
+.theme-night .map-base-muted .osm-base-tiles {
+  filter: invert(1) hue-rotate(180deg) brightness(0.55) contrast(0.7) saturate(0.25);
+}
+
+.theme-night .map-base-faded .osm-base-tiles {
+  filter: invert(1) hue-rotate(180deg) brightness(0.45) contrast(0.45) saturate(0.1);
+}
+
 .boat-marker-icon {
   display: block;
   width: 28px;

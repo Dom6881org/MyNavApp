@@ -14,7 +14,16 @@ interface ControlPanelProps {
   onToggleGPSConnection: () => void;
   onThemeChange: (theme: 'light' | 'dark' | 'night') => void;
   onUnitChange: UnitChangeHandler;
+  mapBaseStyle?: MapBaseStyle;
+  onMapBaseStyleChange?: (style: MapBaseStyle) => void;
 }
+
+export type MapBaseStyle = 'standard' | 'muted' | 'faded';
+const MAP_BASE_STYLE_LABELS: Record<MapBaseStyle, string> = {
+  standard: 'Standard',
+  muted: 'Muted land',
+  faded: 'Faded land'
+};
 
 const ControlPanel: React.FC<ControlPanelProps> = ({
   layout,
@@ -23,7 +32,9 @@ const ControlPanel: React.FC<ControlPanelProps> = ({
   hasGPS,
   onToggleGPSConnection,
   onThemeChange,
-  onUnitChange
+  onUnitChange,
+  mapBaseStyle,
+  onMapBaseStyleChange
 }) => {
 
   return (
@@ -66,6 +77,24 @@ const ControlPanel: React.FC<ControlPanelProps> = ({
           ))}
         </div>
       </div>
+
+      {mapBaseStyle && onMapBaseStyleChange && (
+        <div className="control-section">
+          <h3>Chart background</h3>
+          <div className="theme-selector">
+            {(Object.keys(MAP_BASE_STYLE_LABELS) as MapBaseStyle[]).map(style => (
+              <button
+                key={style}
+                onClick={() => onMapBaseStyleChange(style)}
+                className={`theme-button ${mapBaseStyle === style ? 'active' : ''}`}
+                aria-pressed={mapBaseStyle === style}
+              >
+                {MAP_BASE_STYLE_LABELS[style]}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
 
       <div className="control-section">
         <h3>Units</h3>
