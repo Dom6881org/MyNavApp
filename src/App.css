@@ -51,40 +51,515 @@
 }
 
 .wind-map-readout {
-  position: absolute;
-  z-index: 700;
-  bottom: 3rem;
-  left: 0.75rem;
   display: flex;
   flex-direction: column;
   gap: 0.25rem;
-  max-width: min(24rem, calc(100% - 5rem));
-  padding: 0.6rem 0.75rem;
-  border: 1px solid rgba(255, 255, 255, 0.2);
-  border-radius: 6px;
-  background: rgba(10, 24, 35, 0.88);
-  color: #f4f8fb;
-  font-size: 0.75rem;
   line-height: 1.35;
-  pointer-events: none;
 }
 
-.ais-map-controls {
-  position: absolute;
-  z-index: 750;
-  right: 0.75rem;
-  bottom: 0.75rem;
+.gps-map-readout,
+.replay-map-controls {
   display: flex;
   flex-direction: column;
   gap: 0.45rem;
-  width: min(15rem, calc(100% - 1.5rem));
-  padding: 0.65rem;
+  line-height: 1.35;
+}
+
+.gps-map-readout strong,
+.replay-map-controls > strong {
+  color: #74e3e5;
+  font-size: 0.68rem;
+  letter-spacing: 0.06em;
+}
+
+.replay-map-controls label {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  color: #c4d8df;
+  font-size: 0.7rem;
+  font-weight: 650;
+}
+
+.replay-map-controls select {
+  width: 100%;
+  min-height: 2rem;
+  padding: 0.25rem 0.4rem;
+  border: 1px solid rgba(175, 210, 221, 0.38);
+  border-radius: 5px;
+  background: #102532;
+  color: #f4f8fb;
+  font: inherit;
+}
+
+.replay-map-controls progress {
+  width: 100%;
+  height: 0.45rem;
+  accent-color: #74e3e5;
+}
+
+.replay-map-controls select:focus-visible {
+  outline: 2px solid #74e3e5;
+  outline-offset: 2px;
+}
+
+.gpx-replay-error {
+  color: #ffaaa5;
+}
+
+.map-global-legend {
+  flex: 0 0 auto;
+  margin-top: 0.4rem;
+  color: #e6edf1;
+  font-size: 0.75rem;
+}
+
+.map-global-legend summary {
+  width: fit-content;
+  padding: 0.35rem 0.65rem;
+  border: 1px solid rgba(175, 210, 221, 0.38);
+  border-radius: 6px;
+  background: #102532;
+  color: #f4f8fb;
+  cursor: pointer;
+  font-weight: 650;
+  list-style-position: inside;
+}
+
+.map-global-legend summary:hover {
+  border-color: #74e3e5;
+  background: #1b4854;
+}
+
+.map-global-legend summary:focus-visible {
+  outline: 2px solid #74e3e5;
+  outline-offset: 2px;
+}
+
+.map-global-legend-content {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.6rem 1rem;
+  margin-top: 0.4rem;
+  padding: 0.65rem 0.75rem;
   border: 1px solid rgba(175, 210, 221, 0.32);
+  border-radius: 6px;
+  background: rgba(10, 24, 35, 0.94);
+  box-shadow: 0 3px 12px rgba(0, 0, 0, 0.2);
+  line-height: 1.4;
+}
+
+.map-global-legend-item {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.map-global-legend-content p {
+  flex-basis: 100%;
+  color: #c4d8df;
+}
+
+.map-legend-speed-vector,
+.map-legend-track {
+  display: inline-block;
+  height: 3px;
+}
+
+.map-legend-speed-vector {
+  width: 12px;
+  background: #123b66;
+}
+
+.map-legend-track {
+  width: 14px;
+  background: #19d3c5;
+}
+
+.theme-light .map-global-legend {
+  color: #243f4b;
+}
+
+.theme-light .map-global-legend summary {
+  border-color: #91aeb8;
+  background: #fff;
+  color: #183847;
+  box-shadow: 0 1px 4px rgba(29, 66, 78, 0.12);
+}
+
+.theme-light .map-global-legend summary:hover {
+  border-color: #277d89;
+  background: #eaf5f6;
+}
+
+.theme-light .map-global-legend summary:focus-visible {
+  outline-color: #176b79;
+}
+
+.theme-light .map-global-legend-content {
+  border-color: #a8bec5;
+  background: rgba(255, 255, 255, 0.97);
+  color: #243f4b;
+  box-shadow: 0 3px 12px rgba(29, 66, 78, 0.16);
+}
+
+.theme-light .map-global-legend-content p {
+  color: #415f6a;
+}
+
+.map-tools {
+  position: absolute;
+  z-index: 1100;
+  right: 0.75rem;
+  top: 50%;
+  transform: translateY(-50%);
+}
+
+.map-tools-toolbar {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  padding: 0.35rem;
   border-radius: 8px;
   background: rgba(10, 24, 35, 0.88);
   box-shadow: 0 3px 12px rgba(0, 0, 0, 0.28);
+}
+
+.map-tool-item {
+  position: relative;
+}
+
+.map-tool-button {
+  position: relative;
+  display: grid;
+  width: 2.5rem;
+  height: 2.5rem;
+  place-items: center;
+  padding: 0.5rem;
+  border: 1px solid rgba(175, 210, 221, 0.32);
+  border-radius: 6px;
+  background: #102532;
+  color: #f4f8fb;
+  cursor: pointer;
+}
+
+.map-tool-button:hover,
+.map-tool-button.layer-visible {
+  border-color: #74e3e5;
+  background: #1b4854;
+}
+
+.map-tool-button:not(.layer-visible) {
+  color: #8da5ae;
+  background: #0b1921;
+}
+
+.map-tool-button:not(.layer-visible) svg {
+  opacity: 0.65;
+}
+
+.map-tool-button:disabled {
+  cursor: wait;
+  opacity: 0.6;
+}
+
+.map-tool-button.replay-active {
+  border-color: #ffd166;
+  background: #473d22;
+  color: #ffe3a1;
+}
+
+.gps-map-button.gps-connected {
+  border-color: #61d095;
+  color: #9af0bd;
+}
+
+.gps-map-button.gps-disconnected {
+  color: #ffd166;
+}
+
+.gps-map-indicator {
+  position: absolute;
+  right: 0.28rem;
+  bottom: 0.28rem;
+  width: 0.48rem;
+  height: 0.48rem;
+  border: 1px solid #102532;
+  border-radius: 50%;
+  background: #d49a31;
+}
+
+.gps-connected .gps-map-indicator {
+  background: #39c978;
+}
+
+.map-tool-details {
+  position: absolute;
+  right: -0.28rem;
+  bottom: -0.28rem;
+  display: grid;
+  width: 1.1rem;
+  height: 1.1rem;
+  place-items: center;
+  padding: 0;
+  border: 1px solid #102532;
+  border-radius: 999px;
+  background: #d7e5e9;
+  color: #10202a;
+  cursor: pointer;
+  font: inherit;
+  font-size: 0.68rem;
+  font-weight: 800;
+  line-height: 1;
+}
+
+.map-tool-details:hover,
+.map-tool-details.active {
+  background: #74e3e5;
+}
+
+.map-tool-button svg {
+  width: 1.35rem;
+  height: 1.35rem;
+  fill: none;
+  stroke: currentColor;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 1.7;
+}
+
+.map-tool-button:focus-visible {
+  outline: 2px solid #74e3e5;
+  outline-offset: 2px;
+}
+
+.map-tool-details:focus-visible {
+  outline: 2px solid #74e3e5;
+  outline-offset: 2px;
+}
+
+.map-tool-count {
+  position: absolute;
+  top: -0.3rem;
+  right: -0.3rem;
+  display: grid;
+  min-width: 1.05rem;
+  height: 1.05rem;
+  place-items: center;
+  padding: 0 0.18rem;
+  border: 1px solid #102532;
+  border-radius: 999px;
+  background: #ffd166;
+  color: #10202a;
+  font-size: 0.62rem;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+}
+
+.map-tool-panel {
+  position: absolute;
+  top: 50%;
+  right: calc(100% + 0.5rem);
+  width: min(15rem, calc(100vw - 7rem));
+  max-height: min(70vh, 24rem);
+  overflow-y: auto;
+  padding: 0.65rem;
+  border: 1px solid rgba(175, 210, 221, 0.32);
+  border-radius: 8px;
+  background: rgba(10, 24, 35, 0.94);
+  box-shadow: 0 3px 12px rgba(0, 0, 0, 0.28);
   color: #f4f8fb;
   font-size: 0.75rem;
+  transform: translateY(-50%);
+}
+
+.map-settings-panel {
+  width: min(27rem, calc(100vw - 7rem));
+  max-height: min(82vh, 38rem);
+  padding: 0.75rem;
+}
+
+.map-settings-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 0.5rem;
+  color: #74e3e5;
+  font-size: 0.72rem;
+  letter-spacing: 0.06em;
+}
+
+.map-settings-heading button {
+  width: 1.6rem;
+  height: 1.6rem;
+  border: 1px solid rgba(175, 210, 221, 0.38);
+  border-radius: 5px;
+  background: #102532;
+  color: #f4f8fb;
+  cursor: pointer;
+  font: inherit;
+  font-size: 1rem;
+  line-height: 1;
+}
+
+.map-settings-heading button:hover {
+  border-color: #74e3e5;
+  background: #1b4854;
+}
+
+.map-settings-heading button:focus-visible {
+  outline: 2px solid #74e3e5;
+  outline-offset: 2px;
+}
+
+.map-settings-panel .control-panel {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.55rem;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+.map-settings-panel .control-section {
+  min-width: 0;
+  padding: 0.65rem;
+  border: 1px solid rgba(175, 210, 221, 0.24);
+  border-radius: 7px;
+  background: linear-gradient(145deg, rgba(27, 72, 84, 0.52), rgba(16, 37, 50, 0.8));
+}
+
+.map-settings-panel .control-section-connection {
+  grid-column: 1 / -1;
+}
+
+.map-settings-panel .control-section h3 {
+  margin-bottom: 0.6rem;
+  color: #74e3e5;
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.map-settings-panel .connection-button {
+  min-height: 2.2rem;
+  padding: 0.45rem 0.65rem;
+  font-size: 0.75rem;
+}
+
+.map-settings-panel .control-connection-actions {
+  display: grid;
+  grid-template-columns: minmax(7rem, 0.75fr) minmax(0, 1.25fr);
+  align-items: center;
+  gap: 0.6rem;
+}
+
+.map-settings-panel .control-gps-status {
+  padding: 0.45rem 0.55rem;
+  border-radius: 5px;
+  background: rgba(4, 15, 22, 0.48);
+  color: #c4d8df;
+  font-size: 0.68rem;
+  line-height: 1.35;
+}
+
+.map-settings-panel .control-gps-status.connected {
+  color: #9af0bd;
+}
+
+.map-settings-panel .control-gps-status.disconnected {
+  color: #ffd166;
+}
+
+.map-settings-panel .instrument-visibility-option {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  min-height: 1.8rem;
+  cursor: pointer;
+}
+
+.map-settings-panel .instrument-visibility-option input {
+  accent-color: #39c978;
+}
+
+.map-settings-panel .theme-selector {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.3rem;
+}
+
+.map-settings-panel .theme-button {
+  min-width: 0;
+  padding: 0.4rem 0.25rem;
+  border: 1px solid rgba(175, 210, 221, 0.28);
+  border-radius: 5px;
+  background: rgba(4, 15, 22, 0.35);
+  color: #d9e6ea;
+  cursor: pointer;
+  font-size: 0.7rem;
+}
+
+.map-settings-panel .theme-button.active {
+  border-color: #74e3e5;
+  background: rgba(116, 227, 229, 0.18);
+  color: #fff;
+}
+
+.map-settings-panel .instrument-visibility-option,
+.map-settings-panel .unit-group {
+  color: #e6edf1;
+  font-size: 0.72rem;
+}
+
+.map-settings-panel .unit-selector {
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+}
+
+.map-settings-panel .unit-group {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.map-settings-panel .unit-group select {
+  min-width: 0;
+  padding: 0.3rem;
+  border: 1px solid rgba(175, 210, 221, 0.38);
+  border-radius: 5px;
+  background: #102532;
+  color: #f4f8fb;
+  font: inherit;
+}
+
+.map-settings-panel .unit-group select:focus-visible {
+  outline: 2px solid #74e3e5;
+  outline-offset: 2px;
+}
+
+@media (max-width: 480px) {
+  .map-settings-panel .control-panel {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .map-settings-panel .control-section-connection {
+    grid-column: auto;
+  }
+
+  .map-settings-panel .control-connection-actions {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+.ais-map-controls {
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
 }
 
 .ais-map-source {
@@ -160,7 +635,8 @@
 
 .ais-map-source select:focus-visible,
 .ais-map-visibility input:focus-visible,
-.ais-map-zoom:focus-visible {
+.ais-map-zoom:focus-visible,
+.replay-map-controls select:focus-visible {
   outline: 2px solid #74e3e5;
   outline-offset: 2px;
 }
@@ -242,27 +718,6 @@
   gap: 1rem;
   align-items: center;
   flex-wrap: wrap;
-}
-
-/* GPS Status Indicator */
-.gps-status {
-  padding: 0.4rem 0.8rem;
-  border-radius: 16px;
-  font-size: 0.85rem;
-  font-weight: bold;
-  display: flex;
-  align-items: center;
-  gap: 0.3rem;
-}
-
-.gps-status.connected {
-  background: rgba(0, 255, 0, 0.2);
-  color: #00ff00;
-}
-
-.gps-status.disconnected {
-  background: rgba(255, 170, 0, 0.2);
-  color: #ffaa00;
 }
 
 /* Connection indicator pulse animation */
@@ -711,10 +1166,6 @@ html {
     min-width: 100%;
   }
   
-  .gps-status {
-    width: 100%;
-    justify-content: center;
-  }
 }
 
 /* ==================== NEW SPLIT LAYOUT STYLES ==================== */
@@ -786,23 +1237,6 @@ html {
 }
 
 /* Settings button in header */
-.settings-button {
-  padding: 0.4rem 0.8rem;
-  border: 1px solid var(--border-color);
-  border-radius: 4px;
-  background: var(--bg-secondary);
-  color: var(--text-primary);
-  cursor: pointer;
-  font-size: 1rem;
-  transition: all 0.2s;
-  margin-left: 0.5rem;
-}
-
-.settings-button:hover {
-  background: var(--bg-tertiary);
-  color: var(--accent-color);
-}
-
 .backend-status {
   flex: 0 0 auto;
   color: var(--text-secondary);
@@ -897,10 +1331,6 @@ html {
     min-width: 100%;
   }
   
-  .settings-button {
-    padding: 0.3rem 0.5rem;
-    font-size: 0.9rem;
-  }
 }
 
 /* Instrument cards */
@@ -1088,14 +1518,6 @@ html {
   gap: 0.35rem;
 }
 
-.instrument-panel-gps .gps-signal {
-  display: flex;
-  align-items: baseline;
-  gap: 0.4rem;
-  min-width: 0;
-  margin: 0 0 0 auto !important;
-}
-
 .instrument-panel-gps .gps-field-label {
   flex: 0 0 auto;
   color: var(--text-secondary) !important;
@@ -1112,10 +1534,6 @@ html {
   font-variant-numeric: tabular-nums;
 }
 
-.instrument-panel-gps .gps-signal .gps-field-value {
-  white-space: nowrap;
-}
-
 @media (max-width: 600px) {
   .instrument-panel-gps .gps-meta-list {
     align-items: flex-start;
@@ -1123,9 +1541,6 @@ html {
     gap: 0.4rem;
   }
 
-  .instrument-panel-gps .gps-signal {
-    margin-left: 0 !important;
-  }
 }
 
 @media (max-width: 900px) {
@@ -1357,6 +1772,11 @@ html {
 }
 
 @media (max-width: 600px) {
+  .map-tool-panel {
+    width: min(14rem, calc(100vw - 7rem));
+    max-height: min(65vh, 12rem);
+  }
+
   .map-orientation-control {
     right: 0.5rem;
     left: auto;
@@ -1644,78 +2064,151 @@ html {
 
 .main-layout-instruments-top .wind-instrument {
   display: flex;
-  flex-direction: row;
+  flex-direction: column;
   align-items: center;
-  justify-content: space-around;
-  gap: 0.6rem;
+  justify-content: center;
 }
 
-.wind-dial {
+.wind-indicator {
   position: relative;
-  width: min(132px, 48%);
-  aspect-ratio: 1;
-  flex: 0 0 auto;
-  border: 1px solid rgba(122, 172, 190, 0.3);
-  border-radius: 50%;
-  background:
-    radial-gradient(circle, rgba(54, 199, 208, 0.08) 0 3px, transparent 4px),
-    repeating-radial-gradient(circle, transparent 0 17px, rgba(122, 172, 190, 0.08) 18px 19px);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.1rem;
+  height: 100%;
+  min-height: 0;
+  padding: 0;
+  background: transparent;
 }
 
-.wind-dial > span {
-  position: absolute;
-  color: #89a9b7;
-  font-size: 0.55rem;
+.wind-gauge-column {
+  display: flex;
+  flex: 1 1 0;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.1rem;
+  min-width: 0;
+  min-height: 0;
+  width: 100%;
+}
+
+.wind-gauge {
+  display: block;
+  flex: 1 1 0;
+  min-height: 0;
+  width: auto;
+  max-width: 100%;
+  aspect-ratio: 1;
+  overflow: visible;
+}
+
+.wind-gauge-face {
+  fill: #07090d;
+  stroke: rgba(195, 201, 205, 0.4);
+  stroke-width: 2;
+}
+
+.wind-gauge-track {
+  fill: none;
+  stroke: rgba(178, 194, 201, 0.42);
+  stroke-width: 2;
+}
+
+.wind-gauge-sector {
+  fill: none;
+  stroke-width: 9;
+}
+
+.wind-gauge-sector-port { stroke: rgba(232, 57, 56, 0.9); }
+.wind-gauge-sector-starboard { stroke: rgba(27, 188, 111, 0.9); }
+
+.wind-gauge-tick {
+  stroke: rgba(231, 239, 242, 0.72);
+  stroke-width: 1.3;
+}
+
+.wind-gauge-tick-major {
+  stroke: #f5f8f9;
+  stroke-width: 2.2;
+}
+
+.wind-gauge-number {
+  fill: #f3f8fb;
+  font-family: inherit;
+  font-size: 10px;
   font-weight: 700;
 }
 
-.wind-dial > span:nth-child(1) { top: 4px; left: 50%; transform: translateX(-50%); }
-.wind-dial > span:nth-child(2) { top: 50%; right: 5px; transform: translateY(-50%); }
-.wind-dial > span:nth-child(3) { bottom: 4px; left: 50%; transform: translateX(-50%); }
-.wind-dial > span:nth-child(4) { top: 50%; left: 5px; transform: translateY(-50%); }
-
-.wind-dial-needle {
-  position: absolute;
-  top: 25%;
-  left: calc(50% - 1px);
-  width: 2px;
-  height: 25%;
-  border-radius: 2px;
-  background: linear-gradient(#45d2d4, rgba(69, 210, 212, 0.08));
+.wind-gauge-needle line {
+  stroke: #f6fafb;
+  stroke-linecap: round;
+  stroke-width: 3.8;
 }
 
-.wind-dial-center {
-  position: absolute;
-  inset: 0;
-  display: grid;
-  place-items: center;
-  color: #d9edf1;
-  font-size: 0.7rem;
+.wind-gauge-needle path { fill: #f6fafb; }
+
+.wind-gauge-pivot {
+  fill: #dce3e5;
+  stroke: #646e72;
+  stroke-width: 2;
 }
 
-.wind-readings {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 0.4rem 0.7rem;
+.wind-gauge-hull {
+  fill: #f4f7f8;
+  stroke: #7b8790;
+  stroke-linejoin: round;
+  stroke-width: 1.5;
 }
 
-.wind-readings strong {
-  color: #edf8fa;
-  font-size: 0.95rem;
-  font-variant-numeric: tabular-nums;
+.wind-gauge-lcd {
+  fill: rgba(111, 126, 103, 0.82);
+  stroke: rgba(35, 39, 35, 0.9);
+  stroke-width: 3;
+}
+
+.wind-gauge-speed {
+  fill: #d5e7d7;
+  font-family: "Courier New", monospace;
+  font-size: 17px;
+  font-weight: 700;
+  letter-spacing: -1px;
+}
+
+.wind-gauge-unit {
+  fill: #c0d5c3;
+  font-family: inherit;
+  font-size: 6px;
+  font-weight: 700;
+}
+
+.wind-gauge-mode {
+  fill: #c0d5c3;
+  font-family: inherit;
+  font-size: 6px;
+  font-weight: 800;
+  letter-spacing: 1px;
+}
+
+.wind-forecast-note {
+  flex: 0 0 auto;
+  color: #829eac;
+  font-size: 0.45rem;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  line-height: 1;
+  text-align: center;
+  text-transform: uppercase;
   white-space: nowrap;
 }
 
-.wind-readings small {
-  color: #91a9b4;
-  font-size: 0.63rem;
-  font-weight: 400;
+.main-layout-instruments-top .wind-readings .instrument-reading-secondary {
+  font-size: 0.55rem !important;
 }
 
-.wind-readings .instrument-reading-secondary {
-  grid-column: 1 / -1;
-  color: #829eac;
-  font-size: 0.62rem;
+.wind-readings .instrument-reading-secondary.forecast-reading {
+  color: #74e3e5;
+  font-weight: 650;
 }
 
 .main-layout-instruments-top .instrument-unavailable {
@@ -1744,10 +2237,6 @@ html {
   font-size: 0.73rem !important;
 }
 
-.main-layout-instruments-top .instrument-panel-gps .gps-signal {
-  padding-top: 0;
-}
-
 .theme-light .main-layout-instruments-top .instruments-sidebar {
   background: linear-gradient(180deg, #e5eff2, #dce8ec);
 }
@@ -1758,6 +2247,11 @@ html {
   box-shadow: 0 8px 22px rgba(29, 66, 78, 0.1), inset 0 1px 0 #fff;
 }
 
+.theme-light .main-layout-instruments-top .instrument-wrapper:hover {
+  border-color: rgba(39, 125, 137, 0.55);
+  box-shadow: 0 10px 26px rgba(29, 66, 78, 0.14), 0 0 18px rgba(32, 169, 192, 0.08);
+}
+
 .theme-light .main-layout-instruments-top .instrument-card-header .instrument-title,
 .theme-light .speed-reading strong,
 .theme-light .course-secondary-readings strong,
@@ -1766,9 +2260,123 @@ html {
   color: #183847 !important;
 }
 
-.theme-light .speed-reading small,
+.theme-light .speed-gauge-track {
+  stroke: rgba(48, 93, 109, 0.24);
+}
+
+.theme-light .speed-gauge-tick {
+  stroke: rgba(48, 93, 109, 0.52);
+}
+
+.theme-light .speed-gauge-tick-major {
+  stroke: #52717d;
+}
+
+.theme-light .speed-gauge-mark {
+  fill: #415f6a;
+}
+
+.theme-light .speed-reading-stw > span {
+  color: #9a5200;
+}
+
+.theme-light .speed-reading-sog > span {
+  color: #087985;
+}
+
+.theme-light .speed-reading small {
+  color: #587783;
+}
+
+.theme-light .compass-dial-ring {
+  fill: rgba(35, 87, 103, 0.07);
+  stroke: rgba(48, 93, 109, 0.3);
+}
+
+.theme-light .compass-tick {
+  stroke: rgba(48, 93, 109, 0.55);
+}
+
+.theme-light .compass-tick-major {
+  stroke: #52717d;
+}
+
+.theme-light .main-layout-instruments-top .compass-cardinal {
+  fill: #415f6a !important;
+  color: #415f6a !important;
+}
+
+.theme-light .compass-heading-value {
+  color: #183847;
+  text-shadow: 0 1px 2px rgba(255, 255, 255, 0.9);
+}
+
 .theme-light .course-secondary-readings span,
-.theme-light .wind-readings > div > span,
+.theme-light .wind-readings > div > span {
+  color: #415f6a;
+}
+
+.theme-light .wind-gauge-face {
+  fill: #f7fafb;
+  stroke: rgba(48, 93, 109, 0.45);
+}
+
+.theme-light .wind-gauge-track {
+  stroke: rgba(48, 93, 109, 0.55);
+}
+
+.theme-light .wind-gauge-tick {
+  stroke: #52717d;
+}
+
+.theme-light .wind-gauge-tick-major,
+.theme-light .wind-gauge-number {
+  stroke: #294d5a;
+  fill: #183847;
+}
+
+.theme-light .wind-gauge-needle line,
+.theme-light .wind-gauge-needle path {
+  stroke: #183847;
+  fill: #183847;
+}
+
+.theme-light .wind-gauge-hull {
+  fill: #183847;
+  stroke: #fff;
+}
+
+.theme-light .wind-gauge-lcd {
+  fill: #dce8d0;
+  stroke: #6e7a68;
+}
+
+.theme-light .wind-gauge-speed,
+.theme-light .wind-gauge-unit {
+  fill: #263329;
+}
+
+.theme-light .wind-gauge-mode {
+  fill: #415f6a;
+}
+
+.theme-light .wind-forecast-note {
+  color: #587783;
+}
+
+.theme-light .wind-readings small {
+  color: #587783;
+}
+
+.theme-light .wind-readings .instrument-reading-secondary {
+  color: #415f6a;
+}
+
+.theme-light .wind-readings .instrument-reading-secondary.forecast-reading {
+  color: #176b79;
+}
+
+.theme-light .speed-reading small,
 .theme-light .main-layout-instruments-top .instrument-panel-gps .gps-field-label {
   color: #587783 !important;
 }
@@ -1799,16 +2407,6 @@ html {
     flex-direction: row;
     justify-content: center;
     gap: 0.45rem;
-  }
-
-  .gps-status {
-    width: auto;
-    padding: 0.32rem 0.6rem;
-    font-size: 0.72rem;
-  }
-
-  .settings-button {
-    margin-left: 0;
   }
 
   .main-layout.main-layout-instruments-top {
@@ -1843,6 +2441,10 @@ html {
   .main-layout-instruments-top .instrument-grid-top .instrument-wrapper {
     flex: 0 0 205px;
     scroll-snap-align: start;
+  }
+
+  .main-layout-instruments-top .instrument-grid-top .instrument-wrapper-wind {
+    flex-basis: 300px;
   }
 
   .main-layout-instruments-top .instrument-grid-bottom {
@@ -1882,10 +2484,6 @@ html {
 
   .compass-dial {
     height: 88px;
-  }
-
-  .wind-dial {
-    width: min(112px, 46%);
   }
 }
 
@@ -1931,15 +2529,6 @@ html {
     flex-wrap: nowrap;
     gap: 0.35rem;
   }
-
-  .app .app-header .settings-button {
-    flex: 0 0 auto;
-    padding: 0.3rem 0.45rem;
-  }
-
-  .wind-dial {
-    width: min(78px, 42%);
-  }
 }
 
 @media (min-width: 1100px) {
@@ -1976,11 +2565,11 @@ html {
     grid-row: 1;
   }
 
-  .main-layout-instruments-top .instrument-grid-top .instrument-wrapper-wind {
+  .main-layout-instruments-top .instrument-grid-top .instrument-wrapper-compass {
     grid-row: 2;
   }
 
-  .main-layout-instruments-top .instrument-grid-top .instrument-wrapper-compass {
+  .main-layout-instruments-top .instrument-grid-top .instrument-wrapper-wind {
     grid-row: 3;
   }
 

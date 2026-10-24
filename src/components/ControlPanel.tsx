@@ -33,45 +33,27 @@ const ControlPanel: React.FC<ControlPanelProps> = ({
   return (
     <div className="control-panel">
       {/* Connection section */}
-      <div className="control-section">
+      <div className="control-section control-section-connection">
         <h3>Connection</h3>
         
-        {/* GPS Connection */}
-        <div style={{ marginBottom: '1rem' }}>
-          <div style={{ 
-            display: 'flex', 
-            gap: '0.5rem', 
-            alignItems: 'center',
-            marginBottom: '0.5rem'
-          }}>
-            <button 
-              onClick={onToggleGPSConnection}
-              className={`connection-button gps-button ${isGPSEnabled ? 'connected' : 'disconnected'}`}
-              disabled={!hasGPS}
-              style={{ flex: 1 }}
-            >
-              {isGPSEnabled
-                ? gpsStatus.isConnected ? 'GPS: Connected' : gpsStatus.error ? 'GPS: Retry' : 'GPS: Searching…'
-                : 'GPS: Start'}
-            </button>
-          </div>
-          
-          {/* GPS Status */}
-          <div style={{
-              fontSize: '0.85rem',
-              color: gpsStatus.isConnected ? 'var(--accent-color)' : 'var(--warning-color)',
-              padding: '0.5rem',
-              background: 'rgba(0, 0, 0, 0.2)',
-              borderRadius: '4px'
-            }}>
-              {gpsStatus.isConnected
-                ? `Position received · accuracy ±${gpsStatus.accuracy?.toFixed(0) ?? '?'} m`
-                : gpsStatus.error
-                  ? `⚠️ ${gpsStatus.error}`
-                  : '⏳ Allow location access and wait for a GPS fix.'}
+        <div className="control-connection-actions">
+          <button
+            onClick={onToggleGPSConnection}
+            className={`connection-button gps-button ${isGPSEnabled ? 'connected' : 'disconnected'}`}
+            disabled={!hasGPS}
+          >
+            {isGPSEnabled
+              ? gpsStatus.isConnected ? 'GPS connected' : gpsStatus.error ? 'Retry GPS' : 'Searching for GPS…'
+              : 'Start GPS'}
+          </button>
+          <div className={`control-gps-status ${gpsStatus.isConnected ? 'connected' : 'disconnected'}`} role="status">
+            {gpsStatus.isConnected
+              ? `Position received · accuracy ±${gpsStatus.accuracy?.toFixed(0) ?? '?'} m`
+              : gpsStatus.error
+                ? gpsStatus.error
+                : 'Allow location access and wait for a GPS fix.'}
           </div>
         </div>
-
       </div>
 
       <div className="control-section">

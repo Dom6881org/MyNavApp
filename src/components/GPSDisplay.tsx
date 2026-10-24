@@ -4,7 +4,6 @@ import { Position, GPSTime } from '../types';
 interface GPSDisplayProps {
   position: Position | null;
   gpsTime: GPSTime | null;
-  accuracy: number | null;
 }
 
 const formatCoord = (value: number, isLat: boolean): string => {
@@ -18,8 +17,7 @@ const formatCoord = (value: number, isLat: boolean): string => {
 
 const GPSDisplay: React.FC<GPSDisplayProps> = ({
   position,
-  gpsTime,
-  accuracy
+  gpsTime
 }) => {
   return (
     <div className="instrument gps-display">
@@ -52,12 +50,6 @@ const GPSDisplay: React.FC<GPSDisplayProps> = ({
             <span className="gps-field-label">Date</span>
             <span className="gps-field-value">{gpsTime?.date ?? '—'}</span>
           </div>
-        </div>
-        <div className="gps-signal">
-          <span className="gps-field-label">ACCURACY</span>
-          <span className="gps-field-value">
-            {accuracy === null ? 'Waiting for position' : `± ${Math.round(accuracy)} m`}
-          </span>
         </div>
       </div>
     </div>

@@ -32,7 +32,10 @@ const InstrumentPanel: React.FC<InstrumentPanelProps> = ({ data, config, units, 
       case 'wind':
         return (
           <WindIndicator
-            data={data.apparentWind}
+            apparentWind={data.apparentWind}
+            forecastWind={data.wind}
+            forecastStatus={data.windForecastStatus}
+            headingDegrees={data.compass?.heading ?? data.compass?.cog ?? null}
             unit={units.speed}
             size={instrumentSize}
           />
@@ -43,7 +46,6 @@ const InstrumentPanel: React.FC<InstrumentPanelProps> = ({ data, config, units, 
         return <GPSDisplay 
           position={data.position} 
           gpsTime={data.gpsTime} 
-          accuracy={data.gpsAccuracy}
         />;
       case 'map':
         return <MapView data={data} size={{ width: '100%', height: '100%' }} />;

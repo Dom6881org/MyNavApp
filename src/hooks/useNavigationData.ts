@@ -18,6 +18,13 @@ export const useNavigationData = () => {
   const replayPositionRef = useRef<Position | null>(null);
   replayPositionRef.current = replay.isActive ? activeSample?.position ?? null : null;
   const nmeaNavigation = backendSnapshot?.nmeaConnected ? backendSnapshot.navigation : null;
+  const navigationSource: 'replay' | 'nmea' | 'browser' | 'none' = replay.isActive
+    ? 'replay'
+    : nmeaNavigation
+      ? 'nmea'
+      : gpsData.status.isConnected
+        ? 'browser'
+        : 'none';
 
   useEffect(() => {
     if (!gpsData.position || !gpsData.status.lastUpdate || replay.isActive) return;
@@ -90,7 +97,7 @@ export const useNavigationData = () => {
     navigationData,
     isConnected: replay.isActive || Boolean(nmeaNavigation) || gpsData.status.isConnected,
     isGPSEnabled: replay.isActive || isGPSEnabled,
-    navigationSource: replay.isActive ? 'replay' : nmeaNavigation ? 'nmea' : gpsData.status.isConnected ? 'browser' : 'none',
+    navigationSource,
     backendStatus,
     aisState: backendSnapshot?.ais ?? null,
     gpsStatus: replay.isActive && activeSample

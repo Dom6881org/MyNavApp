@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { AISBackendState, AISSource, AISTarget, NavigationData, Position } from '../types';
+import { AISBackendState, AISSource, AISTarget, DashboardLayout, NavigationData, Position } from '../types';
+import ControlPanel from './ControlPanel';
 
 // Extend Window interface for Leaflet
 declare global {
@@ -20,10 +21,38 @@ interface MapViewSimpleProps {
   aisSource?: AISSource;
   onAISSourceChange?: (source: AISSource) => void;
   onAISVisibilityChange?: (visible: boolean) => void;
+  layout?: DashboardLayout;
+  onThemeChange?: (theme: 'light' | 'dark' | 'night') => void;
+  onUnitChange?: (unitType: keyof DashboardLayout['units'], value: any) => void;
+  onToggleInstrumentVisibility?: (id: string) => void;
+  onToggleGPSConnection?: () => void;
+  showReplayControls?: boolean;
+  gpxReplay?: {
+    isActive: boolean;
+    isPlaying: boolean;
+    isLoading: boolean;
+    error: string | null;
+    progress: number;
+    speedMultiplier: number;
+    start: () => Promise<boolean>;
+    stop: () => void;
+    setSpeedMultiplier: (speed: number) => void;
+  };
+  gpsStatus?: GPSStatus;
+  navigationSource?: 'replay' | 'nmea' | 'browser' | 'none';
+  hasGPS?: boolean;
+  isGPSEnabled?: boolean;
   size?: { width: number | string; height: number | string };
 }
 
 type MapOrientation = 'north' | 'heading' | 'course';
+type MapToolPanel = 'ais' | 'weather' | 'gps' | 'replay' | 'settings' | null;
+type GPSStatus = {
+  isConnected: boolean;
+  error: string | null;
+  accuracy: number | null;
+  lastUpdate: number | null;
+};
 
 /**
  * Marine chart with OpenStreetMap base tiles and OpenSeaMap navigation marks.
@@ -40,6 +69,17 @@ const MapViewSimple: React.FC<MapViewSimpleProps> = ({
   aisSource = 'local',
   onAISSourceChange,
   onAISVisibilityChange,
+  layout,
+  onThemeChange,
+  onUnitChange,
+  onToggleInstrumentVisibility,
+  onToggleGPSConnection,
+  showReplayControls = false,
+  gpxReplay,
+  gpsStatus,
+  navigationSource = 'none',
+  hasGPS = true,
+  isGPSEnabled = true,
   size
 }) => {
   const mapRef = useRef<HTMLDivElement>(null);
@@ -50,6 +90,12 @@ const MapViewSimple: React.FC<MapViewSimpleProps> = ({
   const [rotationUnavailable, setRotationUnavailable] = useState<boolean>(false);
   const [leafletError, setLeafletError] = useState<boolean>(false);
   const [mapOrientation, setMapOrientation] = useState<MapOrientation>('north');
+  const [activeMapTool, setActiveMapTool] = useState<MapToolPanel>(null);
+  const [showWindLayer, setShowWindLayer] = useState(true);
+  const canOpenSettings = Boolean(
+    layout && gpsStatus && onThemeChange && onUnitChange &&
+    onToggleInstrumentVisibility && onToggleGPSConnection
+  );
   const aisMarkersRef = useRef<Map<string, any>>(new Map());
   const visibleAISTargets = useMemo(() => aisTargets.filter(target =>
     Number.isFinite(target.latitude) && Number.isFinite(target.longitude) &&
@@ -435,7 +481,7 @@ const MapViewSimple: React.FC<MapViewSimpleProps> = ({
   }, [mapInstance, leafletLoaded, leafletError, onWindGridRequest]);
 
   useEffect(() => {
-    if (!mapInstance || !leafletLoaded || leafletError || !window.L || data.windGrid.length === 0) return;
+    if (!showWindLayer || !mapInstance || !leafletLoaded || leafletError || !window.L || data.windGrid.length === 0) return;
 
     const L = window.L;
     const map = mapInstance.map;
@@ -473,7 +519,7 @@ const MapViewSimple: React.FC<MapViewSimpleProps> = ({
     return () => {
       map.removeLayer(flowLayer);
     };
-  }, [mapInstance, leafletLoaded, leafletError, data.windGrid]);
+  }, [mapInstance, leafletLoaded, leafletError, data.windGrid, showWindLayer]);
 
   return (
     <div 
@@ -554,75 +600,263 @@ const MapViewSimple: React.FC<MapViewSimpleProps> = ({
             ))}
           </div>
         )}
-        <section className="ais-map-controls" aria-label="AIS controls" onMouseDown={event => event.stopPropagation()}>
-          <label className="ais-map-source">
-            <span>AIS source</span>
-            <select
-              value={aisSource}
-              onChange={event => onAISSourceChange?.(event.target.value as AISSource)}
-            >
-              <option value="local">Local VHF · NMEA/UDP</option>
-              <option value="internet">Internet · AISstream</option>
-            </select>
-          </label>
-          <label className="ais-map-visibility">
-            <input
-              type="checkbox"
-              checked={showAIS}
-              onChange={event => onAISVisibilityChange?.(event.target.checked)}
-            />
-            <span>Show AIS targets</span>
-          </label>
-          <div className="ais-map-target-count" aria-live="polite">
-            <span>AIS targets detected</span>
-            <strong>{getAISDetectedTargetCount(aisSource, aisState)}</strong>
-          </div>
-          <div className="ais-map-status" role="status">
-            {getAISStatusMessage(aisSource, aisState)}
-          </div>
-          {aisSource === 'internet' && (
-            <div className="ais-map-coverage">
-              AISstream area: about 15 NM around the latest GPS position
+        <div className="map-tools" onMouseDown={event => event.stopPropagation()}>
+          <div className="map-tools-toolbar" role="group" aria-label="Map information">
+            {canOpenSettings && (
+              <button
+                className={`map-tool-button ${activeMapTool === 'settings' ? 'layer-visible' : ''}`}
+                type="button"
+                aria-label="Settings"
+                title="Settings"
+                aria-expanded={activeMapTool === 'settings'}
+                aria-controls="map-settings-panel"
+                onClick={() => setActiveMapTool(activeMapTool === 'settings' ? null : 'settings')}
+              >
+                <svg viewBox="0 0 24 24" aria-hidden="true">
+                  <path d="M12 8.5a3.5 3.5 0 1 0 0 7 3.5 3.5 0 0 0 0-7Z" />
+                  <path d="m19.4 13.5 1.1.9-1.4 2.4-1.4-.5a7.8 7.8 0 0 1-1.5.9l-.2 1.5h-2.8l-.3-1.5a7.8 7.8 0 0 1-1.5-.9l-1.4.5-1.4-2.4 1.1-.9a6.8 6.8 0 0 1 0-1.8l-1.1-.9 1.4-2.4 1.4.5a7.8 7.8 0 0 1 1.5-.9l.3-1.5H16l.2 1.5a7.8 7.8 0 0 1 1.5.9l1.4-.5 1.4 2.4-1.1.9a6.8 6.8 0 0 1 0 1.8Z" transform="translate(-1 -1)" />
+                </svg>
+              </button>
+            )}
+            {showReplayControls && gpxReplay && (
+              <div className="map-tool-item">
+                <button
+                  className={`map-tool-button ${gpxReplay.isActive ? 'replay-active' : ''}`}
+                  type="button"
+                  aria-label={gpxReplay.isActive ? 'Stop GPX replay' : 'Start GPX replay'}
+                  title={gpxReplay.isActive ? 'Stop GPX replay' : 'Start GPX replay'}
+                  disabled={gpxReplay.isLoading}
+                  onClick={() => void (gpxReplay.isActive ? gpxReplay.stop() : gpxReplay.start())}
+                >
+                  <svg viewBox="0 0 24 24" aria-hidden="true">
+                    {gpxReplay.isActive
+                      ? <path d="M7 7h10v10H7z" />
+                      : <path d="m8 5 12 7-12 7V5Z" />}
+                  </svg>
+                </button>
+                <button
+                  className={`map-tool-details ${activeMapTool === 'replay' ? 'active' : ''}`}
+                  type="button"
+                  aria-label="GPX replay controls"
+                  aria-expanded={activeMapTool === 'replay'}
+                  aria-controls="map-replay-panel"
+                  title="GPX replay controls"
+                  onClick={() => setActiveMapTool(activeMapTool === 'replay' ? null : 'replay')}
+                >
+                  i
+                </button>
+              </div>
+            )}
+            <div className="map-tool-item">
+              <button
+                className={`map-tool-button gps-map-button ${gpsStatus?.isConnected || navigationSource === 'nmea' ? 'gps-connected' : 'gps-disconnected'}`}
+                type="button"
+                aria-label="GPS signal and position status"
+                aria-expanded={activeMapTool === 'gps'}
+                aria-controls="map-gps-panel"
+                title={getGPSStatusMessage(gpsStatus, navigationSource, hasGPS, isGPSEnabled)}
+                onClick={() => setActiveMapTool(activeMapTool === 'gps' ? null : 'gps')}
+              >
+                <svg viewBox="0 0 24 24" aria-hidden="true">
+                  <path d="M12 21s7-6.2 7-12a7 7 0 1 0-14 0c0 5.8 7 12 7 12Z" />
+                  <circle cx="12" cy="9" r="2.3" />
+                </svg>
+                <span className="gps-map-indicator" aria-hidden="true" />
+              </button>
             </div>
+            <div className="map-tool-item">
+              <button
+                className={`map-tool-button ${showAIS ? 'layer-visible' : ''}`}
+                type="button"
+                aria-label={`${showAIS ? 'Hide' : 'Show'} AIS targets on map`}
+                aria-pressed={showAIS}
+                title={`${showAIS ? 'Hide' : 'Show'} AIS targets on map`}
+                onClick={() => onAISVisibilityChange?.(!showAIS)}
+              >
+                <svg viewBox="0 0 24 24" aria-hidden="true">
+                  <path d="M12 3 20 19H4L12 3Z" />
+                  <path d="M8 16h8M12 9v4" />
+                </svg>
+                <span className="map-tool-count">{getAISDetectedTargetCount(aisSource, aisState)}</span>
+              </button>
+              <button
+                className={`map-tool-details ${activeMapTool === 'ais' ? 'active' : ''}`}
+                type="button"
+                aria-label="AIS settings and status"
+                aria-expanded={activeMapTool === 'ais'}
+                aria-controls="map-ais-panel"
+                title="AIS settings and status"
+                onClick={() => setActiveMapTool(activeMapTool === 'ais' ? null : 'ais')}
+              >
+                ⚙
+              </button>
+            </div>
+            <div className="map-tool-item">
+              <button
+                className={`map-tool-button ${showWindLayer ? 'layer-visible' : ''}`}
+                type="button"
+                aria-label={`${showWindLayer ? 'Hide' : 'Show'} weather layer on map`}
+                aria-pressed={showWindLayer}
+                title={`${showWindLayer ? 'Hide' : 'Show'} weather layer on map`}
+                onClick={() => setShowWindLayer(visible => !visible)}
+              >
+                <svg viewBox="0 0 24 24" aria-hidden="true">
+                  <path d="M6.5 15.5h11a3.5 3.5 0 0 0 .2-7 5.7 5.7 0 0 0-10.8 1.2 3 3 0 0 0-.4 5.8Z" />
+                  <path d="m8 19-1 2m6-2-1 2m6-2-1 2" />
+                </svg>
+              </button>
+              <button
+                className={`map-tool-details ${activeMapTool === 'weather' ? 'active' : ''}`}
+                type="button"
+                aria-label="Weather forecast information"
+                aria-expanded={activeMapTool === 'weather'}
+                aria-controls="map-weather-panel"
+                title="Weather forecast information"
+                onClick={() => setActiveMapTool(activeMapTool === 'weather' ? null : 'weather')}
+              >
+                i
+              </button>
+            </div>
+          </div>
+          {activeMapTool === 'settings' && layout && gpsStatus &&
+            onThemeChange && onUnitChange && onToggleInstrumentVisibility && onToggleGPSConnection && (
+            <section id="map-settings-panel" className="map-tool-panel map-settings-panel" aria-label="Settings">
+              <div className="map-settings-heading">
+                <strong>SETTINGS</strong>
+                <button
+                  type="button"
+                  aria-label="Close settings panel"
+                  title="Close settings panel"
+                  onClick={() => setActiveMapTool(null)}
+                >
+                  ×
+                </button>
+              </div>
+              <ControlPanel
+                layout={layout}
+                isGPSEnabled={isGPSEnabled}
+                gpsStatus={gpsStatus}
+                hasGPS={hasGPS}
+                onToggleGPSConnection={onToggleGPSConnection}
+                onThemeChange={onThemeChange}
+                onUnitChange={onUnitChange}
+                onToggleInstrumentVisibility={onToggleInstrumentVisibility}
+              />
+            </section>
           )}
-          {visibleAISTargets.length > 0 && (
-            <button
-              className="ais-map-zoom"
-              type="button"
-              disabled={!showAIS || !mapInstance}
-              onClick={event => {
-                event.stopPropagation();
-                if (!mapInstance || !window.L || !showAIS) return;
-                const points: [number, number][] = visibleAISTargets.map(target => [target.latitude, target.longitude]);
-                if (data.position) points.push([data.position.latitude, data.position.longitude]);
-                mapInstance.map.fitBounds(window.L.latLngBounds(points), {
-                  padding: [48, 48],
-                  maxZoom: 13
-                });
-              }}
-              onMouseDown={event => event.stopPropagation()}
-            >
-              Zoom to {visibleAISTargets.length === 1 ? 'target' : 'targets'} ({visibleAISTargets.length})
-            </button>
+          {activeMapTool === 'gps' && (
+            <section id="map-gps-panel" className="map-tool-panel gps-map-readout" aria-label="GPS status">
+              <strong>GPS STATUS</strong>
+              <span>{getGPSStatusMessage(gpsStatus, navigationSource, hasGPS, isGPSEnabled)}</span>
+              {gpsStatus?.error && <span role="alert">{gpsStatus.error}</span>}
+            </section>
           )}
-        </section>
-        <div className="wind-map-readout" aria-live="polite">
-          <strong>LOCAL WIND FORECAST</strong>
-          {data.wind ? (
-            <span>
-              {data.wind.speed.toFixed(1)} kn · FROM {getWindDirectionText(data.wind.direction)} {data.wind.direction.toFixed(0)}°
-            </span>
-          ) : (
-            <span>{data.windForecastStatus.error || (data.windForecastStatus.isLoading ? 'Loading…' : 'Waiting for GPS fix')}</span>
+          {activeMapTool === 'replay' && gpxReplay && (
+            <section id="map-replay-panel" className="map-tool-panel replay-map-controls" aria-label="GPX replay controls">
+              <strong>GPX REPLAY</strong>
+              <label>
+                <span>Playback speed</span>
+                <select
+                  aria-label="GPX replay speed"
+                  value={gpxReplay.speedMultiplier}
+                  onChange={event => gpxReplay.setSpeedMultiplier(Number(event.target.value))}
+                >
+                  <option value={1}>1×</option>
+                  <option value={10}>10×</option>
+                  <option value={60}>60×</option>
+                </select>
+              </label>
+              {gpxReplay.isActive && (
+                <>
+                  <progress aria-label="GPX replay progress" max={1} value={gpxReplay.progress} />
+                  {!gpxReplay.isPlaying && <span>Replay complete</span>}
+                </>
+              )}
+              {gpxReplay.isLoading && <span>Loading GPX track…</span>}
+              {gpxReplay.error && <span className="gpx-replay-error" role="alert">{gpxReplay.error}</span>}
+              <button
+                className="ais-map-zoom"
+                type="button"
+                disabled={gpxReplay.isLoading}
+                onClick={() => void (gpxReplay.isActive ? gpxReplay.stop() : gpxReplay.start())}
+              >
+                {gpxReplay.isActive ? 'Stop replay' : 'Start replay'}
+              </button>
+            </section>
           )}
-          {data.wind && <span>Hover over a wind barb for its forecast</span>}
-          {data.windForecastStatus.updatedAt && (
-            <span className="wind-map-updated">
-              Updated {new Date(data.windForecastStatus.updatedAt).toLocaleTimeString('en-GB')}
-            </span>
+          {activeMapTool === 'ais' && (
+            <section id="map-ais-panel" className="map-tool-panel ais-map-controls" aria-label="AIS controls">
+              <label className="ais-map-source">
+                <span>AIS source</span>
+                <select
+                  value={aisSource}
+                  onChange={event => onAISSourceChange?.(event.target.value as AISSource)}
+                >
+                  <option value="local">Local VHF · NMEA/UDP</option>
+                  <option value="internet">Internet · AISstream</option>
+                </select>
+              </label>
+              <label className="ais-map-visibility">
+                <input
+                  type="checkbox"
+                  checked={showAIS}
+                  onChange={event => onAISVisibilityChange?.(event.target.checked)}
+                />
+                <span>Show AIS targets</span>
+              </label>
+              <div className="ais-map-target-count" aria-live="polite">
+                <span>AIS targets detected</span>
+                <strong>{getAISDetectedTargetCount(aisSource, aisState)}</strong>
+              </div>
+              <div className="ais-map-status" role="status">
+                {getAISStatusMessage(aisSource, aisState)}
+              </div>
+              {aisSource === 'internet' && (
+                <div className="ais-map-coverage">
+                  AISstream area: about 15 NM around the latest GPS position
+                </div>
+              )}
+              {visibleAISTargets.length > 0 && (
+                <button
+                  className="ais-map-zoom"
+                  type="button"
+                  disabled={!showAIS || !mapInstance}
+                  onClick={event => {
+                    event.stopPropagation();
+                    if (!mapInstance || !window.L || !showAIS) return;
+                    const points: [number, number][] = visibleAISTargets.map(target => [target.latitude, target.longitude]);
+                    if (data.position) points.push([data.position.latitude, data.position.longitude]);
+                    mapInstance.map.fitBounds(window.L.latLngBounds(points), {
+                      padding: [48, 48],
+                      maxZoom: 13
+                    });
+                  }}
+                >
+                  Zoom to {visibleAISTargets.length === 1 ? 'target' : 'targets'} ({visibleAISTargets.length})
+                </button>
+              )}
+            </section>
           )}
-          {data.windForecastStatus.error && <span role="alert">{data.windForecastStatus.error}</span>}
-          {data.windForecastStatus.gridError && <span role="alert">{data.windForecastStatus.gridError}</span>}
+          {activeMapTool === 'weather' && (
+            <section id="map-weather-panel" className="map-tool-panel wind-map-readout" aria-label="Weather forecast">
+              <strong>LOCAL WIND FORECAST</strong>
+              {data.wind ? (
+                <span>
+                  {data.wind.speed.toFixed(1)} kn · FROM {getWindDirectionText(data.wind.direction)} {data.wind.direction.toFixed(0)}°
+                </span>
+              ) : (
+                <span>{data.windForecastStatus.error || (data.windForecastStatus.isLoading ? 'Loading…' : 'Waiting for GPS fix')}</span>
+              )}
+              {data.wind && <span>Hover over a wind barb for its forecast</span>}
+              {data.windForecastStatus.updatedAt && (
+                <span className="wind-map-updated">
+                  Updated {new Date(data.windForecastStatus.updatedAt).toLocaleTimeString('en-GB')}
+                </span>
+              )}
+              {data.windForecastStatus.error && <span role="alert">{data.windForecastStatus.error}</span>}
+              {data.windForecastStatus.gridError && <span role="alert">{data.windForecastStatus.gridError}</span>}
+            </section>
+          )}
         </div>
         {!leafletError && !leafletLoaded && (
           <div style={{
@@ -671,47 +905,36 @@ const MapViewSimple: React.FC<MapViewSimpleProps> = ({
         )}
       </div>
       
-      {/* Legend */}
-      <div 
-        style={{
-          display: 'flex',
-          justifyContent: 'center',
-          flexWrap: 'wrap',
-          gap: '0.75rem 1rem',
-          marginTop: '0.5rem',
-          padding: '0.5rem',
-          fontSize: '0.75rem',
-          color: 'var(--text-secondary)',
-          background: 'rgba(0, 0, 0, 0.2)',
-          borderRadius: '4px'
-        }}
-      >
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
-          <div style={{ width: '12px', height: '3px', backgroundColor: '#123b66' }} />
-          <span>Speed vector · 15 min (SOG / COG)</span>
+      <details className="map-global-legend">
+        <summary>Map legend</summary>
+        <div className="map-global-legend-content">
+          <div className="map-global-legend-item">
+            <span className="map-legend-speed-vector" aria-hidden="true" />
+            <span>Speed vector · 15 min (SOG / COG)</span>
+          </div>
+          <div className="map-global-legend-item">
+            <span className="map-legend-track" aria-hidden="true" />
+            <span>Past positions · GPS / GPX replay</span>
+          </div>
+          <div className="map-global-legend-item">
+            <svg width="14" height="18" viewBox="0 0 48 48" aria-hidden="true">
+              <path d={getWindBarbSvg(15, false)} fill="none" stroke="#10202a" strokeWidth="8" strokeLinejoin="round" strokeLinecap="round" />
+              <path d={getWindBarbSvg(15, false)} fill="none" stroke="#fff" strokeWidth="4" strokeLinejoin="round" strokeLinecap="round" />
+            </svg>
+            <span>Wind barbs · hover for forecast</span>
+          </div>
+          <div className="map-global-legend-item">
+            <svg width="18" height="18" viewBox="0 0 48 48" aria-hidden="true">
+              <path d="M24 3 L40 38 Q24 47 8 38 Z" fill="#f4f8fb" stroke="#10202a" strokeWidth="4" />
+              <path d="M24 8 L24 35" stroke="#19d3c5" strokeWidth="3" />
+            </svg>
+            <span>Vessel · HDG</span>
+          </div>
+          <p>Each barb uses the forecast at its location; nearby winds may match due to model resolution.</p>
+          <p>Enable “Seamarks &amp; navigation aids” to show OpenSeaMap data.</p>
+          <p>Indicative data only · not a substitute for an official nautical chart.</p>
         </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
-          <div style={{ width: '14px', height: '3px', backgroundColor: '#19d3c5' }} />
-          <span>Past positions · GPS / GPX replay</span>
-        </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
-          <svg width="14" height="18" viewBox="0 0 48 48" aria-hidden="true">
-            <path d={getWindBarbSvg(15, false)} fill="none" stroke="#10202a" strokeWidth="8" strokeLinejoin="round" strokeLinecap="round" />
-            <path d={getWindBarbSvg(15, false)} fill="none" stroke="#fff" strokeWidth="4" strokeLinejoin="round" strokeLinecap="round" />
-          </svg>
-          <span>Wind barbs · hover for forecast</span>
-        </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
-          <svg width="18" height="18" viewBox="0 0 48 48" aria-hidden="true">
-            <path d="M24 3 L40 38 Q24 47 8 38 Z" fill="#f4f8fb" stroke="#10202a" strokeWidth="4" />
-            <path d="M24 8 L24 35" stroke="#19d3c5" strokeWidth="3" />
-          </svg>
-          <span>Vessel · HDG</span>
-        </div>
-        <span>Each barb uses the forecast at its location; nearby winds may match due to model resolution.</span>
-        <span>Enable “Seamarks & navigation aids” to show OpenSeaMap data.</span>
-        <span>Indicative data only · not a substitute for an official nautical chart.</span>
-      </div>
+      </details>
     </div>
   );
 };
@@ -719,6 +942,23 @@ const MapViewSimple: React.FC<MapViewSimpleProps> = ({
 const getWindDirectionText = (degrees: number): string => {
   const directions = ['N', 'NNE', 'NE', 'ENE', 'E', 'ESE', 'SE', 'SSE', 'S', 'SSW', 'SW', 'WSW', 'W', 'WNW', 'NW', 'NNW'];
   return directions[Math.round(degrees / 22.5) % 16];
+};
+
+const getGPSStatusMessage = (
+  gpsStatus: GPSStatus | undefined,
+  navigationSource: 'replay' | 'nmea' | 'browser' | 'none',
+  hasGPS: boolean,
+  isGPSEnabled: boolean
+): string => {
+  if (navigationSource === 'replay') return 'Using local Navionics GPX track replay';
+  if (navigationSource === 'nmea') return 'Navigation data received from NMEA';
+  if (gpsStatus?.error) return gpsStatus.error;
+  if (gpsStatus?.isConnected) {
+    return `GPS connected · accuracy ±${gpsStatus.accuracy?.toFixed(0) ?? '?'} m`;
+  }
+  if (!hasGPS) return 'GPS unavailable in this browser';
+  if (!isGPSEnabled) return 'GPS stopped';
+  return 'Waiting for GPS fix';
 };
 
 const getHeadingSource = (heading: number | null | undefined): 'HDG' | 'COG' => (
@@ -828,7 +1068,8 @@ const getWindBarbSvg = (speedKnots: number, includeOutline = true): string => {
   const path = paths.join(' ');
   if (!includeOutline) return path;
 
-  return `<path d="${path}" fill="#fff" stroke="#10202a" stroke-width="5" stroke-linejoin="round" stroke-linecap="round"/><path d="${path}" fill="none" stroke="#fff" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round"/>`;
+  const color = speedKnots > 30 ? '#ff4d4f' : speedKnots > 20 ? '#ff9f43' : '#fff';
+  return `<path d="${path}" fill="${color}" stroke="#10202a" stroke-width="5" stroke-linejoin="round" stroke-linecap="round"/><path d="${path}" fill="none" stroke="${color}" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round"/>`;
 };
 
 export default MapViewSimple;
