@@ -227,6 +227,7 @@ const MapViewSimple: React.FC<MapViewSimpleProps> = ({
         
         const baseLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
           attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
+          className: 'osm-base-tiles',
           maxZoom: 19,
           keepBuffer: 2,
           updateWhenIdle: true,

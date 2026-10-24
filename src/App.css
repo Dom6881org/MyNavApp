@@ -680,6 +680,15 @@
   border: 0;
 }
 
+/* OpenStreetMap has no dark style, so the base tiles are inverted; seamarks stay untouched. */
+.theme-dark .osm-base-tiles {
+  filter: invert(1) hue-rotate(180deg) brightness(0.9) contrast(0.9) saturate(0.75);
+}
+
+.theme-night .osm-base-tiles {
+  filter: invert(1) hue-rotate(180deg) brightness(0.62) contrast(0.9) saturate(0.55);
+}
+
 .boat-marker-icon {
   display: block;
   width: 36px;
