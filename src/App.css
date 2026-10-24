@@ -258,6 +258,14 @@
   opacity: 0.65;
 }
 
+.map-tool-button.recenter-map-button:not(.layer-visible) {
+  color: #9af0bd;
+}
+
+.map-tool-button.recenter-map-button:not(.layer-visible) svg {
+  opacity: 1;
+}
+
 .map-tool-button:disabled {
   cursor: wait;
   opacity: 0.6;

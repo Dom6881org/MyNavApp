@@ -284,11 +284,7 @@ const MapViewSimple: React.FC<MapViewSimpleProps> = ({
       } else {
         const instance = mapInstanceRef.current;
         const boatPosition = L.latLng(data.position.latitude, data.position.longitude);
-        const visibleBounds = instance.map.getBounds().pad(-0.25);
 
-        if (!visibleBounds.contains(boatPosition)) {
-          instance.map.panTo(boatPosition, { animate: false });
-        }
         instance.marker.setLatLng(boatPosition);
         instance.marker.setPopupContent(
           `<b>Vessel position</b><br>LAT: ${data.position.latitude.toFixed(6)}°<br>LON: ${data.position.longitude.toFixed(6)}°`
@@ -602,6 +598,31 @@ const MapViewSimple: React.FC<MapViewSimpleProps> = ({
         )}
         <div className="map-tools" onMouseDown={event => event.stopPropagation()}>
           <div className="map-tools-toolbar" role="group" aria-label="Map information">
+            {data.position && (
+              <button
+                className="map-tool-button recenter-map-button"
+                type="button"
+                aria-label="Center map on vessel"
+                title="Center map on vessel"
+                disabled={!mapInstance || leafletError}
+                onClick={event => {
+                  event.stopPropagation();
+                  const position = data.position;
+                  if (position) {
+                    mapInstanceRef.current?.map.panTo([
+                      position.latitude,
+                      position.longitude
+                    ]);
+                  }
+                }}
+              >
+                <svg viewBox="0 0 24 24" aria-hidden="true">
+                  <circle cx="12" cy="12" r="7" />
+                  <circle cx="12" cy="12" r="2" />
+                  <path d="M12 2v3M12 19v3M2 12h3M19 12h3" />
+                </svg>
+              </button>
+            )}
             {canOpenSettings && (
               <button
                 className={`map-tool-button ${activeMapTool === 'settings' ? 'layer-visible' : ''}`}
