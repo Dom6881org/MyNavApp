@@ -2,6 +2,7 @@ import React from 'react';
 import { useAISSettings, useNavigationData, useDashboardLayout } from './hooks';
 import { InstrumentPanel } from './components';
 import MapView from './components/MapView';
+import AppLogo from './components/AppLogo';
 import './App.css';
 
 const App: React.FC = () => {
@@ -58,7 +59,7 @@ const App: React.FC = () => {
     <div className="app">
       <header className="app-header">
         <div className="header-title">
-          <h1>MyNavApp - Marine Navigation Dashboard</h1>
+          <h1><AppLogo /></h1>
         </div>
         
         <div className="header-info">

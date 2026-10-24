@@ -53,6 +53,15 @@ interface MapViewSimpleProps {
 }
 
 type MapOrientation = 'north' | 'heading' | 'course';
+const ORIENTATION_ORDER: MapOrientation[] = ['north', 'heading', 'course'];
+const ORIENTATION_LABELS: Record<MapOrientation, string> = {
+  north: 'North up',
+  heading: 'Heading up',
+  course: 'Course up'
+};
+const ORIENTATION_BADGES: Record<MapOrientation, string> = { north: 'N', heading: 'H', course: 'C' };
+const nextOrientation = (current: MapOrientation): MapOrientation =>
+  ORIENTATION_ORDER[(ORIENTATION_ORDER.indexOf(current) + 1) % ORIENTATION_ORDER.length];
 type MapToolPanel = 'ais' | 'weather' | 'gps' | 'replay' | 'settings' | null;
 type GPSStatus = {
   isConnected: boolean;
@@ -583,36 +592,11 @@ const MapViewSimple: React.FC<MapViewSimpleProps> = ({
           background: leafletError ? 'var(--bg-secondary)' : '#1a2e1a'
         }}
       >
-        {!leafletError && leafletLoaded && data.position && (rotationAvailable || rotationUnavailable) && (
-          <div className="map-orientation-control" role="group" aria-label="Map orientation">
-            {rotationUnavailable && (
-              <span className="map-rotation-error" role="status">
-                Rotation unavailable · North up
-              </span>
-            )}
-            {([
-              ['north', 'North up'],
-              ['heading', 'Heading up'],
-              ['course', 'Course up']
-            ] as const).map(([orientation, label]) => (
-              <button
-                key={orientation}
-                type="button"
-                aria-pressed={mapOrientation === orientation}
-                disabled={rotationUnavailable && orientation !== 'north'}
-                onClick={event => {
-                  event.stopPropagation();
-                  setMapOrientation(orientation);
-                }}
-                onMouseDown={event => event.stopPropagation()}
-              >
-                {label}
-              </button>
-            ))}
-          </div>
-        )}
         {!leafletError && leafletLoaded && data.position && (
-          <MapPositionReadout position={data.position} gpsTime={data.gpsTime} />
+          <>
+            <MapPositionReadout position={data.position} gpsTime={data.gpsTime} part="time" />
+            <MapPositionReadout position={data.position} gpsTime={data.gpsTime} part="position" />
+          </>
         )}
         <div className="map-tools" onMouseDown={event => event.stopPropagation()}>
           <div className="map-tools-toolbar" role="group" aria-label="Map information">
@@ -639,6 +623,28 @@ const MapViewSimple: React.FC<MapViewSimpleProps> = ({
                   <circle cx="12" cy="12" r="2" />
                   <path d="M12 2v3M12 19v3M2 12h3M19 12h3" />
                 </svg>
+              </button>
+            )}
+            {data.position && !leafletError && leafletLoaded && (rotationAvailable || rotationUnavailable) && (
+              <button
+                className={`map-tool-button orientation-map-button ${mapOrientation !== 'north' ? 'layer-visible' : ''}`}
+                type="button"
+                aria-label={`Map orientation: ${ORIENTATION_LABELS[mapOrientation]}`}
+                title={rotationUnavailable
+                  ? 'Rotation unavailable · North up'
+                  : `${ORIENTATION_LABELS[mapOrientation]} · click for ${ORIENTATION_LABELS[nextOrientation(mapOrientation)]}`}
+                disabled={rotationUnavailable}
+                onClick={event => {
+                  event.stopPropagation();
+                  setMapOrientation(nextOrientation(mapOrientation));
+                }}
+              >
+                <svg viewBox="0 0 24 24" aria-hidden="true">
+                  <circle cx="12" cy="12" r="9" />
+                  <path d="m12 5 3 7h-6l3-7Z" />
+                  <path d="M12 12v7" />
+                </svg>
+                <span className="map-tool-mode" aria-hidden="true">{ORIENTATION_BADGES[mapOrientation]}</span>
               </button>
             )}
             {canOpenSettings && (
