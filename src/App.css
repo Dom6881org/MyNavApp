@@ -1931,6 +1931,20 @@ html {
   stroke-width: 2.3;
 }
 
+.speed-max-marker line {
+  stroke: #ff4d4f;
+  stroke-width: 2.2;
+  stroke-linecap: round;
+}
+
+.speed-max-marker circle {
+  fill: #ff4d4f;
+}
+
+.speed-max-marker {
+  transition: transform 350ms ease;
+}
+
 .speed-gauge-hub {
   fill: #d8e6eb;
   stroke: #183847;
@@ -1944,6 +1958,16 @@ html {
   justify-content: center;
   gap: 1.1rem;
   padding: 0 0.25rem 0.1rem;
+}
+
+.speed-max-row {
+  display: flex;
+  width: 100%;
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: center;
+  gap: 0.45rem;
+  padding: 0 0.25rem 0.25rem;
 }
 
 .speed-reading {
@@ -1979,6 +2003,28 @@ html {
   color: #9ab0bb;
   font-size: 0.62rem;
   font-weight: 400;
+}
+
+.speed-reading-max > span {
+  color: #7d94a1;
+}
+
+.speed-max-reset {
+  padding: 0.05rem 0.3rem;
+  border: 1px solid #2c3e4a;
+  border-radius: 999px;
+  background: transparent;
+  color: #9ab0bb;
+  font: inherit;
+  font-size: 0.5rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  cursor: pointer;
+}
+
+.speed-max-reset:hover {
+  color: #e8f3f6;
+  border-color: #5b7482;
 }
 
 .main-layout-instruments-top .course-instrument {
@@ -2314,6 +2360,20 @@ html {
 
 .theme-light .speed-reading small {
   color: #587783;
+}
+
+.theme-light .speed-reading-max > span {
+  color: #6d8b97;
+}
+
+.theme-light .speed-max-reset {
+  border-color: rgba(48, 93, 109, 0.35);
+  color: #587783;
+}
+
+.theme-light .speed-max-reset:hover {
+  color: #183847;
+  border-color: #52717d;
 }
 
 .theme-light .compass-dial-ring {

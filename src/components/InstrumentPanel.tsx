@@ -15,9 +15,10 @@ interface InstrumentPanelProps {
     temperature: 'celsius' | 'fahrenheit';
   };
   size?: 'normal' | 'minimized';
+  onResetMaxSpeed?: () => void;
 }
 
-const InstrumentPanel: React.FC<InstrumentPanelProps> = ({ data, config, units, size = 'normal' }) => {
+const InstrumentPanel: React.FC<InstrumentPanelProps> = ({ data, config, units, size = 'normal', onResetMaxSpeed }) => {
   if (!config.visible) return null;
 
   const renderInstrument = () => {
@@ -25,7 +26,7 @@ const InstrumentPanel: React.FC<InstrumentPanelProps> = ({ data, config, units, 
     
     switch (config.type) {
       case 'speed':
-        return <Speedometer data={data.speed} size={instrumentSize} />;
+        return <Speedometer data={data.speed} size={instrumentSize} onResetMaxSpeed={onResetMaxSpeed} />;
       case 'compass':
         return <Compass data={data.compass} size={instrumentSize} />;
       case 'wind':

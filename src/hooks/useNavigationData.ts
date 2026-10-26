@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { useRealGPS } from './useRealGPS';
 import { useGpxReplay } from './useGpxReplay';
 import { useWindForecast } from './useWindForecast';
@@ -58,9 +58,22 @@ export const useNavigationData = () => {
   const livePosition = nmeaNavigation?.position ?? backendNavigation?.position ?? gpsData.position;
   const position = activeSample?.position ?? livePosition;
   const { wind, windGrid, status: windForecastStatus, requestWindGrid } = useWindForecast(position);
+  const liveSpeed = activeSample?.speed ?? nmeaNavigation?.speed ?? backendNavigation?.speed ?? gpsData.speed;
+  const currentSog = liveSpeed?.sog ?? liveSpeed?.speed ?? null;
+  const [sessionMaxSpeed, setSessionMaxSpeed] = useState<number | null>(null);
+
+  useEffect(() => {
+    if (currentSog === null) return;
+    setSessionMaxSpeed(prev => prev === null || currentSog > prev ? currentSog : prev);
+  }, [currentSog]);
+
+  const resetMaxSpeed = useCallback(() => {
+    setSessionMaxSpeed(null);
+  }, []);
+
   const navigationData: NavigationData = {
     position,
-    speed: activeSample?.speed ?? nmeaNavigation?.speed ?? backendNavigation?.speed ?? gpsData.speed,
+    speed: liveSpeed ? { ...liveSpeed, maxSpeed: sessionMaxSpeed } : null,
     wind,
     apparentWind: nmeaNavigation?.apparentWind ?? backendNavigation?.apparentWind ?? null,
     windGrid,
@@ -97,6 +110,7 @@ export const useNavigationData = () => {
 
   return {
     navigationData,
+    resetMaxSpeed,
     isConnected: replay.isActive || Boolean(nmeaNavigation) || gpsData.status.isConnected,
     isGPSEnabled: replay.isActive || isGPSEnabled,
     navigationSource,

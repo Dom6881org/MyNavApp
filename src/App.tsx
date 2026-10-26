@@ -7,6 +7,7 @@ import './App.css';
 const App: React.FC = () => {
   const {
     navigationData,
+    resetMaxSpeed,
     requestWindGrid,
     isGPSEnabled,
     gpsStatus,
@@ -49,6 +50,7 @@ const App: React.FC = () => {
             data={navigationData}
             config={{ ...instrument, visible: true }}
             units={layout.units}
+            onResetMaxSpeed={resetMaxSpeed}
           />
         </div>
       </div>

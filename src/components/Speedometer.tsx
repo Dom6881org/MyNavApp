@@ -4,14 +4,16 @@ import { SpeedData } from '../types';
 interface SpeedometerProps {
   data: SpeedData | null;
   size?: number;
+  onResetMaxSpeed?: () => void;
 }
 
-const Speedometer: React.FC<SpeedometerProps> = ({ data, size = 200 }) => {
+const Speedometer: React.FC<SpeedometerProps> = ({ data, size = 200, onResetMaxSpeed }) => {
   const displaySTW = data?.stw ?? data?.sog ?? data?.speed ?? 0;
   const displaySOG = data?.sog ?? data?.speed ?? 0;
-  const needleAngle = (speed: number) => -135 + Math.min(Math.max(speed, 0), 20) / 20 * 270;
-  const ticks = Array.from({ length: 21 }, (_, index) => {
-    const angle = (-135 + index * 13.5) * Math.PI / 180;
+  const displayMax = data?.maxSpeed ?? null;
+  const needleAngle = (speed: number) => -135 + Math.min(Math.max(speed, 0), 15) / 15 * 270;
+  const ticks = Array.from({ length: 16 }, (_, index) => {
+    const angle = (-135 + index * 18) * Math.PI / 180;
     const innerRadius = index % 5 === 0 ? 53 : 57;
     const outerRadius = 63;
     const point = (radius: number) => ({
@@ -67,6 +69,15 @@ const Speedometer: React.FC<SpeedometerProps> = ({ data, size = 200 }) => {
           y2="43"
           transform={`rotate(${needleAngle(displaySOG)} 90 84)`}
         />
+        {displayMax !== null && (
+          <g
+            className="speed-max-marker"
+            transform={`rotate(${needleAngle(displayMax)} 90 84)`}
+          >
+            <line x1="90" y1="21" x2="90" y2="36" />
+            <circle cx="90" cy="17" r="2.6" />
+          </g>
+        )}
         <circle className="speed-gauge-hub" cx="90" cy="84" r="6" />
       </svg>
       <div className="speed-readouts">
@@ -78,6 +89,22 @@ const Speedometer: React.FC<SpeedometerProps> = ({ data, size = 200 }) => {
           <span>SOG</span>
           <strong>{displaySOG.toFixed(1)} <small>kn</small></strong>
         </div>
+      </div>
+      <div className="speed-max-row">
+        <div className="speed-reading speed-reading-max">
+          <span>MAX</span>
+          <strong>{displayMax !== null ? `${displayMax.toFixed(1)}` : '--.-'} <small>kn</small></strong>
+        </div>
+        {onResetMaxSpeed && (
+          <button
+            type="button"
+            className="speed-max-reset"
+            onClick={onResetMaxSpeed}
+            title="Reset session max speed"
+          >
+            RESET
+          </button>
+        )}
       </div>
     </div>
   );
