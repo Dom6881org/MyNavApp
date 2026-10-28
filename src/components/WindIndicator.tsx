@@ -4,19 +4,23 @@ import useDisplayMode from '../hooks/useDisplayMode';
 
 interface WindIndicatorProps {
   apparentWind: ApparentWindData | null;
+  trueWind: ApparentWindData | null;
   forecastWind: WindData | null;
   forecastStatus: WindForecastStatus;
   headingDegrees: number | null;
   unit: 'knots' | 'kmh' | 'mph';
+  boatSpeedKnots?: number | null;
   size?: number;
 }
 
 const WindIndicator: React.FC<WindIndicatorProps> = ({
   apparentWind,
+  trueWind: measuredTrueWind = null,
   forecastWind,
   forecastStatus,
   headingDegrees,
   unit,
+  boatSpeedKnots = null,
   size = 200
 }) => {
   const usesForecast = apparentWind === null;
@@ -34,8 +38,28 @@ const WindIndicator: React.FC<WindIndicatorProps> = ({
   const dialAngle = relativeWindAngle === null
     ? null
     : ((relativeWindAngle + 180) % 360 + 360) % 360 - 180;
+  const computedTrueWind = apparentWind && boatSpeedKnots !== null
+    ? (() => {
+        const awa = (apparentWind.angleDegrees * Math.PI) / 180;
+        const vx = boatSpeedKnots - apparentWind.speedKnots * Math.cos(awa);
+        const vy = -apparentWind.speedKnots * Math.sin(awa);
+        const speedKnots = Math.hypot(vx, vy);
+        const angleDegrees = ((Math.atan2(-vy, -vx) * 180) / Math.PI + 540) % 360 - 180;
+        return { speedKnots, angleDegrees };
+      })()
+    : null;
+  const trueWind = measuredTrueWind ?? computedTrueWind;
+  const trueSpeed = trueWind === null
+    ? null
+    : trueWind.speedKnots * (unit === 'kmh' ? 1.852 : unit === 'mph' ? 1.15078 : 1);
+  const trueDialAngle = trueWind === null
+    ? null
+    : ((trueWind.angleDegrees + 180) % 360 + 360) % 360 - 180;
+  const trueAngleDisplay = trueWind === null
+    ? null
+    : ((trueWind.angleDegrees % 360) + 360) % 360;
   const dialLabel = apparentWind
-    ? `Apparent wind angle ${apparentWind.angleDegrees.toFixed(0)} degrees relative to the boat`
+    ? `Apparent wind angle ${apparentWind.angleDegrees.toFixed(0)} degrees relative to the boat${trueWind ? `; true wind ${trueWind.speedKnots.toFixed(1)} knots at ${trueAngleDisplay?.toFixed(0)} degrees relative to the boat` : ''}`
     : forecastWind && dialAngle !== null && headingDegrees !== null
       ? `Forecast wind ${Math.abs(dialAngle).toFixed(0)} degrees ${dialAngle < 0 ? 'to port' : 'to starboard'} relative to the boat`
       : forecastWind
@@ -88,6 +112,19 @@ const WindIndicator: React.FC<WindIndicatorProps> = ({
             <span>{apparentWind ? 'AWA' : 'DIR'}</span>
             <strong>{angleValue === null ? '--' : angleValue.toFixed(0)}°</strong>
           </div>
+          {trueWind && (
+            <>
+              <div className="instrument-digital-row instrument-digital-wind">
+                <span>TWS</span>
+                <strong>{trueSpeed === null ? '--.-' : trueSpeed.toFixed(1)}</strong>
+                <small>{unitLabel}</small>
+              </div>
+              <div className="instrument-digital-row instrument-digital-secondary instrument-digital-angle">
+                <span>TWA</span>
+                <strong>{trueAngleDisplay === null ? '--' : `${trueAngleDisplay.toFixed(0)}°`}</strong>
+              </div>
+            </>
+          )}
           <span className="wind-forecast-note">{sourceLabel}</span>
         </div>
       ) : (
@@ -128,14 +165,41 @@ const WindIndicator: React.FC<WindIndicatorProps> = ({
             )}
             <circle className="wind-gauge-pivot" cx="120" cy="120" r="5" />
             <path className="wind-gauge-hull" d="M120 91 L127 112 L120 108 L113 112 Z" />
-            <rect className="wind-gauge-lcd" x="90" y="134" width="60" height="31" rx="3" />
-            <text className="wind-gauge-mode" x="120" y="143" textAnchor="middle">
+            {trueDialAngle !== null && (
+              <g className="wind-gauge-needle wind-gauge-needle-true" transform={`rotate(${trueDialAngle} 120 120)`}>
+                <line x1="120" y1="120" x2="120" y2="37" />
+                <path d="M120 30 L115.5 44 L120 41 L124.5 44 Z" />
+              </g>
+            )}
+            <rect
+              className="wind-gauge-lcd"
+              x={trueWind ? 84 : 90}
+              y={trueWind ? 122 : 134}
+              width={trueWind ? 72 : 60}
+              height={trueWind ? 52 : 31}
+              rx="3"
+            />
+            <text className="wind-gauge-mode" x="120" y={trueWind ? 131 : 143} textAnchor="middle">
               {apparentWind ? 'AWS' : forecastWind ? 'WIND' : '—'}
             </text>
-            <text className="wind-gauge-speed" x="114" y="160" textAnchor="middle">
+            <text
+              className={`wind-gauge-speed${trueWind ? ' wind-gauge-speed-compact' : ''}`}
+              x="114"
+              y={trueWind ? 144 : 160}
+              textAnchor="middle"
+            >
               {speed === null ? '—' : speed.toFixed(1)}
             </text>
-            <text className="wind-gauge-unit" x="141" y="160" textAnchor="middle">{unitLabel}</text>
+            <text className="wind-gauge-unit" x="141" y={trueWind ? 144 : 160} textAnchor="middle">{unitLabel}</text>
+            {trueWind && (
+              <>
+                <text className="wind-gauge-mode" x="120" y="155" textAnchor="middle">TWS</text>
+                <text className="wind-gauge-speed wind-gauge-speed-compact" x="114" y="168" textAnchor="middle">
+                  {trueSpeed === null ? '—' : trueSpeed.toFixed(1)}
+                </text>
+                <text className="wind-gauge-unit" x="141" y="168" textAnchor="middle">{unitLabel}</text>
+              </>
+            )}
           </svg>
           <span className="wind-forecast-note">{sourceLabel}</span>
         </div>

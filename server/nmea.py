@@ -171,7 +171,7 @@ def parse_nmea_sentence(input_sentence: str) -> dict[str, Any] | None:
         return {"depth": {"depth": depth, "temperature": 0, "alarm": False, "alarmDepth": 0}}
 
     if kind == "MWV":
-        if len(fields) <= 5 or fields[2] != "R" or fields[5] != "A":
+        if len(fields) <= 5 or fields[5] != "A" or fields[2] not in ("R", "T"):
             return None
         angle, speed = _number(fields[1]), _number(fields[3])
         if angle is None or speed is None or speed < 0:
@@ -180,6 +180,7 @@ def parse_nmea_sentence(input_sentence: str) -> dict[str, Any] | None:
         speed_knots = speed if unit == "N" else speed * 3600 / 1852 if unit == "M" else speed / 1.852 if unit == "K" else None
         if speed_knots is None:
             return None
-        return {"apparentWind": {"angleDegrees": _normalize_degrees(angle), "speedKnots": speed_knots}}
+        key = "apparentWind" if fields[2] == "R" else "trueWind"
+        return {key: {"angleDegrees": _normalize_degrees(angle), "speedKnots": speed_knots}}
 
     return None

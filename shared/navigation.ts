@@ -60,6 +60,7 @@ export interface NavigationData {
   speed: SpeedData | null;
   wind: WindData | null;
   apparentWind: ApparentWindData | null;
+  trueWind: ApparentWindData | null;
   windGrid: WindForecastPoint[];
   windForecastStatus: WindForecastStatus;
   compass: CompassData | null;
@@ -81,7 +82,7 @@ export interface BackendNavigationSnapshot {
   source: 'nmea' | 'browser' | 'none';
   nmeaConnected: boolean;
   updatedAt: number | null;
-  navigation: Pick<NavigationData, 'position' | 'speed' | 'compass' | 'depth' | 'gpsTime' | 'gpsAccuracy' | 'apparentWind'>;
+  navigation: Pick<NavigationData, 'position' | 'speed' | 'compass' | 'depth' | 'gpsTime' | 'gpsAccuracy' | 'apparentWind' | 'trueWind'>;
   ais: AISBackendState;
 }
 

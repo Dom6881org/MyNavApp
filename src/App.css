@@ -2266,6 +2266,38 @@ html {
   container-type: size;
 }
 
+.depth-instrument {
+  position: relative;
+  display: flex;
+  min-height: 0;
+  flex-direction: column;
+  align-items: center;
+  justify-content: space-between;
+  overflow: hidden;
+  container-type: size;
+}
+
+.speed-needle-depth {
+  stroke-width: 3.5;
+}
+
+.instrument-digital-depth > span,
+.speed-reading-depth > span {
+  color: #35d98f;
+}
+
+.instrument-digital-temp > span,
+.speed-reading-temp > span {
+  color: #7d94a1;
+}
+
+.depth-alarm-note {
+  color: #ff4d4f;
+  font-size: 0.6rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+}
+
 .wind-gauge-column {
   display: flex;
   flex: 1 1 0;
@@ -2332,6 +2364,17 @@ html {
 }
 
 .wind-gauge-needle path { fill: #f6fafb; }
+
+.wind-gauge-needle-true line {
+  stroke: #36c7d0;
+  stroke-width: 3.2;
+}
+
+.wind-gauge-needle-true path { fill: #36c7d0; }
+
+.wind-gauge-speed-compact {
+  font-size: 13px;
+}
 
 .wind-gauge-pivot {
   fill: #dce3e5;
@@ -2466,6 +2509,20 @@ html {
   border-color: #52717d;
 }
 
+.theme-light .instrument-digital-depth > span,
+.theme-light .speed-reading-depth > span {
+  color: #12804d;
+}
+
+.theme-light .instrument-digital-temp > span,
+.theme-light .speed-reading-temp > span {
+  color: #6d8b97;
+}
+
+.theme-light .depth-alarm-note {
+  color: #c53030;
+}
+
 .theme-light .instrument-mode-toggle {
   border-color: rgba(48, 93, 109, 0.35);
   color: #587783;
@@ -2551,6 +2608,12 @@ html {
 .theme-light .wind-gauge-needle path {
   stroke: #183847;
   fill: #183847;
+}
+
+.theme-light .wind-gauge-needle-true line,
+.theme-light .wind-gauge-needle-true path {
+  stroke: #0b7a86;
+  fill: #0b7a86;
 }
 
 .theme-light .wind-gauge-hull {

@@ -33,10 +33,12 @@ const InstrumentPanel: React.FC<InstrumentPanelProps> = ({ data, config, units, 
         return (
           <WindIndicator
             apparentWind={data.apparentWind}
+            trueWind={data.trueWind}
             forecastWind={data.wind}
             forecastStatus={data.windForecastStatus}
             headingDegrees={data.compass?.heading ?? data.compass?.cog ?? null}
             unit={units.speed}
+            boatSpeedKnots={data.speed?.stw ?? data.speed?.sog ?? null}
             size={instrumentSize}
           />
         );

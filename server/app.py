@@ -46,6 +46,7 @@ EMPTY_FIELDS = {
     "compass": None,
     "depth": None,
     "apparentWind": None,
+    "trueWind": None,
     "gpsTime": None,
     "gpsAccuracy": None,
 }
@@ -97,6 +98,7 @@ def combine_fields() -> dict[str, Any]:
             "compass": browser_navigation["compass"],
             "depth": None,
             "apparentWind": None,
+            "trueWind": None,
             "gpsTime": browser_navigation["gpsTime"],
             "gpsAccuracy": browser_navigation["gpsAccuracy"],
         } if browser_fresh and browser_navigation else EMPTY_FIELDS
@@ -106,6 +108,7 @@ def combine_fields() -> dict[str, Any]:
             "compass": _merge_compass(nmea_navigation["compass"], browser_fields["compass"]) if nmea_connected else browser_fields["compass"],
             "depth": nmea_navigation["depth"] if nmea_connected else browser_fields["depth"],
             "apparentWind": nmea_navigation["apparentWind"] if nmea_connected else browser_fields["apparentWind"],
+            "trueWind": nmea_navigation["trueWind"] if nmea_connected else browser_fields["trueWind"],
             "gpsTime": (nmea_navigation["gpsTime"] or browser_fields["gpsTime"]) if nmea_connected else browser_fields["gpsTime"],
             "gpsAccuracy": (nmea_navigation["gpsAccuracy"] if nmea_navigation["gpsAccuracy"] is not None else browser_fields["gpsAccuracy"]) if nmea_connected else browser_fields["gpsAccuracy"],
         }
@@ -597,6 +600,7 @@ def _nmea_listener() -> None:
                         "speed": _merge_speed(update.get("speed"), previous["speed"]) if update.get("speed") else previous["speed"],
                         "compass": _merge_compass(update.get("compass"), previous["compass"]) if update.get("compass") else previous["compass"],
                         "apparentWind": update.get("apparentWind", previous["apparentWind"]),
+                        "trueWind": update.get("trueWind", previous["trueWind"]),
                         "depth": {
                             **(previous["depth"] or {}),
                             **update["depth"],

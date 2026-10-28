@@ -76,6 +76,7 @@ export const useNavigationData = () => {
     speed: liveSpeed ? { ...liveSpeed, maxSpeed: sessionMaxSpeed } : null,
     wind,
     apparentWind: nmeaNavigation?.apparentWind ?? backendNavigation?.apparentWind ?? null,
+    trueWind: nmeaNavigation?.trueWind ?? backendNavigation?.trueWind ?? null,
     windGrid,
     windForecastStatus,
     compass: activeSample?.compass ?? nmeaNavigation?.compass ?? backendNavigation?.compass ?? gpsData.compass,

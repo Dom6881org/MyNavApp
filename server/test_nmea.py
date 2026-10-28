@@ -34,8 +34,14 @@ class NmeaParserTests(unittest.TestCase):
         wind = parse_nmea_sentence(sentence("WIMWV,045,R,10.2,M,A"))
         self.assertEqual(wind["apparentWind"]["angleDegrees"], 45)
         self.assertAlmostEqual(wind["apparentWind"]["speedKnots"], 19.828, delta=0.001)
-        self.assertIsNone(parse_nmea_sentence(sentence("WIMWV,045,T,10.2,N,A")))
         self.assertIsNone(parse_nmea_sentence(sentence("WIMWV,045,R,10.2,N,V")))
+        self.assertIsNone(parse_nmea_sentence(sentence("WIMWV,045,X,10.2,N,A")))
+
+    def test_parses_theoretical_true_wind(self) -> None:
+        wind = parse_nmea_sentence(sentence("WIMWV,312,T,14.5,N,A"))
+        self.assertEqual(wind["trueWind"]["angleDegrees"], 312)
+        self.assertEqual(wind["trueWind"]["speedKnots"], 14.5)
+        self.assertNotIn("apparentWind", wind)
 
     def test_normalizes_degrees_and_rejects_invalid_sentences(self) -> None:
         wrapped = parse_nmea_sentence(sentence("GPVTG,361.0,T,,M,5.0,N,,K"))
