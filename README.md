@@ -21,6 +21,17 @@ The React app runs as a Vite frontend and talks to a separate Python service. Th
 
 The LAN mode is an early development feature: the API and Vite server do not yet provide authentication, and the production backend does not provide HTTPS. Use loopback by default, and expose it only on a trusted, firewalled boat network. Browser geolocation on other devices requires a secure context: for `npm run dev:lan`, the Vite dev server can serve HTTPS — set `VITE_HTTPS_CERT` and `VITE_HTTPS_KEY` in `.env` to the paths of a certificate trusted by the client devices (e.g. generated with mkcert for `localhost <PC-IP>`, see `.env.example`) and open `https://<PC-IP>:5173`. NMEA-fed positions are available without client geolocation.
 
+### Offline charts
+
+The chart loads Leaflet and its rotation plugin from the app bundle (no CDN), and requests tiles from the backend at `/api/tiles/{osm|seamark}/{z}/{x}/{y}.png`. Tiles found in the local `tiles/` directory (configurable with `TILES_DIR`, ignored by Git) are served from disk; when a tile is missing the layer falls back to the online source, so the chart works at sea without Internet inside the pre-downloaded area. Before departure, cache your cruising area:
+
+```bash
+python tools/download_tiles.py --bbox 47.0,-5.0,48.2,-2.5 --zooms 8-16
+```
+
+OpenStreetMap serves the base layer and OpenSeaMap the seamarks; 404s on open water (no seamark tile) are skipped. Keep the area and zoom range reasonable: a 100 × 100 km coastal region at zooms 8–17 is typically a few GB. Wind forecast (Open-Meteo) and Internet AIS remain online-only features; local VHF AIS, NMEA instruments and the chart keep working offline.
+
+
 ### AIS targets
 
 Install the Python backend dependencies with `python -m pip install -r requirements.txt`. To configure Internet AIS, copy `.env.example` to `.env`, replace the placeholder with your AISstream key, and restart the app with `npm run dev`. The `.env` file is local and ignored by Git; do not share it or commit it. Configure the VHF/AIS receiver or NMEA gateway to send NMEA 0183 UDP to `NMEA_UDP_HOST:NMEA_UDP_PORT` (default `0.0.0.0:10111`). Use the compact right-side map tools to open Settings directly on the chart, view GPS status, control development GPX replay, toggle AIS targets and the weather layer, and open AIS source/status and weather forecast details. The Settings panel contains GPS connection, theme, and unit controls. AIS settings select **Local VHF · NMEA/UDP** or **Internet · AISstream** and display the detected target count. When targets are available, **Zoom to targets** fits them on the chart. Local AIS target reports are kept for up to 10 minutes.

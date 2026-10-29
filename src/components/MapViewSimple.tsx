@@ -1,4 +1,7 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
+import * as LeafletBundle from 'leaflet';
+import 'leaflet/dist/leaflet.css';
+import '@tomickigrzegorz/leaflet-rotate';
 import { AISBackendState, AISSource, AISTarget, DashboardLayout, NavigationData, Position, UnitChangeHandler, WindData } from '../types';
 import ControlPanel, { MapBaseStyle } from './ControlPanel';
 import MapPositionReadout from './MapPositionReadout';
@@ -146,106 +149,15 @@ const MapViewSimple: React.FC<MapViewSimpleProps> = ({
   
   // Load Leaflet library
   useEffect(() => {
-    let disposed = false;
-    let checkInterval: number | undefined;
-    // Assigned after the callbacks above, which may run first, so it cannot be a const.
-    // eslint-disable-next-line prefer-const
-    let timeoutId: number | undefined;
-    const script = document.getElementById('leaflet-js') as HTMLScriptElement | null;
-    let rotationScript: HTMLScriptElement | null = null;
-    const onLeafletLoad = () => {
-      markMapLoaded();
-      loadRotationPlugin();
-    };
-
-    const markMapLoaded = () => {
-      if (disposed || !window.L) return;
-      setLeafletLoaded(true);
-    };
-    const markRotationLoaded = () => {
-      if (disposed || !window.L?.Map?.prototype?.setBearing) return;
-      if (checkInterval !== undefined) window.clearInterval(checkInterval);
-      if (timeoutId !== undefined) window.clearTimeout(timeoutId);
+    // Leaflet and the rotation plugin are bundled with the app, so the chart
+    // works fully offline; tiles are served by the navigation backend.
+    window.L = LeafletBundle;
+    setLeafletLoaded(true);
+    if (window.L?.Map?.prototype?.setBearing) {
       setRotationAvailable(true);
-      setRotationUnavailable(false);
-      markMapLoaded();
-    };
-    const markUnavailable = () => {
-      if (disposed) return;
-      if (window.L) {
-        markMapLoaded();
-        setRotationUnavailable(true);
-        if (checkInterval !== undefined) window.clearInterval(checkInterval);
-        if (timeoutId !== undefined) window.clearTimeout(timeoutId);
-        return;
-      }
-      if (checkInterval !== undefined) window.clearInterval(checkInterval);
-      if (timeoutId !== undefined) window.clearTimeout(timeoutId);
-      setLeafletError(true);
-    };
-
-    const loadRotationPlugin = () => {
-      if (disposed || !window.L) return;
-      if (window.L.Map?.prototype?.setBearing) {
-        markRotationLoaded();
-        return;
-      }
-
-      rotationScript = document.getElementById('leaflet-rotate-js') as HTMLScriptElement | null;
-      if (!rotationScript) {
-        rotationScript = document.createElement('script');
-        rotationScript.id = 'leaflet-rotate-js';
-        rotationScript.src = 'https://cdn.jsdelivr.net/npm/@tomickigrzegorz/leaflet-rotate@0.3.0/dist/leaflet-rotate.umd.min.js';
-        document.head.appendChild(rotationScript);
-      }
-      rotationScript.addEventListener('load', markRotationLoaded);
-      rotationScript.addEventListener('error', markUnavailable);
-    };
-
-    if (window.L) {
-      loadRotationPlugin();
     } else {
-      if (!document.getElementById('leaflet-css')) {
-        const link = document.createElement('link');
-        link.id = 'leaflet-css';
-        link.rel = 'stylesheet';
-        link.href = 'https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.min.css';
-        link.onerror = markUnavailable;
-        document.head.appendChild(link);
-      }
-
-      const leafletScript = script ?? document.createElement('script');
-      leafletScript.id = 'leaflet-js';
-      leafletScript.src = 'https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.min.js';
-      leafletScript.addEventListener('load', onLeafletLoad);
-      leafletScript.addEventListener('error', markUnavailable);
-      if (!script) document.head.appendChild(leafletScript);
-
-      rotationScript = document.getElementById('leaflet-rotate-js') as HTMLScriptElement | null;
-      checkInterval = window.setInterval(() => {
-        if (window.L?.Map?.prototype?.setBearing) markRotationLoaded();
-        else if (window.L) loadRotationPlugin();
-      }, 100);
+      setRotationUnavailable(true);
     }
-
-    if (window.L) {
-      markMapLoaded();
-      if (window.L.Map?.prototype?.setBearing) markRotationLoaded();
-    }
-
-    timeoutId = window.setTimeout(() => {
-      markUnavailable();
-    }, 10000);
-
-    return () => {
-      disposed = true;
-      if (checkInterval !== undefined) window.clearInterval(checkInterval);
-      if (timeoutId !== undefined) window.clearTimeout(timeoutId);
-      script?.removeEventListener('load', onLeafletLoad);
-      script?.removeEventListener('error', markUnavailable);
-      rotationScript?.removeEventListener('load', markRotationLoaded);
-      rotationScript?.removeEventListener('error', markUnavailable);
-    };
   }, []);
 
   // Initialize map when Leaflet is ready
@@ -268,7 +180,7 @@ const MapViewSimple: React.FC<MapViewSimpleProps> = ({
           touchRotate: false
         });
         
-        const baseLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        const baseLayer = createTileLayer(L, 'osm', {
           attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
           className: 'osm-base-tiles',
           maxZoom: 19,
@@ -276,7 +188,7 @@ const MapViewSimple: React.FC<MapViewSimpleProps> = ({
           updateWhenIdle: true,
           updateWhenZooming: false
         }).addTo(map);
-        const seamarkLayer = L.tileLayer('https://tiles.openseamap.org/seamark/{z}/{x}/{y}.png', {
+        const seamarkLayer = createTileLayer(L, 'seamark', {
           attribution: '&copy; <a href="https://www.openseamap.org/">OpenSeaMap</a> contributors',
           maxZoom: 18,
           opacity: 0.9,
@@ -1012,7 +924,7 @@ const MapViewSimple: React.FC<MapViewSimpleProps> = ({
             zIndex: 1000
           }}>
             <strong>Marine chart unavailable</strong>
-            <span>Check your connection to load OpenSeaMap.</span>
+            <span>The chart could not be initialized. Restart the application.</span>
           </div>
         )}
       </div>
@@ -1054,6 +966,30 @@ const MapViewSimple: React.FC<MapViewSimpleProps> = ({
 const getWindDirectionText = (degrees: number): string => {
   const directions = ['N', 'NNE', 'NE', 'ENE', 'E', 'ESE', 'SE', 'SSE', 'S', 'SSW', 'SW', 'WSW', 'W', 'WNW', 'NW', 'NNW'];
   return directions[Math.round(degrees / 22.5) % 16];
+};
+
+/**
+ * Tile layer served by the navigation backend from the local offline cache
+ * (tiles/osm and tiles/seamark directories). When a tile is missing (outside
+ * the cached area), the layer switches to the online source once; without
+ * Internet the missing tiles simply stay blank.
+ */
+const createTileLayer = (
+  leaflet: LeafletObject,
+  layer: 'osm' | 'seamark',
+  options: Record<string, unknown>
+): LeafletObject => {
+  const remoteUrl = layer === 'osm'
+    ? 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png'
+    : 'https://tiles.openseamap.org/seamark/{z}/{x}/{y}.png';
+  const tileLayer = leaflet.tileLayer(`/api/tiles/${layer}/{z}/{x}/{y}.png`, options);
+  let usingRemote = false;
+  tileLayer.on('tileerror', () => {
+    if (usingRemote) return;
+    usingRemote = true;
+    tileLayer.setUrl(remoteUrl, false);
+  });
+  return tileLayer;
 };
 
 const getGPSStatusMessage = (

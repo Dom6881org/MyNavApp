@@ -17,10 +17,13 @@
     "test:server": "python -m unittest discover -s server -t . -p \"test_*.py\""
   },
   "dependencies": {
+    "@tomickigrzegorz/leaflet-rotate": "^0.3.0",
+    "leaflet": "^1.9.4",
     "react": "^18.2.0",
     "react-dom": "^18.2.0"
   },
   "devDependencies": {
+    "@types/leaflet": "^1.9.22",
     "@types/node": "^26.6.5",
     "@types/react": "^18.2.43",
     "@types/react-dom": "^18.2.17",

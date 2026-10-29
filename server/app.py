@@ -5,6 +5,7 @@ import os
 import queue
 import signal
 import socket
+import sys
 import threading
 import time
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
@@ -32,6 +33,8 @@ HOST = os.environ.get("HOST", "127.0.0.1")
 PORT = int(os.environ.get("PORT", "3001"))
 NMEA_PORT = int(os.environ.get("NMEA_UDP_PORT", "10111"))
 NMEA_HOST = os.environ.get("NMEA_UDP_HOST", "0.0.0.0")
+TILES_DIR = os.environ.get("TILES_DIR", str(PROJECT_ROOT / "tiles"))
+TILE_LAYERS = ("osm", "seamark")
 AISSTREAM_API_KEY = os.environ.get("AISSTREAM_API_KEY", "").strip()
 IS_PRODUCTION = os.environ.get("NODE_ENV") == "production"
 NMEA_FRESHNESS_MS = 5000
@@ -384,9 +387,38 @@ def _valid_browser_update(value: Any) -> bool:
     return True
 
 
+def _tile_path(segments: list[str]) -> Path | None:
+    """Resolve /api/tiles/{layer}/{z}/{x}/{y}.png to a file inside TILES_DIR, or None."""
+    if len(segments) != 4 or segments[0] not in TILE_LAYERS:
+        return None
+    _layer, z_raw, x_raw, y_raw = segments
+    name, extension = os.path.splitext(y_raw)
+    if extension != ".png":
+        return None
+    try:
+        z, x, y = int(z_raw), int(x_raw), int(name)
+    except ValueError:
+        return None
+    if z < 0 or z > 21 or not (0 <= x < 2 ** z) or not (0 <= y < 2 ** z):
+        return None
+    root = Path(TILES_DIR).resolve()
+    tile = (root / _layer / str(z) / str(x) / f"{y}.png").resolve()
+    if tile != root and root not in tile.parents:
+        return None
+    return tile
+
+
 class NavigationHTTPServer(ThreadingHTTPServer):
     daemon_threads = True
-    allow_reuse_address = True
+    # On Windows allow_reuse_address lets two instances silently share the
+    # port, which splits requests between stale and fresh processes; the
+    # exclusive flag below makes a second instance fail loudly instead.
+    allow_reuse_address = sys.platform != "win32"
+
+    def server_bind(self) -> None:
+        if sys.platform == "win32":
+            self.socket.setsockopt(socket.SOL_SOCKET, socket.SO_EXCLUSIVEADDRUSE, 1)
+        super().server_bind()
 
 
 class RequestHandler(BaseHTTPRequestHandler):
@@ -412,6 +444,21 @@ class RequestHandler(BaseHTTPRequestHandler):
         if self.command != "HEAD":
             self.wfile.write(body)
 
+    def _send_tile(self, path: str) -> None:
+        tile = _tile_path(path[len("/api/tiles/"):].split("/"))
+        if tile is None or not tile.is_file():
+            self._send_json(404, {"error": "Tile not found."})
+            return
+        body = tile.read_bytes()
+        self.send_response(200)
+        self.send_header("Content-Type", "image/png")
+        self.send_header("Cache-Control", "public, max-age=86400")
+        self.send_header("X-Content-Type-Options", "nosniff")
+        self.send_header("Content-Length", str(len(body)))
+        self.end_headers()
+        if self.command != "HEAD":
+            self.wfile.write(body)
+
     def do_GET(self) -> None:
         path = urlsplit(self.path).path
         if path == "/api/health":
@@ -425,6 +472,8 @@ class RequestHandler(BaseHTTPRequestHandler):
             self._send_json(200, combine_fields())
         elif path == "/api/navigation/events":
             self._send_events()
+        elif path.startswith("/api/tiles/"):
+            self._send_tile(path)
         elif path.startswith("/api/"):
             self._send_json(404, {"error": "API route not found."})
         elif not IS_PRODUCTION:
@@ -434,7 +483,9 @@ class RequestHandler(BaseHTTPRequestHandler):
 
     def do_HEAD(self) -> None:
         path = urlsplit(self.path).path
-        if path.startswith("/api/"):
+        if path.startswith("/api/tiles/"):
+            self._send_tile(path)
+        elif path.startswith("/api/"):
             self._send_json(404, {"error": "API route not found."})
         elif not IS_PRODUCTION:
             self._send_json(404, {"error": "Development server routes frontend requests."})
