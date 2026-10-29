@@ -10,13 +10,21 @@ import threading
 import time
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
-from urllib.parse import unquote, urlsplit
+from urllib.parse import parse_qs, unquote, urlsplit
 from typing import Any
 
 from dotenv import load_dotenv
 
 from server.ais import LocalAISDecoder, parse_internet_message
 from server.nmea import parse_nmea_sentence
+from server.tracks import (
+    TrackNotFoundError,
+    TrackRecorder,
+    TrackRecorderError,
+    track_to_csv,
+    track_to_geojson,
+    track_to_gpx,
+)
 from websockets.sync.client import connect as connect_websocket
 
 
@@ -34,6 +42,7 @@ PORT = int(os.environ.get("PORT", "3001"))
 NMEA_PORT = int(os.environ.get("NMEA_UDP_PORT", "10111"))
 NMEA_HOST = os.environ.get("NMEA_UDP_HOST", "0.0.0.0")
 TILES_DIR = os.environ.get("TILES_DIR", str(PROJECT_ROOT / "tiles"))
+TRACKS_DIR = os.environ.get("TRACKS_DIR", str(PROJECT_ROOT / "tracks"))
 TILE_LAYERS = ("osm", "seamark")
 AISSTREAM_API_KEY = os.environ.get("AISSTREAM_API_KEY", "").strip()
 IS_PRODUCTION = os.environ.get("NODE_ENV") == "production"
@@ -68,6 +77,7 @@ ais_internet_connected = False
 ais_internet_error: str | None = None
 ais_replay_position: dict[str, Any] | None = None
 local_ais_decoder = LocalAISDecoder()
+track_recorder = TrackRecorder(Path(TRACKS_DIR))
 
 
 def _merge_speed(primary: dict[str, Any] | None, fallback: dict[str, Any] | None) -> dict[str, Any] | None:
@@ -96,14 +106,15 @@ def combine_fields() -> dict[str, Any]:
         nmea_connected = last_nmea_message_at is not None and now - last_nmea_message_at <= NMEA_FRESHNESS_MS
         browser_fresh = browser_navigation is not None and now - browser_navigation["receivedAt"] <= BROWSER_FRESHNESS_MS
         browser_fields = {
-            "position": browser_navigation["position"],
-            "speed": browser_navigation["speed"],
-            "compass": browser_navigation["compass"],
+            # .get : la validation accepte les clés facultatives absentes du payload.
+            "position": browser_navigation.get("position"),
+            "speed": browser_navigation.get("speed"),
+            "compass": browser_navigation.get("compass"),
             "depth": None,
             "apparentWind": None,
             "trueWind": None,
-            "gpsTime": browser_navigation["gpsTime"],
-            "gpsAccuracy": browser_navigation["gpsAccuracy"],
+            "gpsTime": browser_navigation.get("gpsTime"),
+            "gpsAccuracy": browser_navigation.get("gpsAccuracy"),
         } if browser_fresh and browser_navigation else EMPTY_FIELDS
         navigation = {
             "position": (nmea_navigation["position"] or browser_fields["position"]) if nmea_connected else browser_fields["position"],
@@ -323,7 +334,9 @@ def _expire_ais_targets() -> None:
 
 def broadcast_navigation() -> None:
     global last_broadcast_message
-    message = "data: " + json.dumps(combine_fields(), separators=(",", ":"), allow_nan=False) + "\n\n"
+    snapshot = combine_fields()
+    track_recorder.record(snapshot["navigation"], int(time.time() * 1000))
+    message = "data: " + json.dumps(snapshot, separators=(",", ":"), allow_nan=False) + "\n\n"
     with state_lock:
         if message == last_broadcast_message:
             return
@@ -474,6 +487,13 @@ class RequestHandler(BaseHTTPRequestHandler):
             self._send_events()
         elif path.startswith("/api/tiles/"):
             self._send_tile(path)
+        elif path == "/api/tracks":
+            self._send_json(200, {
+                "recorder": track_recorder.status(),
+                "tracks": track_recorder.list_tracks(),
+            })
+        elif path.startswith("/api/tracks/"):
+            self._send_track_route()
         elif path.startswith("/api/"):
             self._send_json(404, {"error": "API route not found."})
         elif not IS_PRODUCTION:
@@ -485,6 +505,8 @@ class RequestHandler(BaseHTTPRequestHandler):
         path = urlsplit(self.path).path
         if path.startswith("/api/tiles/"):
             self._send_tile(path)
+        elif path == "/api/tracks" or path.startswith("/api/tracks/"):
+            self._send_track_route()
         elif path.startswith("/api/"):
             self._send_json(404, {"error": "API route not found."})
         elif not IS_PRODUCTION:
@@ -494,6 +516,18 @@ class RequestHandler(BaseHTTPRequestHandler):
 
     def do_POST(self) -> None:
         path = urlsplit(self.path).path
+        if path in ("/api/tracks/start", "/api/tracks/stop"):
+            try:
+                stopped = track_recorder.stop() if path == "/api/tracks/stop" else track_recorder.start()
+            except TrackRecorderError as error:
+                self._send_json(409, {"error": str(error)})
+                return
+            self._send_json(202, {
+                "recorder": track_recorder.status(),
+                "tracks": track_recorder.list_tracks(),
+                "stopped": stopped if path == "/api/tracks/stop" else None,
+            })
+            return
         if path not in ("/api/navigation/browser", "/api/ais/settings", "/api/ais/replay-position"):
             self._send_json(404, {"error": "API route not found."} if path.startswith("/api/") else {"error": "Not found."})
             return
@@ -553,6 +587,68 @@ class RequestHandler(BaseHTTPRequestHandler):
         snapshot = combine_fields()
         broadcast_navigation()
         self._send_json(202, snapshot)
+
+    def do_DELETE(self) -> None:
+        path = urlsplit(self.path).path
+        prefix = "/api/tracks/"
+        if not path.startswith(prefix):
+            self._send_json(404, {"error": "API route not found."} if path.startswith("/api/") else {"error": "Not found."})
+            return
+        track_id = path[len(prefix):]
+        if not track_id or "/" in track_id:
+            self._send_json(404, {"error": "Track API route not found."})
+            return
+        try:
+            track_recorder.delete_track(track_id)
+        except TrackNotFoundError:
+            self._send_json(404, {"error": "Track not found."})
+            return
+        except TrackRecorderError as error:
+            self._send_json(409, {"error": str(error)})
+            return
+        self._send_json(202, {
+            "recorder": track_recorder.status(),
+            "tracks": track_recorder.list_tracks(),
+        })
+
+    def _send_track_route(self) -> None:
+        """Route les requêtes /api/tracks/{id}/export?format=... vers le bon format."""
+        url = urlsplit(self.path)
+        segments = url.path[len("/api/tracks/"):].split("/")
+        if len(segments) == 2 and segments[1] == "export":
+            self._send_track_export(segments[0], parse_qs(url.query))
+        else:
+            self._send_json(404, {"error": "Track API route not found."})
+
+    def _send_track_export(self, track_id: str, query: dict[str, list[str]]) -> None:
+        export_format = (query.get("format") or ["geojson"])[0]
+        if export_format not in ("geojson", "gpx", "csv"):
+            self._send_json(400, {"error": "Unsupported export format. Use geojson, gpx or csv."})
+            return
+        try:
+            summary = track_recorder.track_summary(track_id)
+            points = track_recorder.load_points(track_id)
+        except TrackNotFoundError:
+            self._send_json(404, {"error": "Track not found."})
+            return
+        if export_format == "geojson":
+            body = json.dumps(track_to_geojson(summary, points), separators=(",", ":"), allow_nan=False).encode("utf-8")
+            content_type = "application/geo+json; charset=utf-8"
+        elif export_format == "gpx":
+            body = track_to_gpx(summary, points).encode("utf-8")
+            content_type = "application/gpx+xml; charset=utf-8"
+        else:
+            body = track_to_csv(summary, points).encode("utf-8")
+            content_type = "text/csv; charset=utf-8"
+        self.send_response(200)
+        self.send_header("Content-Type", content_type)
+        self.send_header("Content-Disposition", f'attachment; filename="{track_id}.{export_format}"')
+        self.send_header("Cache-Control", "no-store")
+        self.send_header("X-Content-Type-Options", "nosniff")
+        self.send_header("Content-Length", str(len(body)))
+        self.end_headers()
+        if self.command != "HEAD":
+            self.wfile.write(body)
 
     def _send_events(self) -> None:
         client: queue.Queue[str] = queue.Queue(maxsize=1)

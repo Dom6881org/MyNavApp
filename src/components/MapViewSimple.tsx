@@ -2,7 +2,7 @@ import React, { useEffect, useMemo, useRef, useState } from 'react';
 import * as LeafletBundle from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import '@tomickigrzegorz/leaflet-rotate';
-import { AISBackendState, AISSource, AISTarget, DashboardLayout, NavigationData, Position, UnitChangeHandler, WindData } from '../types';
+import { AISBackendState, AISSource, AISTarget, DashboardLayout, NavigationData, Position, TrackRecorderStatus, TrackSummary, UnitChangeHandler, WindData } from '../types';
 import ControlPanel, { MapBaseStyle } from './ControlPanel';
 import MapPositionReadout from './MapPositionReadout';
 import AppLogo from './AppLogo';
@@ -54,8 +54,20 @@ interface MapViewSimpleProps {
   hasGPS?: boolean;
   isGPSEnabled?: boolean;
   backendStatus?: { isConnected: boolean; error?: string | null };
+  trackRecorder?: TrackRecorderControls;
   size?: { width: number | string; height: number | string };
 }
+
+type TrackRecorderControls = {
+  status: TrackRecorderStatus | null;
+  tracks: TrackSummary[];
+  error: string | null;
+  isBusy: boolean;
+  refresh: () => Promise<void>;
+  start: () => Promise<void>;
+  stop: () => Promise<void>;
+  remove: (trackId: string) => Promise<void>;
+};
 
 type MapOrientation = 'north' | 'heading' | 'course';
 const ORIENTATION_ORDER: MapOrientation[] = ['north', 'heading', 'course'];
@@ -67,7 +79,7 @@ const ORIENTATION_LABELS: Record<MapOrientation, string> = {
 const ORIENTATION_BADGES: Record<MapOrientation, string> = { north: 'N', heading: 'H', course: 'C' };
 const nextOrientation = (current: MapOrientation): MapOrientation =>
   ORIENTATION_ORDER[(ORIENTATION_ORDER.indexOf(current) + 1) % ORIENTATION_ORDER.length];
-type MapToolPanel = 'ais' | 'weather' | 'gps' | 'replay' | 'settings' | 'about' | null;
+type MapToolPanel = 'ais' | 'weather' | 'gps' | 'replay' | 'track' | 'settings' | 'about' | null;
 const NAVIGATION_SOURCE_LABELS: Record<NonNullable<MapViewSimpleProps['navigationSource']>, string> = {
   replay: 'GPX replay',
   nmea: 'NMEA (backend)',
@@ -107,6 +119,7 @@ const MapViewSimple: React.FC<MapViewSimpleProps> = ({
   hasGPS = true,
   isGPSEnabled = true,
   backendStatus,
+  trackRecorder,
   size
 }) => {
   const mapRef = useRef<HTMLDivElement>(null);
@@ -658,6 +671,40 @@ const MapViewSimple: React.FC<MapViewSimpleProps> = ({
                 </button>
               </div>
             )}
+            {trackRecorder && (
+              <div className="map-tool-item">
+                <button
+                  className={`map-tool-button track-record-button ${trackRecorder.status?.recording ? 'recording-active' : ''}`}
+                  type="button"
+                  aria-label={trackRecorder.status?.recording ? 'Stop track recording' : 'Start track recording'}
+                  aria-pressed={Boolean(trackRecorder.status?.recording)}
+                  title={trackRecorder.status?.recording ? 'Stop track recording' : 'Record the vessel track'}
+                  disabled={trackRecorder.isBusy}
+                  onClick={event => {
+                    event.stopPropagation();
+                    void (trackRecorder.status?.recording ? trackRecorder.stop() : trackRecorder.start());
+                  }}
+                >
+                  <svg viewBox="0 0 24 24" aria-hidden="true">
+                    <circle cx="12" cy="12" r="6" />
+                  </svg>
+                </button>
+                <button
+                  className={`map-tool-details ${activeMapTool === 'track' ? 'active' : ''}`}
+                  type="button"
+                  aria-label="Track recording and export"
+                  aria-expanded={activeMapTool === 'track'}
+                  aria-controls="map-track-panel"
+                  title="Track recording and export"
+                  onClick={() => {
+                    if (activeMapTool !== 'track') void trackRecorder.refresh();
+                    setActiveMapTool(activeMapTool === 'track' ? null : 'track');
+                  }}
+                >
+                  i
+                </button>
+              </div>
+            )}
             <div className="map-tool-item">
               <button
                 className={`map-tool-button gps-map-button ${gpsStatus?.isConnected || navigationSource === 'nmea' ? 'gps-connected' : 'gps-disconnected'}`}
@@ -806,6 +853,60 @@ const MapViewSimple: React.FC<MapViewSimpleProps> = ({
               >
                 {gpxReplay.isActive ? 'Stop replay' : 'Start replay'}
               </button>
+            </section>
+          )}
+          {activeMapTool === 'track' && trackRecorder && (
+            <section id="map-track-panel" className="map-tool-panel track-map-controls" aria-label="Track recording and export">
+              <strong>TRACK RECORDING</strong>
+              <span className="track-map-status" role="status">
+                {trackRecorder.status?.recording
+                  ? `Recording · ${formatTrackStartedAt(trackRecorder.status.startedAt ?? 0)} · ${trackRecorder.status.pointCount ?? 0} points`
+                  : 'Not recording'}
+              </span>
+              {(trackRecorder.status?.error || trackRecorder.error) && (
+                <span role="alert">{trackRecorder.status?.error ?? trackRecorder.error}</span>
+              )}
+              <button
+                className="ais-map-zoom track-map-toggle"
+                type="button"
+                disabled={trackRecorder.isBusy}
+                onClick={() => void (trackRecorder.status?.recording ? trackRecorder.stop() : trackRecorder.start())}
+              >
+                {trackRecorder.status?.recording ? 'Stop recording' : 'Start recording'}
+              </button>
+              <div className="track-map-list-heading">
+                <strong>SAVED TRACKS</strong>
+                <button type="button" onClick={() => void trackRecorder.refresh()}>Refresh</button>
+              </div>
+              {trackRecorder.tracks.length === 0 ? (
+                <span className="track-map-status">No saved tracks yet.</span>
+              ) : (
+                <div className="track-map-list">
+                  {trackRecorder.tracks.map(track => (
+                    <div key={track.id} className="track-map-item">
+                      <div className="track-map-item-info">
+                        <strong>{formatTrackStartedAt(track.startedAt)}</strong>
+                        <span>
+                          {track.pointCount} points · {formatTrackSize(track.sizeBytes)}
+                          {track.endedAt === null ? ' · recording' : ''}
+                        </span>
+                      </div>
+                      <div className="track-map-item-actions">
+                        <a href={`/api/tracks/${track.id}/export?format=geojson`} download={`${track.id}.geojson`}>GeoJSON</a>
+                        <a href={`/api/tracks/${track.id}/export?format=gpx`} download={`${track.id}.gpx`}>GPX</a>
+                        <a href={`/api/tracks/${track.id}/export?format=csv`} download={`${track.id}.csv`}>CSV</a>
+                        <button
+                          type="button"
+                          disabled={trackRecorder.isBusy}
+                          onClick={() => void trackRecorder.remove(track.id)}
+                        >
+                          Delete
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
             </section>
           )}
           {activeMapTool === 'ais' && (
@@ -967,6 +1068,15 @@ const getWindDirectionText = (degrees: number): string => {
   const directions = ['N', 'NNE', 'NE', 'ENE', 'E', 'ESE', 'SE', 'SSE', 'S', 'SSW', 'SW', 'WSW', 'W', 'WNW', 'NW', 'NNW'];
   return directions[Math.round(degrees / 22.5) % 16];
 };
+
+const formatTrackStartedAt = (startedAt: number): string => {
+  const started = new Date(startedAt);
+  return `Track ${started.toLocaleDateString('en-GB')} ${started.toLocaleTimeString('en-GB')}`;
+};
+
+const formatTrackSize = (sizeBytes: number): string => sizeBytes >= 1_048_576
+  ? `${(sizeBytes / 1_048_576).toFixed(1)} MB`
+  : `${Math.max(1, Math.round(sizeBytes / 1024))} KB`;
 
 /**
  * Tile layer served by the navigation backend from the local offline cache

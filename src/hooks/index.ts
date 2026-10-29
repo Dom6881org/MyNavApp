@@ -4,3 +4,4 @@ export * from './useDisplayMode';
 export * from './useRealGPS';
 export * from './useNavigationBackend';
 export * from './useAISSettings';
+export * from './useTrackRecorder';

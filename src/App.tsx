@@ -1,5 +1,5 @@
 import React from 'react';
-import { useAISSettings, useNavigationData, useDashboardLayout } from './hooks';
+import { useAISSettings, useNavigationData, useDashboardLayout, useTrackRecorder } from './hooks';
 import { InstrumentPanel } from './components';
 import MapView from './components/MapView';
 import './App.css';
@@ -26,6 +26,7 @@ const App: React.FC = () => {
   } = useDashboardLayout();
 
   const aisSettings = useAISSettings(backendStatus.isConnected, aisState);
+  const trackRecorder = useTrackRecorder();
 
   // Apply the selected theme to the document.
   React.useEffect(() => {
@@ -91,6 +92,7 @@ const App: React.FC = () => {
               hasGPS={hasGPS}
               isGPSEnabled={isGPSEnabled}
               backendStatus={backendStatus}
+              trackRecorder={trackRecorder}
               size={{ width: '100%', height: '100%' }}
             />
           </div>

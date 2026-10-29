@@ -111,6 +111,28 @@ export interface AISBackendState {
   internetError: string | null;
 }
 
+export interface TrackRecorderStatus {
+  recording: boolean;
+  trackId: string | null;
+  startedAt: number | null;
+  pointCount: number | null;
+  error: string | null;
+}
+
+export interface TrackSummary {
+  id: string;
+  startedAt: number;
+  endedAt: number | null;
+  pointCount: number;
+  sizeBytes: number;
+}
+
+export interface TracksResponse {
+  recorder: TrackRecorderStatus;
+  tracks: TrackSummary[];
+  stopped?: TrackSummary | null;
+}
+
 export type InstrumentType = 'speed' | 'wind' | 'compass' | 'depth' | 'map' | 'all';
 
 export interface InstrumentConfig {

@@ -272,6 +272,27 @@
   color: #ffe3a1;
 }
 
+.map-tool-button.track-record-button:not(.layer-visible) svg {
+  fill: currentColor;
+}
+
+.map-tool-button.track-record-button.recording-active {
+  border-color: #ff6b6b;
+  background: #3a1f24;
+  color: #ff9b9b;
+}
+
+.map-tool-button.track-record-button.recording-active svg {
+  fill: currentColor;
+  animation: track-record-pulse 1.6s ease-in-out infinite;
+}
+
+@keyframes track-record-pulse {
+  50% {
+    opacity: 0.35;
+  }
+}
+
 .gps-map-button.gps-connected {
   border-color: #61d095;
   color: #9af0bd;
@@ -563,6 +584,97 @@
   display: flex;
   flex-direction: column;
   gap: 0.45rem;
+}
+
+.track-map-controls {
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+}
+
+.track-map-status {
+  color: #c4d8df;
+  font-size: 0.68rem;
+  line-height: 1.35;
+}
+
+.track-map-list-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  margin-top: 0.2rem;
+  font-size: 0.66rem;
+  letter-spacing: 0.08em;
+}
+
+.track-map-list-heading button {
+  padding: 0.15rem 0.4rem;
+  border: 1px solid rgba(175, 210, 221, 0.38);
+  border-radius: 5px;
+  background: #102532;
+  color: #f4f8fb;
+  cursor: pointer;
+  font: inherit;
+  font-size: 0.62rem;
+}
+
+.track-map-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.track-map-item {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  padding: 0.35rem;
+  border: 1px solid rgba(175, 210, 221, 0.25);
+  border-radius: 6px;
+  background: rgba(16, 37, 50, 0.6);
+}
+
+.track-map-item-info {
+  display: flex;
+  flex-direction: column;
+  gap: 0.12rem;
+}
+
+.track-map-item-info span {
+  color: #c4d8df;
+  font-size: 0.66rem;
+}
+
+.track-map-item-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.3rem;
+}
+
+.track-map-item-actions a,
+.track-map-item-actions button {
+  padding: 0.16rem 0.4rem;
+  border: 1px solid rgba(116, 227, 229, 0.55);
+  border-radius: 5px;
+  background: rgba(116, 227, 229, 0.12);
+  color: #bdeef0;
+  cursor: pointer;
+  font: inherit;
+  font-size: 0.64rem;
+  font-weight: 650;
+  text-decoration: none;
+}
+
+.track-map-item-actions button {
+  border-color: rgba(255, 107, 107, 0.55);
+  background: rgba(255, 107, 107, 0.12);
+  color: #ffb3b3;
+}
+
+.track-map-item-actions a:hover,
+.track-map-item-actions button:hover {
+  filter: brightness(1.15);
 }
 
 .ais-map-source {

@@ -13,6 +13,7 @@ __pycache__/
 build/
 dist/
 tiles/
+tracks/
 
 # Misc
 .DS_Store
