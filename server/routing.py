@@ -112,11 +112,23 @@ def compute_route(
         raise RoutingError(f"Le calcul de routage a échoué : {error}") from error
 
     if not result.found:
-        raise RoutingError(
-            "Aucune route trouvée : horizon dépassé "
-            f"(meilleure progression à {result.min_dist_nm:.1f} mn de l'arrivée). "
-            "Augmentez l'horizon ou rapprochez le point d'arrivée."
-        )
+        # Horizon dépassé (issue #17) : pas une erreur bloquante — on retourne
+        # la meilleure progression atteinte pour l'afficher sur la carte.
+        return {
+            "found": False,
+            "coords": result.coords,
+            "times_s": result.times_s,
+            "sog_kts": result.sog_kts,
+            "headings_deg": result.headings_deg,
+            "eta_s": 0.0,
+            "min_dist_nm": result.min_dist_nm,
+            "geojson": None,
+            "message": (
+                "Aucune route trouvée : horizon dépassé "
+                f"(meilleure progression à {result.min_dist_nm:.1f} mn de l'arrivée). "
+                "Augmentez l'horizon ou rapprochez le point d'arrivée."
+            ),
+        }
 
     return {
         "found": True,
@@ -127,6 +139,73 @@ def compute_route(
         "eta_s": result.eta_s,
         "min_dist_nm": result.min_dist_nm,
         "geojson": to_geojson(result),
+        "message": None,
+    }
+
+
+def compute_route_payload(payload: Any) -> dict[str, Any]:
+    """Exécute un calcul de routage depuis le payload POST de l'API (issue #17).
+
+    Attend : start/finish = {latitude, longitude}, polarId = id de polaire
+    (voir list_polars), wind = {directionFromDeg, speedKts} (optionnel :
+    vent constant de test 270°/12 nds par défaut).
+    Retourne un dict JSON-ready : found, coords, etaS, minDistNm, message,
+    geojson, wind, polarId.
+    Lève RoutingError (message utilisateur) si les entrées sont invalides.
+    """
+    if not isinstance(payload, dict):
+        raise RoutingError("Requête de routage invalide : objet JSON attendu.")
+
+    polar_id = payload.get("polarId")
+    polar = next((entry for entry in list_polars() if entry["id"] == polar_id), None)
+    if polar is None:
+        raise RoutingError(
+            "Polaire inconnue : " + str(polar_id) + ". Choisissez une polaire de la liste."
+        )
+
+    wind_payload = payload.get("wind")
+    if wind_payload is None:
+        wind_values = (270.0, 12.0)
+    elif (
+        isinstance(wind_payload, dict)
+        and isinstance(wind_payload.get("directionFromDeg"), (int, float))
+        and isinstance(wind_payload.get("speedKts"), (int, float))
+    ):
+        wind_values = (
+            float(wind_payload["directionFromDeg"]),
+            float(wind_payload["speedKts"]),
+        )
+    else:
+        raise RoutingError("Vent invalide : {directionFromDeg, speedKts} attendus.")
+
+    from mynav_routing import ConstantWind
+
+    wind = ConstantWind(direction_from_deg=wind_values[0], speed_kts=wind_values[1])
+
+    def position_tuple(value: Any) -> Any:
+        """Convertit {latitude, longitude} en (lat, lon) accepté par compute_route."""
+        if isinstance(value, dict):
+            return (value.get("latitude"), value.get("longitude"))
+        return value
+
+    start = position_tuple(payload.get("start"))
+    finish = position_tuple(payload.get("finish"))
+
+    result = compute_route(start, finish, wind=wind, polar_path=polar["path"])
+
+    start_position = _validate_position("de départ", start)
+    finish_position = _validate_position("d'arrivée", finish)
+    return {
+        "found": result["found"],
+        "coords": result["coords"],
+        "etaS": result["eta_s"],
+        "minDistNm": result["min_dist_nm"],
+        "message": result["message"],
+        "geojson": result["geojson"],
+        "wind": {"directionFromDeg": wind_values[0], "speedKts": wind_values[1]},
+        "polarId": polar_id,
+        "start": {"latitude": start_position[0], "longitude": start_position[1]},
+        "finish": {"latitude": finish_position[0], "longitude": finish_position[1]},
     }
 
 

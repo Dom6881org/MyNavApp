@@ -11,7 +11,7 @@ except ImportError:
     ROUTING_AVAILABLE = False
 
 from server import routing
-from server.routing import RoutingError, compute_route, list_polars, load_polar
+from server.routing import RoutingError, compute_route, compute_route_payload, list_polars, load_polar
 
 POLAR_PATH = os.path.join(os.path.dirname(__file__), os.pardir, "config", "polaire-sugar.pol")
 START = (42.62, 3.02)
@@ -51,11 +51,15 @@ class TestComputeRoute(unittest.TestCase):
         )
 
     def test_horizon_depasse(self):
-        with self.assertRaises(RoutingError) as context:
-            compute_route(
-                START, FINISH, wind=west_wind_12kt(), polar_path=POLAR_PATH, horizon_h=2.0
-            )
-        self.assertIn("Aucune route trouvée", str(context.exception))
+        # Issue #17 : la meilleure progression est retournée, pas une erreur.
+        result = compute_route(
+            START, FINISH, wind=west_wind_12kt(), polar_path=POLAR_PATH, horizon_h=2.0
+        )
+        self.assertFalse(result["found"])
+        self.assertIn("Aucune route trouvée", result["message"])
+        self.assertGreater(len(result["coords"]), 0)
+        self.assertIsNone(result["geojson"])
+        self.assertGreater(result["min_dist_nm"], 0.0)
 
     def test_positions_invalides(self):
         for position in [(91.0, 3.0), (42.0, 200.0), None]:
@@ -89,6 +93,51 @@ class TestListPolars(unittest.TestCase):
             self.assertTrue(polar["name"])
             self.assertTrue(polar["path"].endswith(".pol"))
             self.assertTrue(os.path.isfile(polar["path"]))
+
+
+@unittest.skipUnless(ROUTING_AVAILABLE, "mynav-routing non installé")
+class TestComputeRoutePayload(unittest.TestCase):
+    """Payload POST de l'API de calcul de route (issue #17)."""
+
+    def payload(self, **overrides):
+        base = {
+            "start": {"latitude": 42.62, "longitude": 3.02},
+            "finish": {"latitude": 42.62, "longitude": 3.5},
+            "polarId": "polaire-sugar",
+            "wind": {"directionFromDeg": 270, "speedKts": 12},
+        }
+        base.update(overrides)
+        return base
+
+    def test_payload_complet_route_trouvee(self):
+        result = compute_route_payload(self.payload())
+        self.assertTrue(result["found"])
+        self.assertGreater(result["etaS"], 0.0)
+        self.assertEqual(result["geojson"]["type"], "FeatureCollection")
+        self.assertEqual(result["geojson"]["features"][0]["geometry"]["type"], "LineString")
+        self.assertEqual(result["wind"], {"directionFromDeg": 270.0, "speedKts": 12.0})
+        self.assertEqual(result["polarId"], "polaire-sugar")
+        self.assertEqual(result["start"], {"latitude": 42.62, "longitude": 3.02})
+
+    def test_payload_sans_vent_defaut_test(self):
+        result = compute_route_payload(self.payload(wind=None))
+        self.assertTrue(result["found"])
+        self.assertEqual(result["wind"], {"directionFromDeg": 270.0, "speedKts": 12.0})
+
+    def test_polaire_inconnue(self):
+        with self.assertRaises(RoutingError) as context:
+            compute_route_payload(self.payload(polarId="inconnue"))
+        self.assertIn("Polaire inconnue", str(context.exception))
+
+    def test_positions_invalides(self):
+        with self.assertRaises(RoutingError):
+            compute_route_payload(self.payload(start={"latitude": 91.0, "longitude": 0.0}))
+        with self.assertRaises(RoutingError):
+            compute_route_payload(self.payload(finish=None))
+
+    def test_payload_non_dict(self):
+        with self.assertRaises(RoutingError):
+            compute_route_payload("pas un dict")
 
 
 if __name__ == "__main__":
