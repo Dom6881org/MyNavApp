@@ -101,7 +101,10 @@ export interface AISTarget {
 }
 
 export interface AISBackendState {
+  /** Source actually serving the targets ("internet" when falling back from a silent local NMEA stream). */
   source: AISSource;
+  /** Source selected by the user in the AIS panel. */
+  requestedSource: AISSource;
   localNmeaPort: number | null;
   targets: AISTarget[];
   localTargetCount: number;

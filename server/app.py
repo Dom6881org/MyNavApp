@@ -100,6 +100,24 @@ def _merge_compass(primary: dict[str, Any] | None, fallback: dict[str, Any] | No
     }
 
 
+def _internet_ais_wanted(source: str, visible: bool, local_fresh_count: int) -> bool:
+    """Internet AIS serves the selected "internet" source and acts as a fallback
+    while the local NMEA stream carries no AIS targets."""
+    if not visible:
+        return False
+    if source == "internet":
+        return True
+    return source == "local" and bool(AISSTREAM_API_KEY) and local_fresh_count == 0
+
+
+def _fresh_local_ais_count(now: int) -> int:
+    with state_lock:
+        return sum(
+            now - target["updatedAt"] <= AIS_FRESHNESS_MS
+            for target in ais_targets["local"].values()
+        )
+
+
 def combine_fields() -> dict[str, Any]:
     now = int(time.time() * 1000)
     with state_lock:
@@ -128,21 +146,31 @@ def combine_fields() -> dict[str, Any]:
         }
         source = "nmea" if nmea_connected else "browser" if browser_fresh else "none"
         updated_at = last_nmea_message_at if nmea_connected else browser_navigation["receivedAt"] if browser_fresh and browser_navigation else None
+        local_target_count = sum(
+            now - target["updatedAt"] <= AIS_FRESHNESS_MS for target in ais_targets["local"].values()
+        )
+        internet_target_count = sum(
+            now - target["updatedAt"] <= AIS_FRESHNESS_MS for target in ais_targets["internet"].values()
+        )
+        # Fall back to Internet targets while the local NMEA stream carries no
+        # AIS data and an AISstream key is configured on the server.
+        effective_source = (
+            "internet"
+            if ais_source == "local" and local_target_count == 0 and AISSTREAM_API_KEY
+            else ais_source
+        )
         selected_targets = [
-            target for target in ais_targets[ais_source].values()
+            target for target in ais_targets[effective_source].values()
             if now - target["updatedAt"] <= AIS_FRESHNESS_MS
         ]
         selected_targets.sort(key=lambda target: target["updatedAt"], reverse=True)
         ais = {
-            "source": ais_source,
+            "source": effective_source,
+            "requestedSource": ais_source,
             "localNmeaPort": NMEA_PORT if nmea_listening else None,
             "targets": selected_targets[:AIS_TARGET_LIMIT],
-            "localTargetCount": sum(
-                now - target["updatedAt"] <= AIS_FRESHNESS_MS for target in ais_targets["local"].values()
-            ),
-            "internetTargetCount": sum(
-                now - target["updatedAt"] <= AIS_FRESHNESS_MS for target in ais_targets["internet"].values()
-            ),
+            "localTargetCount": local_target_count,
+            "internetTargetCount": internet_target_count,
             "internetConfigured": bool(AISSTREAM_API_KEY),
             "internetConnected": ais_internet_connected,
             "internetError": ais_internet_error,
@@ -259,7 +287,7 @@ def _aisstream_worker() -> None:
         with state_lock:
             source = ais_source
             visible = ais_visible
-        if source != "internet" or not visible:
+        if not _internet_ais_wanted(source, visible, _fresh_local_ais_count(int(time.time() * 1000))):
             _set_ais_connection(False)
             stop_event.wait(1)
             continue
@@ -287,7 +315,8 @@ def _aisstream_worker() -> None:
                 last_subscription_position = position
                 while not stop_event.is_set():
                     with state_lock:
-                        if ais_source != "internet":
+                        if ais_source == "local" and _fresh_local_ais_count(int(time.time() * 1000)) > 0:
+                            # Fallback mode: hand targets back to local AIS as soon as it talks.
                             break
                     current_position = _current_ais_position()
                     if current_position and (

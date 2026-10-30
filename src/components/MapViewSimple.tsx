@@ -192,6 +192,10 @@ const MapViewSimple: React.FC<MapViewSimpleProps> = ({
         const seamarkLayer = createTileLayer(L, 'seamark', {
           attribution: '&copy; <a href="https://www.openseamap.org/">OpenSeaMap</a> contributors',
           maxZoom: 18,
+          // OpenSeaMap renders almost no marks below ~z12; request z12 tiles and
+          // scale them down so marks stay visible on wide views.
+          minZoom: 9,
+          minNativeZoom: 12,
           opacity: 0.9,
           keepBuffer: 2,
           updateWhenIdle: true,
@@ -670,7 +674,7 @@ const MapViewSimple: React.FC<MapViewSimpleProps> = ({
                   <path d="M12 3 20 19H4L12 3Z" />
                   <path d="M8 16h8M12 9v4" />
                 </svg>
-                <span className="map-tool-count">{getAISDetectedTargetCount(aisSource, aisState)}</span>
+                <span className="map-tool-count">{getAISDetectedTargetCount(aisState)}</span>
               </button>
               <button
                 className={`map-tool-details ${activeMapTool === 'ais' ? 'active' : ''}`}
@@ -705,7 +709,7 @@ const MapViewSimple: React.FC<MapViewSimpleProps> = ({
                   </label>
                   <div className="ais-map-target-count" aria-live="polite">
                     <span>AIS targets detected</span>
-                    <strong>{getAISDetectedTargetCount(aisSource, aisState)}</strong>
+                    <strong>{getAISDetectedTargetCount(aisState)}</strong>
                   </div>
                   <div className="ais-map-status" role="status">
                     {getAISStatusMessage(aisSource, aisState)}
@@ -1143,7 +1147,15 @@ const getWindTooltip = (wind: WindData): string => buildInfoCard('Wind forecast'
 
 const getAISStatusMessage = (source: AISSource, state: AISBackendState | null): string => {
   if (!state) return 'Waiting for local navigation backend.';
-  if (source === 'local') {
+  if (state.source === 'internet' && source === 'local') {
+    // Local AIS is silent: the backend fell back to AISstream targets.
+    if (state.internetError) return `No local AIS data · ${state.internetError}`;
+    if (!state.internetConnected) return 'No local AIS data · connecting to AISstream…';
+    return state.internetTargetCount > 0
+      ? `No local AIS data · ${state.internetTargetCount} Internet target${state.internetTargetCount === 1 ? '' : 's'} received.`
+      : 'No local AIS data · connected to AISstream, no targets in this area yet.';
+  }
+  if (state.source === 'local') {
     if (state.localTargetCount > 0) {
       return `${state.localTargetCount} local target${state.localTargetCount === 1 ? '' : 's'} received.`;
     }
@@ -1159,9 +1171,9 @@ const getAISStatusMessage = (source: AISSource, state: AISBackendState | null): 
     : 'Connected to AISstream; no targets reported in this area yet.';
 };
 
-const getAISDetectedTargetCount = (source: AISSource, state: AISBackendState | null): number => {
-  if (!state || state.source !== source) return 0;
-  return source === 'local' ? state.localTargetCount : state.internetTargetCount;
+const getAISDetectedTargetCount = (state: AISBackendState | null): number => {
+  if (!state) return 0;
+  return state.source === 'local' ? state.localTargetCount : state.internetTargetCount;
 };
 
 const getWindBarbSvg = (speedKnots: number, includeOutline = true): string => {
