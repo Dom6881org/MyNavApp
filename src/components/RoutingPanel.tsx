@@ -1,22 +1,29 @@
 import React from 'react';
 import { RoutingInput } from '../hooks/useRoutingInput';
 
+export type RoutingPickTarget = 'start' | 'finish';
+
 interface RoutingPanelProps {
   routing: RoutingInput;
-  pickActive: boolean;
-  onRequestPick: () => void;
+  pickTarget: RoutingPickTarget | null;
+  onRequestPick: (target: RoutingPickTarget) => void;
   onClose: () => void;
 }
 
+const pickButtonLabel = (target: RoutingPickTarget, active: boolean): string => {
+  if (active) return 'Click on the chart…';
+  return target === 'start' ? 'Pick departure on chart' : 'Pick destination on chart';
+};
+
 /**
  * Panneau de saisie du plan de routage (issue #15) :
- * départ (position courante ou manuelle), arrivée (coordonnées ou clic carte),
- * polaire du bateau, avec validation en direct.
+ * départ (position courante, manuelle ou clic carte), arrivée (coordonnées
+ * ou clic carte), polaire du bateau, avec validation en direct.
  * Overlay "map tool" ancré à la colonne d'outils, comme le panneau réglages.
  */
 const RoutingPanel: React.FC<RoutingPanelProps> = ({
   routing,
-  pickActive,
+  pickTarget,
   onRequestPick,
   onClose
 }) => {
@@ -77,6 +84,14 @@ const RoutingPanel: React.FC<RoutingPanelProps> = ({
           <span>Use current position</span>
         </label>
         {coordinateRow('Departure', routing.startText, routing.setStartText, routing.useCurrentPosition)}
+        <button
+          type="button"
+          className={`routing-pick-button ${pickTarget === 'start' ? 'active' : ''}`}
+          disabled={routing.useCurrentPosition}
+          onClick={() => onRequestPick('start')}
+        >
+          {pickButtonLabel('start', pickTarget === 'start')}
+        </button>
       </div>
 
       <div className="control-section routing-section">
@@ -84,10 +99,10 @@ const RoutingPanel: React.FC<RoutingPanelProps> = ({
         {coordinateRow('Destination', routing.finishText, routing.setFinishText, false)}
         <button
           type="button"
-          className={`routing-pick-button ${pickActive ? 'active' : ''}`}
-          onClick={onRequestPick}
+          className={`routing-pick-button ${pickTarget === 'finish' ? 'active' : ''}`}
+          onClick={() => onRequestPick('finish')}
         >
-          {pickActive ? 'Click on the chart…' : 'Pick destination on chart'}
+          {pickButtonLabel('finish', pickTarget === 'finish')}
         </button>
       </div>
 

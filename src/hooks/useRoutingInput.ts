@@ -31,8 +31,8 @@ const distanceNm = (start: Position, finish: Position): number => {
 };
 
 /**
- * Saisie du plan de routage (issue #15) : départ (position courante ou manuelle),
- * arrivée (coordonnées ou point choisi sur la carte) et polaire du bateau.
+ * Saisie du plan de routage (issue #15) : départ (position courante, manuelle
+ * ou point choisi sur la carte), arrivée (idem) et polaire du bateau.
  */
 export const useRoutingInput = (currentPosition: Position | null) => {
   const [useCurrentPosition, setUseCurrentPosition] = useState(true);
@@ -92,6 +92,14 @@ export const useRoutingInput = (currentPosition: Position | null) => {
     });
   }, []);
 
+  const setStartFromPosition = useCallback((position: Position) => {
+    setUseCurrentPosition(false);
+    setStartText({
+      latitude: position.latitude.toFixed(5),
+      longitude: position.longitude.toFixed(5)
+    });
+  }, []);
+
   const manualStart = useMemo<Position | null>(() => {
     const latitude = parseCoordinate(startText.latitude);
     const longitude = parseCoordinate(startText.longitude);
@@ -143,6 +151,7 @@ export const useRoutingInput = (currentPosition: Position | null) => {
     finishText,
     setFinishText,
     setFinishFromPosition,
+    setStartFromPosition,
     startPosition: isValidPosition(startPosition) ? startPosition : null,
     finishPosition: isValidPosition(finishPosition) ? finishPosition : null,
     distanceNm: isValidPosition(startPosition) && isValidPosition(finishPosition)

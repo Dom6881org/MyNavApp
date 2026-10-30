@@ -30,15 +30,19 @@ const App: React.FC = () => {
 
   // Routage (issue #15) : saisie départ/arrivée + polaire, panneau outil de la carte.
   const routing = useRoutingInput(navigationData.position);
-  const { setFinishFromPosition } = routing;
-  const [routingPickActive, setRoutingPickActive] = React.useState(false);
-  const handleRoutingPickStart = React.useCallback(() => {
-    setRoutingPickActive(true);
+  const { setStartFromPosition, setFinishFromPosition } = routing;
+  const [routingPickTarget, setRoutingPickTarget] = React.useState<'start' | 'finish' | null>(null);
+  const handleRoutingPickRequest = React.useCallback((target: 'start' | 'finish') => {
+    setRoutingPickTarget(target);
   }, []);
   const handleRoutingMapPick = React.useCallback((position: Position) => {
-    setFinishFromPosition(position);
-    setRoutingPickActive(false);
-  }, [setFinishFromPosition]);
+    if (routingPickTarget === 'start') {
+      setStartFromPosition(position);
+    } else {
+      setFinishFromPosition(position);
+    }
+    setRoutingPickTarget(null);
+  }, [routingPickTarget, setStartFromPosition, setFinishFromPosition]);
 
   // Apply the selected theme to the document.
   React.useEffect(() => {
@@ -102,9 +106,9 @@ const App: React.FC = () => {
               trackRecorder={trackRecorder}
               size={{ width: '100%', height: '100%' }}
               onRoutingMapPick={handleRoutingMapPick}
-              routingPickActive={routingPickActive}
+              routingPickTarget={routingPickTarget}
               routing={routing}
-              onRoutingPickStart={handleRoutingPickStart}
+              onRoutingPickRequest={handleRoutingPickRequest}
             />
           </div>
 

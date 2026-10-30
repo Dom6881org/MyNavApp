@@ -4,7 +4,7 @@ import 'leaflet/dist/leaflet.css';
 import '@tomickigrzegorz/leaflet-rotate';
 import { AISBackendState, AISSource, AISTarget, DashboardLayout, NavigationData, Position, TrackRecorderStatus, TrackSummary, UnitChangeHandler, WindData } from '../types';
 import ControlPanel, { MapBaseStyle } from './ControlPanel';
-import RoutingPanel from './RoutingPanel';
+import RoutingPanel, { RoutingPickTarget } from './RoutingPanel';
 import MapPositionReadout from './MapPositionReadout';
 import AppLogo from './AppLogo';
 import { RoutingInput } from '../hooks/useRoutingInput';
@@ -27,9 +27,9 @@ interface MapViewSimpleProps {
   data: NavigationData;
   onWindGridRequest?: (visible: Position[], prefetch?: Position[]) => void;
   onRoutingMapPick?: (position: Position) => void;
-  routingPickActive?: boolean;
+  routingPickTarget?: RoutingPickTarget | null;
   routing?: RoutingInput;
-  onRoutingPickStart?: () => void;
+  onRoutingPickRequest?: (target: RoutingPickTarget) => void;
   aisTargets?: AISTarget[];
   aisState?: AISBackendState | null;
   showAIS?: boolean;
@@ -90,9 +90,9 @@ const MapViewSimple: React.FC<MapViewSimpleProps> = ({
   data,
   onWindGridRequest,
   onRoutingMapPick,
-  routingPickActive = false,
+  routingPickTarget = null,
   routing,
-  onRoutingPickStart,
+  onRoutingPickRequest,
   aisTargets = [],
   aisState = null,
   showAIS = false,
@@ -274,10 +274,11 @@ const MapViewSimple: React.FC<MapViewSimpleProps> = ({
     };
   }, [mapInstance]);
 
-  // Routage (issue #15) : transmet les clics carte au panneau de saisie quand il choisit l'arrivée.
-  // Le panneau se rouvre automatiquement une fois la destination sélectionnée.
+  // Routage (issue #15) : transmet les clics carte au panneau de saisie quand un
+  // point (depart ou arrivee) est en cours de selection. Le panneau se rouvre
+  // automatiquement une fois le point choisi.
   useEffect(() => {
-    if (!mapInstance || !routingPickActive || !onRoutingMapPick) return;
+    if (!mapInstance || !routingPickTarget || !onRoutingMapPick) return;
     // leaflet-rotate exposes latlng as a plain object {lat, lng}, while stock
     // Leaflet provides LatLng instances with lat()/lng() methods: support both.
     const handleRoutingPick = (event: { latlng: { lat: number | (() => number); lng: number | (() => number) } }) => {
@@ -293,7 +294,7 @@ const MapViewSimple: React.FC<MapViewSimpleProps> = ({
       mapInstance.map.off('click', handleRoutingPick);
       container.style.cursor = '';
     };
-  }, [mapInstance, routingPickActive, onRoutingMapPick]);
+  }, [mapInstance, routingPickTarget, onRoutingMapPick]);
 
   useEffect(() => {
     if (!mapInstance || !followVessel || !data.position) return;
@@ -865,10 +866,10 @@ const MapViewSimple: React.FC<MapViewSimpleProps> = ({
                 {activeMapTool === 'routing' && (
                   <RoutingPanel
                     routing={routing}
-                    pickActive={routingPickActive}
-                    onRequestPick={() => {
+                    pickTarget={routingPickTarget}
+                    onRequestPick={target => {
                       setActiveMapTool(null);
-                      onRoutingPickStart?.();
+                      onRoutingPickRequest?.(target);
                     }}
                     onClose={() => setActiveMapTool(null)}
                   />
