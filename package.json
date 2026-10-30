@@ -28,7 +28,7 @@
     "@types/node": "^26.6.5",
     "@types/react": "^18.2.43",
     "@types/react-dom": "^18.2.17",
-    "@vitejs/plugin-react": "^4.2.1",
+    "@vitejs/plugin-react": "^6.1.2",
     "concurrently": "^10.0.6",
     "cross-env": "^10.1.0",
     "eslint": "^10.13.0",
@@ -37,6 +37,6 @@
     "tsx": "^4.23.15",
     "typescript": "^5.2.2",
     "typescript-eslint": "^8.72.1",
-    "vite": "^5.0.8"
+    "vite": "^8.3.5"
   }
 }
