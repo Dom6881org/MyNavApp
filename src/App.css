@@ -561,6 +561,7 @@
    (max-height calc(100% - 1.5rem)) sinon le conteneur a overflow: hidden le
    rogne par le bas. */
 .map-routing-panel {
+  z-index: 1100;
   top: 0.75rem;
   right: 4.25rem;
   bottom: auto;
