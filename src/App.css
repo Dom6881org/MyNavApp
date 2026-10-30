@@ -555,13 +555,21 @@
   outline-offset: 2px;
 }
 
-/* Routing input panel (issue #15): same overlay recipe as the settings panel. */
+/* Routing input panel (issue #15).
+   Ancre au conteneur carte (pas au bouton outil) : le panneau part du coin
+   haut droit, degage de la colonne d'actions, et ne depasse jamais la carte
+   (max-height calc(100% - 1.5rem)) sinon le conteneur a overflow: hidden le
+   rogne par le bas. */
 .map-routing-panel {
+  top: 0.75rem;
+  right: 4.25rem;
+  bottom: auto;
+  transform: none;
   display: flex;
   flex-direction: column;
   gap: 0.55rem;
   width: min(17rem, calc(100vw - 7rem));
-  max-height: min(70vh, 26rem);
+  max-height: calc(100% - 1.5rem);
 }
 
 /* Hauteur max atteinte : les sections defilent au lieu de se comprimer
@@ -2101,7 +2109,7 @@ html {
 
   /* Form panel: keep enough height for departure/destination/polar sections. */
   .map-routing-panel {
-    max-height: min(70vh, 22rem);
+    max-height: calc(100% - 1.5rem);
   }
 
   /* Both columns pinned to the top corners to leave room for the bottom readouts. */

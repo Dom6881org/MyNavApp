@@ -863,17 +863,6 @@ const MapViewSimple: React.FC<MapViewSimpleProps> = ({
                     <path d="M15.5 8.5 13.2 13.2 8.5 15.5 10.8 10.8Z" />
                   </svg>
                 </button>
-                {activeMapTool === 'routing' && (
-                  <RoutingPanel
-                    routing={routing}
-                    pickTarget={routingPickTarget}
-                    onRequestPick={target => {
-                      setActiveMapTool(null);
-                      onRoutingPickRequest?.(target);
-                    }}
-                    onClose={() => setActiveMapTool(null)}
-                  />
-                )}
               </div>
             )}
             {trackRecorder && (
@@ -966,6 +955,17 @@ const MapViewSimple: React.FC<MapViewSimpleProps> = ({
             )}
           </div>
         </div>
+        {activeMapTool === 'routing' && routing && (
+          <RoutingPanel
+            routing={routing}
+            pickTarget={routingPickTarget}
+            onRequestPick={target => {
+              setActiveMapTool(null);
+              onRoutingPickRequest?.(target);
+            }}
+            onClose={() => setActiveMapTool(null)}
+          />
+        )}
         {!leafletError && !leafletLoaded && (
           <div style={{
             position: 'absolute',
