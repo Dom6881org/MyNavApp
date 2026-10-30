@@ -564,6 +564,12 @@
   max-height: min(70vh, 26rem);
 }
 
+/* Hauteur max atteinte : les sections defilent au lieu de se comprimer
+   (le flex ecrase la derniere ligne - ex. "Plan ready" - sinon). */
+.map-routing-panel > * {
+  flex: 0 0 auto;
+}
+
 .map-routing-panel .control-section {
   padding: 0.65rem;
   border: 1px solid rgba(175, 210, 221, 0.24);

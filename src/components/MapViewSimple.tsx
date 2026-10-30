@@ -692,35 +692,6 @@ const MapViewSimple: React.FC<MapViewSimpleProps> = ({
                 )}
               </div>
             )}
-            {routing && (
-              <div className="map-tool-item">
-                <button
-                  className={`map-tool-button ${activeMapTool === 'routing' ? 'layer-visible' : ''}`}
-                  type="button"
-                  aria-label="Routing"
-                  title="Routing"
-                  aria-expanded={activeMapTool === 'routing'}
-                  aria-controls="map-routing-panel"
-                  onClick={() => setActiveMapTool(activeMapTool === 'routing' ? null : 'routing')}
-                >
-                  <svg viewBox="0 0 24 24" aria-hidden="true">
-                    <circle cx="12" cy="12" r="9" />
-                    <path d="M15.5 8.5 13.2 13.2 8.5 15.5 10.8 10.8Z" />
-                  </svg>
-                </button>
-                {activeMapTool === 'routing' && (
-                  <RoutingPanel
-                    routing={routing}
-                    pickActive={routingPickActive}
-                    onRequestPick={() => {
-                      setActiveMapTool(null);
-                      onRoutingPickStart?.();
-                    }}
-                    onClose={() => setActiveMapTool(null)}
-                  />
-                )}
-              </div>
-            )}
             <div className="map-tool-item">
               <button
                 className={`map-tool-button ${showAIS ? 'layer-visible' : ''}`}
@@ -875,6 +846,35 @@ const MapViewSimple: React.FC<MapViewSimpleProps> = ({
                 </section>
               )}
             </div>
+            {routing && (
+              <div className="map-tool-item">
+                <button
+                  className={`map-tool-button ${activeMapTool === 'routing' ? 'layer-visible' : ''}`}
+                  type="button"
+                  aria-label="Routing"
+                  title="Routing"
+                  aria-expanded={activeMapTool === 'routing'}
+                  aria-controls="map-routing-panel"
+                  onClick={() => setActiveMapTool(activeMapTool === 'routing' ? null : 'routing')}
+                >
+                  <svg viewBox="0 0 24 24" aria-hidden="true">
+                    <circle cx="12" cy="12" r="9" />
+                    <path d="M15.5 8.5 13.2 13.2 8.5 15.5 10.8 10.8Z" />
+                  </svg>
+                </button>
+                {activeMapTool === 'routing' && (
+                  <RoutingPanel
+                    routing={routing}
+                    pickActive={routingPickActive}
+                    onRequestPick={() => {
+                      setActiveMapTool(null);
+                      onRoutingPickStart?.();
+                    }}
+                    onClose={() => setActiveMapTool(null)}
+                  />
+                )}
+              </div>
+            )}
             {trackRecorder && (
               <div className="map-tool-item">
                 <button
