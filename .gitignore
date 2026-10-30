@@ -6,6 +6,8 @@ node_modules/
 # Testing
 coverage/
 /test-data/navionics-track.json
+/test-data/*.gpx
+/test-data/*.geojson
 __pycache__/
 *.py[cod]
 
