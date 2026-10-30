@@ -71,7 +71,7 @@ const App: React.FC = () => {
             <MapView
               data={navigationData}
               onWindGridRequest={requestWindGrid}
-              aisTargets={aisState?.source === aisSettings.source ? aisState.targets : []}
+              aisTargets={aisState?.targets ?? []}
               aisState={aisState}
               showAIS={aisSettings.isVisible}
               aisSource={aisSettings.source}

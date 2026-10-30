@@ -114,6 +114,68 @@ class AisDecoderTests(unittest.TestCase):
         self.assertEqual(dateline["BoundingBoxes"][1][0][1], -180)
         self.assertEqual(polar["BoundingBoxes"][0][1][0], 90)
 
+    def test_local_source_falls_back_to_internet_without_local_ais(self) -> None:
+        isolated_targets = {
+            "local": {},
+            "internet": {"123456789": {"mmsi": "123456789", "updatedAt": 100}},
+        }
+        with (
+            patch.object(app, "ais_targets", isolated_targets),
+            patch.object(app, "ais_source", "local"),
+            patch.object(app, "AISSTREAM_API_KEY", "test-key"),
+            patch.object(app.time, "time", return_value=0.2),
+        ):
+            snapshot = app.combine_fields()
+        ais = snapshot["ais"]
+        self.assertEqual(ais["source"], "internet")
+        self.assertEqual(ais["requestedSource"], "local")
+        self.assertEqual(len(ais["targets"]), 1)
+        self.assertEqual(ais["localTargetCount"], 0)
+        self.assertEqual(ais["internetTargetCount"], 1)
+
+    def test_local_targets_take_priority_over_internet_fallback(self) -> None:
+        isolated_targets = {
+            "local": {"111111111": {"mmsi": "111111111", "updatedAt": 150}},
+            "internet": {"123456789": {"mmsi": "123456789", "updatedAt": 100}},
+        }
+        with (
+            patch.object(app, "ais_targets", isolated_targets),
+            patch.object(app, "ais_source", "local"),
+            patch.object(app, "AISSTREAM_API_KEY", "test-key"),
+            patch.object(app.time, "time", return_value=0.2),
+        ):
+            snapshot = app.combine_fields()
+        ais = snapshot["ais"]
+        self.assertEqual(ais["source"], "local")
+        self.assertEqual(ais["requestedSource"], "local")
+        self.assertEqual(len(ais["targets"]), 1)
+        self.assertEqual(ais["targets"][0]["mmsi"], "111111111")
+
+    def test_no_internet_fallback_without_api_key(self) -> None:
+        isolated_targets = {
+            "local": {},
+            "internet": {"123456789": {"mmsi": "123456789", "updatedAt": 100}},
+        }
+        with (
+            patch.object(app, "ais_targets", isolated_targets),
+            patch.object(app, "ais_source", "local"),
+            patch.object(app, "AISSTREAM_API_KEY", ""),
+            patch.object(app.time, "time", return_value=0.2),
+        ):
+            snapshot = app.combine_fields()
+        ais = snapshot["ais"]
+        self.assertEqual(ais["source"], "local")
+        self.assertEqual(ais["targets"], [])
+
+    def test_internet_ais_wanted_covers_fallback(self) -> None:
+        with patch.object(app, "AISSTREAM_API_KEY", "test-key"):
+            self.assertTrue(app._internet_ais_wanted("internet", True, 5))
+            self.assertFalse(app._internet_ais_wanted("internet", False, 0))
+            self.assertTrue(app._internet_ais_wanted("local", True, 0))
+            self.assertFalse(app._internet_ais_wanted("local", True, 3))
+        with patch.object(app, "AISSTREAM_API_KEY", ""):
+            self.assertFalse(app._internet_ais_wanted("local", True, 0))
+
     def test_replay_position_takes_priority_for_aisstream_bounds(self) -> None:
         replay_position = {
             "position": {"latitude": 48.1, "longitude": -4.5},
