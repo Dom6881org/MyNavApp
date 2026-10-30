@@ -1,5 +1,6 @@
 import React from 'react';
 import { RoutingInput } from '../hooks/useRoutingInput';
+import { RoutingRouteApi } from '../hooks/useRoutingRoute';
 
 export type RoutingPickTarget = 'start' | 'finish';
 
@@ -8,7 +9,14 @@ interface RoutingPanelProps {
   pickTarget: RoutingPickTarget | null;
   onRequestPick: (target: RoutingPickTarget) => void;
   onClose: () => void;
+  routeCalc?: RoutingRouteApi;
+  onComputeRoute?: () => void;
 }
+
+const formatEta = (etaS: number): string => {
+  const hours = etaS / 3600;
+  return `${hours >= 10 ? hours.toFixed(0) : hours.toFixed(1)} h`;
+};
 
 const pickButtonLabel = (target: RoutingPickTarget, active: boolean): string => {
   if (active) return 'Click on the chart…';
@@ -25,7 +33,9 @@ const RoutingPanel: React.FC<RoutingPanelProps> = ({
   routing,
   pickTarget,
   onRequestPick,
-  onClose
+  onClose,
+  routeCalc,
+  onComputeRoute
 }) => {
   const coordinateRow = (
     label: string,
@@ -118,6 +128,38 @@ const RoutingPanel: React.FC<RoutingPanelProps> = ({
           ))}
         </select>
       </div>
+
+      {routeCalc && onComputeRoute && (
+        <div className="control-section routing-section">
+          <h3>Route</h3>
+          <button
+            type="button"
+            className="routing-pick-button"
+            disabled={!routing.plan || routeCalc.isLoading}
+            onClick={onComputeRoute}
+          >
+            {routeCalc.isLoading ? 'Computing…' : 'Compute route'}
+          </button>
+          {routeCalc.error && <p className="routing-error">{routeCalc.error}</p>}
+          {routeCalc.route?.found && (
+            <p className="routing-ok">
+              Route · ETA {formatEta(routeCalc.route.etaS)} · wind {routeCalc.route.wind.speedKts.toFixed(0)} kt
+            </p>
+          )}
+          {routeCalc.route && !routeCalc.route.found && routeCalc.route.message && (
+            <p className="routing-error">{routeCalc.route.message}</p>
+          )}
+          {routeCalc.route && (
+            <button
+              type="button"
+              className="routing-clear-button"
+              onClick={routeCalc.clear}
+            >
+              Clear route
+            </button>
+          )}
+        </div>
+      )}
 
       <div className="routing-status">
         {routing.polarError && <p className="routing-error">{routing.polarError}</p>}

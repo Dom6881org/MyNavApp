@@ -4,7 +4,8 @@ import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 import RoutingPanel, { RoutingPickTarget } from './RoutingPanel';
 import { useRoutingInput } from '../hooks/useRoutingInput';
-import { Position } from '../types';
+import { RoutingRouteApi } from '../hooks/useRoutingRoute';
+import { Position, RoutingRouteResult } from '../types';
 
 const POSITION: Position = { latitude: 47.5, longitude: -4.5 };
 
@@ -16,14 +17,51 @@ const stubPolarsFetch = () => {
   }));
 };
 
+const ROUTE_FOUND: RoutingRouteResult = {
+  found: true,
+  coords: [[47.5, -4.5], [47.6, -4.6]],
+  etaS: 12600,
+  minDistNm: 0.5,
+  message: null,
+  geojson: {
+    type: 'FeatureCollection',
+    features: [{
+      type: 'Feature',
+      geometry: { type: 'LineString', coordinates: [[-4.5, 47.5], [-4.6, 47.6]] },
+      properties: {}
+    }]
+  },
+  wind: { directionFromDeg: 270, speedKts: 12 },
+  polarId: 'polaire-sugar',
+  start: { latitude: 47.5, longitude: -4.5 },
+  finish: { latitude: 47.6, longitude: -4.6 }
+};
+
+const stubRouteCalc = (route: RoutingRouteResult | null = null, error: string | null = null): RoutingRouteApi => ({
+  route,
+  isLoading: false,
+  error,
+  compute: vi.fn(),
+  clear: vi.fn()
+});
+
 interface HarnessProps {
   currentPosition: Position | null;
   pickTarget: RoutingPickTarget | null;
   onRequestPick: (target: RoutingPickTarget) => void;
   onClose: () => void;
+  routeCalc?: RoutingRouteApi;
+  onComputeRoute?: () => void;
 }
 
-const Harness: React.FC<HarnessProps> = ({ currentPosition, pickTarget, onRequestPick, onClose }) => {
+const Harness: React.FC<HarnessProps> = ({
+  currentPosition,
+  pickTarget,
+  onRequestPick,
+  onClose,
+  routeCalc,
+  onComputeRoute
+}) => {
   const routing = useRoutingInput(currentPosition);
   return (
     <RoutingPanel
@@ -31,6 +69,8 @@ const Harness: React.FC<HarnessProps> = ({ currentPosition, pickTarget, onReques
       pickTarget={pickTarget}
       onRequestPick={onRequestPick}
       onClose={onClose}
+      routeCalc={routeCalc}
+      onComputeRoute={onComputeRoute}
     />
   );
 };
@@ -125,5 +165,60 @@ describe('RoutingPanel', () => {
 
     await user.click(screen.getByRole('button', { name: 'Close routing panel' }));
     expect(onClose).toHaveBeenCalledTimes(1);
+  });
+
+  it('section Route masquée sans routeCalc fourni', () => {
+    stubPolarsFetch();
+    renderPanel();
+
+    expect(screen.queryByRole('heading', { name: 'Route' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Compute route' })).not.toBeInTheDocument();
+  });
+
+  it('Compute route désactivé sans plan, activé et cliqué avec une arrivée valide', async () => {
+    stubPolarsFetch();
+    const onComputeRoute = vi.fn();
+    renderPanel({ routeCalc: stubRouteCalc(), onComputeRoute });
+    const user = userEvent.setup();
+
+    expect(screen.getByRole('button', { name: 'Compute route' })).toBeDisabled();
+    await user.click(screen.getByRole('button', { name: 'Compute route' }));
+    expect(onComputeRoute).not.toHaveBeenCalled();
+
+    await user.type(screen.getByLabelText('Destination latitude'), '47.6');
+    await user.type(screen.getByLabelText('Destination longitude'), '-4.6');
+    await user.click(screen.getByRole('button', { name: 'Compute route' }));
+    expect(onComputeRoute).toHaveBeenCalledTimes(1);
+  });
+
+  it('route trouvée : ETA et vent affichés, Clear appelle clear', async () => {
+    stubPolarsFetch();
+    const routeCalc = stubRouteCalc(ROUTE_FOUND);
+    renderPanel({ routeCalc, onComputeRoute: vi.fn() });
+    const user = userEvent.setup();
+
+    expect(screen.getByText(/Route · ETA 3\.5 h/)).toBeInTheDocument();
+    expect(screen.getByText(/wind 12 kt/i)).toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: 'Clear route' }));
+    expect(routeCalc.clear).toHaveBeenCalledTimes(1);
+  });
+
+  it('route non trouvée : message de meilleure progression affiché', () => {
+    stubPolarsFetch();
+    const partialRoute = { ...ROUTE_FOUND, found: false, geojson: null, etaS: 0, message: 'Aucune route trouvée : horizon dépassé (meilleure progression à 14.4 mn de l\'arrivée).' };
+    renderPanel({ routeCalc: stubRouteCalc(partialRoute), onComputeRoute: vi.fn() });
+
+    expect(screen.getByText(/Aucune route trouvée/i)).toBeInTheDocument();
+    expect(screen.getByText(/14\.4 mn/i)).toBeInTheDocument();
+    expect(screen.queryByText(/Route · ETA/i)).not.toBeInTheDocument();
+  });
+
+  it('erreur de calcul affichée avec bouton actif', () => {
+    stubPolarsFetch();
+    renderPanel({ routeCalc: stubRouteCalc(null, 'Polaire inconnue : inconnue.'), onComputeRoute: vi.fn() });
+
+    expect(screen.getByText(/Polaire inconnue/i)).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Clear route' })).not.toBeInTheDocument();
   });
 });

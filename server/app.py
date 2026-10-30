@@ -17,7 +17,7 @@ from dotenv import load_dotenv
 
 from server.ais import LocalAISDecoder, parse_internet_message
 from server.nmea import parse_nmea_sentence
-from server.routing import list_polars
+from server.routing import RoutingError, compute_route_payload, list_polars
 from server.tracks import (
     TrackNotFoundError,
     TrackRecorder,
@@ -560,7 +560,12 @@ class RequestHandler(BaseHTTPRequestHandler):
                 "stopped": stopped if path == "/api/tracks/stop" else None,
             })
             return
-        if path not in ("/api/navigation/browser", "/api/ais/settings", "/api/ais/replay-position"):
+        if path not in (
+            "/api/routing/compute",
+            "/api/navigation/browser",
+            "/api/ais/settings",
+            "/api/ais/replay-position",
+        ):
             self._send_json(404, {"error": "API route not found."} if path.startswith("/api/") else {"error": "Not found."})
             return
         try:
@@ -577,6 +582,14 @@ class RequestHandler(BaseHTTPRequestHandler):
             value = json.loads(self.rfile.read(length))
         except (json.JSONDecodeError, UnicodeDecodeError):
             self._send_json(400, {"error": "Malformed JSON request body."})
+            return
+        if path == "/api/routing/compute":
+            try:
+                result = compute_route_payload(value)
+            except RoutingError as error:
+                self._send_json(422, {"error": str(error)})
+                return
+            self._send_json(200, result)
             return
         if path == "/api/ais/replay-position":
             if not _valid_ais_replay_position_update(value):
