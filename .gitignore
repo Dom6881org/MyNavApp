@@ -42,6 +42,11 @@ next-env.d.ts
 
 # IDE
 .idea/
-.vscode/
+# .vscode : config partagée versionnée, reste local pour le reste
+.vscode/*
+!.vscode/settings.json
+!.vscode/extensions.json
+!.vscode/tasks.json
+!.vscode/launch.json
 *.swp
 *.swo

@@ -1,0 +1,21 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "Backend (server.app)",
+      "type": "debugpy",
+      "request": "launch",
+      "module": "server.app",
+      "justMyCode": false,
+      "envFile": "${workspaceFolder}/.env"
+    },
+    {
+      "name": "Tests serveur (unittest)",
+      "type": "debugpy",
+      "request": "launch",
+      "module": "unittest",
+      "args": ["discover", "-s", "server", "-t", ".", "-p", "test_*.py"],
+      "justMyCode": false
+    }
+  ]
+}
