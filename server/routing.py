@@ -178,9 +178,21 @@ def compute_route_payload(payload: Any) -> dict[str, Any]:
     else:
         raise RoutingError("Vent invalide : {directionFromDeg, speedKts} attendus.")
 
-    from mynav_routing import ConstantWind
+    # Issue #16 : champ GRIB frais s'il existe (offline à bord), sinon vent constant.
+    wind_source = "constant"
+    wind_field = None
+    try:
+        from server.grib import load_wind_field
 
-    wind = ConstantWind(direction_from_deg=wind_values[0], speed_kts=wind_values[1])
+        wind_field = load_wind_field()
+    except Exception:
+        wind_field = None
+    if wind_field is None:
+        from mynav_routing import ConstantWind
+
+        wind_field = ConstantWind(direction_from_deg=wind_values[0], speed_kts=wind_values[1])
+    else:
+        wind_source = "grib"
 
     def position_tuple(value: Any) -> Any:
         """Convertit {latitude, longitude} en (lat, lon) accepté par compute_route."""
@@ -191,7 +203,7 @@ def compute_route_payload(payload: Any) -> dict[str, Any]:
     start = position_tuple(payload.get("start"))
     finish = position_tuple(payload.get("finish"))
 
-    result = compute_route(start, finish, wind=wind, polar_path=polar["path"])
+    result = compute_route(start, finish, wind=wind_field, polar_path=polar["path"])
 
     start_position = _validate_position("de départ", start)
     finish_position = _validate_position("d'arrivée", finish)
@@ -202,6 +214,7 @@ def compute_route_payload(payload: Any) -> dict[str, Any]:
         "minDistNm": result["min_dist_nm"],
         "message": result["message"],
         "geojson": result["geojson"],
+        "windSource": wind_source,
         "wind": {"directionFromDeg": wind_values[0], "speedKts": wind_values[1]},
         "polarId": polar_id,
         "start": {"latitude": start_position[0], "longitude": start_position[1]},

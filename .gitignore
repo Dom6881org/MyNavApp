@@ -17,6 +17,9 @@ dist/
 tiles/
 tracks/
 
+# Cache GRIB (issue #16) : fichiers téléchargés, jamais versionnés
+cache/
+
 # Misc
 .DS_Store
 *.pem

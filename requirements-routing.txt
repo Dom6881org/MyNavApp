@@ -3,3 +3,9 @@
 # En local :  pip install -r requirements.txt -r requirements-routing.txt
 # Le tag v0.1.0 sera utilise une fois publie ; en attendant on epingle le commit.
 mynav-routing @ git+https://github.com/Dom6881org/mynav-routing.git@9e85fe79058b108cee41aacd577d1fab013d89af
+# GRIB (issue #16) : lecture/ecriture via ecCodes.
+# Windows : la librairie native n'est pas embarquee par pip ; installer via
+# conda-forge (conda install -c conda-forge eccodes) et avoir les DLL dans le PATH.
+eccodes>=2.37
+xarray>=2024.1
+cfgrib>=0.9.14

@@ -2,6 +2,7 @@
 
 import os
 import unittest
+from unittest.mock import patch
 
 try:
     from mynav_routing import ConstantWind
@@ -116,8 +117,16 @@ class TestComputeRoutePayload(unittest.TestCase):
         self.assertEqual(result["geojson"]["type"], "FeatureCollection")
         self.assertEqual(result["geojson"]["features"][0]["geometry"]["type"], "LineString")
         self.assertEqual(result["wind"], {"directionFromDeg": 270.0, "speedKts": 12.0})
+        self.assertEqual(result["windSource"], "constant")
         self.assertEqual(result["polarId"], "polaire-sugar")
         self.assertEqual(result["start"], {"latitude": 42.62, "longitude": 3.02})
+
+    def test_payload_avec_grib_frais(self):
+        # Issue #16 : un GRIB frais remplace le vent constant.
+        with patch("server.grib.load_wind_field", return_value=west_wind_12kt()):
+            result = compute_route_payload(self.payload())
+        self.assertEqual(result["windSource"], "grib")
+        self.assertTrue(result["found"])
 
     def test_payload_sans_vent_defaut_test(self):
         result = compute_route_payload(self.payload(wind=None))
