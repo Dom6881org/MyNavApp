@@ -102,10 +102,14 @@ def load_gpx(path):
         ns = root.tag.split("}", 1)[0] + "}"
     pts = []
     for trkpt in root.iter(ns + "trkpt"):
+        lat_s = trkpt.get("lat")
+        lon_s = trkpt.get("lon")
+        if lat_s is None or lon_s is None:
+            continue
         try:
-            lat = float(trkpt.get("lat"))
-            lon = float(trkpt.get("lon"))
-        except (TypeError, ValueError):
+            lat = float(lat_s)
+            lon = float(lon_s)
+        except ValueError:
             continue
         ts = None
         time_el = trkpt.find(ns + "time")
@@ -362,7 +366,7 @@ class Broadcaster:
                 except OSError:
                     pass
                 self.clients.remove(c)
-        if self.udp:
+        if self.udp and self.udp_addr:
             try:
                 self.udp.sendto(data, self.udp_addr)
             except OSError:
