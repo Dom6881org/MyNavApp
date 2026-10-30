@@ -5,7 +5,8 @@ import { describe, expect, it, vi } from 'vitest';
 import RoutingPanel, { RoutingPickTarget } from './RoutingPanel';
 import { useRoutingInput } from '../hooks/useRoutingInput';
 import { RoutingRouteApi } from '../hooks/useRoutingRoute';
-import { Position, RoutingRouteResult } from '../types';
+import { GribApi } from '../hooks/useGrib';
+import { Position, GribStatus, RoutingRouteResult } from '../types';
 
 const POSITION: Position = { latitude: 47.5, longitude: -4.5 };
 
@@ -31,6 +32,7 @@ const ROUTE_FOUND: RoutingRouteResult = {
       properties: {}
     }]
   },
+  windSource: 'constant',
   wind: { directionFromDeg: 270, speedKts: 12 },
   polarId: 'polaire-sugar',
   start: { latitude: 47.5, longitude: -4.5 },
@@ -45,6 +47,30 @@ const stubRouteCalc = (route: RoutingRouteResult | null = null, error: string | 
   clear: vi.fn()
 });
 
+const GRIB_FRESH: GribStatus = {
+  available: true,
+  fresh: true,
+  reason: null,
+  createdAt: 1730000000,
+  validUntil: 1730200000,
+  south: 46,
+  north: 47,
+  west: -5,
+  east: -4,
+  resolutionDeg: 0.5,
+  stepH: 3,
+  points: 9,
+  steps: 25
+};
+
+const stubGrib = (status: GribStatus | null): GribApi => ({
+  status,
+  isDownloading: false,
+  error: null,
+  download: vi.fn(),
+  refresh: vi.fn()
+});
+
 interface HarnessProps {
   currentPosition: Position | null;
   pickTarget: RoutingPickTarget | null;
@@ -52,6 +78,8 @@ interface HarnessProps {
   onClose: () => void;
   routeCalc?: RoutingRouteApi;
   onComputeRoute?: () => void;
+  gribCalc?: GribApi;
+  onDownloadGrib?: () => void;
 }
 
 const Harness: React.FC<HarnessProps> = ({
@@ -60,7 +88,9 @@ const Harness: React.FC<HarnessProps> = ({
   onRequestPick,
   onClose,
   routeCalc,
-  onComputeRoute
+  onComputeRoute,
+  gribCalc,
+  onDownloadGrib
 }) => {
   const routing = useRoutingInput(currentPosition);
   return (
@@ -71,6 +101,8 @@ const Harness: React.FC<HarnessProps> = ({
       onClose={onClose}
       routeCalc={routeCalc}
       onComputeRoute={onComputeRoute}
+      gribCalc={gribCalc}
+      onDownloadGrib={onDownloadGrib}
     />
   );
 };
@@ -198,7 +230,7 @@ describe('RoutingPanel', () => {
     const user = userEvent.setup();
 
     expect(screen.getByText(/Route · ETA 3\.5 h/)).toBeInTheDocument();
-    expect(screen.getByText(/wind 12 kt/i)).toBeInTheDocument();
+    expect(screen.getByText(/constant 12 kt/i)).toBeInTheDocument();
 
     await user.click(screen.getByRole('button', { name: 'Clear route' }));
     expect(routeCalc.clear).toHaveBeenCalledTimes(1);
@@ -220,5 +252,36 @@ describe('RoutingPanel', () => {
 
     expect(screen.getByText(/Polaire inconnue/i)).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Clear route' })).not.toBeInTheDocument();
+  });
+
+  it('section Wind masquée sans gribCalc fourni', () => {
+    stubPolarsFetch();
+    renderPanel();
+
+    expect(screen.queryByRole('heading', { name: 'Wind' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /Download GRIB/i })).not.toBeInTheDocument();
+  });
+
+  it('GRIB frais : statut valide jusqu’au, bouton téléchargement actif avec plan', async () => {
+    stubPolarsFetch();
+    const onDownloadGrib = vi.fn();
+    renderPanel({ gribCalc: stubGrib(GRIB_FRESH), onDownloadGrib });
+    const user = userEvent.setup();
+
+    expect(screen.getByText(/GRIB fresh · valid until/i)).toBeInTheDocument();
+    const downloadButton = screen.getByRole('button', { name: /Download GRIB/i });
+    expect(downloadButton).toBeDisabled();
+
+    await user.type(screen.getByLabelText('Destination latitude'), '47.6');
+    await user.type(screen.getByLabelText('Destination longitude'), '-4.6');
+    await user.click(downloadButton);
+    expect(onDownloadGrib).toHaveBeenCalledTimes(1);
+  });
+
+  it('GRIB absent : repli vent constant affiché', () => {
+    stubPolarsFetch();
+    renderPanel({ gribCalc: stubGrib(null), onDownloadGrib: vi.fn() });
+
+    expect(screen.getByText(/No GRIB on board — constant wind fallback/i)).toBeInTheDocument();
   });
 });

@@ -1,5 +1,5 @@
 import React from 'react';
-import { useAISSettings, useNavigationData, useDashboardLayout, useTrackRecorder, useRoutingInput, useRoutingRoute } from './hooks';
+import { useAISSettings, useNavigationData, useDashboardLayout, useTrackRecorder, useRoutingInput, useRoutingRoute, useGrib } from './hooks';
 import { InstrumentPanel } from './components';
 import { Position } from './types';
 import MapView from './components/MapView';
@@ -54,6 +54,19 @@ const App: React.FC = () => {
       : null;
     void computeRoute(routing.plan, wind);
   }, [routing.plan, navigationData.wind, computeRoute]);
+
+  // GRIB à terre (issue #16) : téléchargement de la zone départ/arrivée + horizon.
+  const grib = useGrib();
+  const { download: downloadGrib } = grib;
+  const handleDownloadGrib = React.useCallback(() => {
+    if (!routing.plan) return;
+    const margin = 1.0;
+    const south = Math.max(-90, Math.min(routing.plan.startPosition?.latitude ?? 0, routing.plan.finishPosition?.latitude ?? 0) - margin);
+    const north = Math.min(90, Math.max(routing.plan.startPosition?.latitude ?? 0, routing.plan.finishPosition?.latitude ?? 0) + margin);
+    const west = Math.max(-180, Math.min(routing.plan.startPosition?.longitude ?? 0, routing.plan.finishPosition?.longitude ?? 0) - margin);
+    const east = Math.min(180, Math.max(routing.plan.startPosition?.longitude ?? 0, routing.plan.finishPosition?.longitude ?? 0) + margin);
+    void downloadGrib({ south, north, west, east }, 72);
+  }, [routing.plan, downloadGrib]);
 
   // Apply the selected theme to the document.
   React.useEffect(() => {
@@ -122,6 +135,8 @@ const App: React.FC = () => {
               onRoutingPickRequest={handleRoutingPickRequest}
               routingRoute={routingRoute}
               onRoutingCompute={handleComputeRoute}
+              gribApi={grib}
+              onDownloadGrib={handleDownloadGrib}
             />
           </div>
 

@@ -193,6 +193,30 @@ export interface RoutingRouteGeoJson {
   }>;
 }
 
+/** Réponse de POST /api/grib/download et GET /api/grib/status (issue #16). */
+export interface GribBounds {
+  south: number;
+  north: number;
+  west: number;
+  east: number;
+}
+
+export interface GribStatus {
+  available: boolean;
+  fresh: boolean;
+  reason: string | null;
+  createdAt: number | null;
+  validUntil: number | null;
+  south: number | null;
+  north: number | null;
+  west: number | null;
+  east: number | null;
+  resolutionDeg: number | null;
+  stepH: number | null;
+  points: number | null;
+  steps: number | null;
+}
+
 /** Réponse de POST /api/routing/compute (issue #17). */
 export interface RoutingRouteResult {
   found: boolean;
@@ -201,6 +225,7 @@ export interface RoutingRouteResult {
   minDistNm: number;
   message: string | null;
   geojson: RoutingRouteGeoJson | null;
+  windSource: 'grib' | 'constant';
   wind: RoutingWindInput;
   polarId: string;
   start: Position;

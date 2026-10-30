@@ -9,6 +9,7 @@ import MapPositionReadout from './MapPositionReadout';
 import AppLogo from './AppLogo';
 import { RoutingInput } from '../hooks/useRoutingInput';
 import { RoutingRouteApi } from '../hooks/useRoutingRoute';
+import { GribApi } from '../hooks/useGrib';
 
 // Extend Window interface for Leaflet
 declare global {
@@ -33,6 +34,8 @@ interface MapViewSimpleProps {
   onRoutingPickRequest?: (target: RoutingPickTarget) => void;
   routingRoute?: RoutingRouteApi;
   onRoutingCompute?: () => void;
+  gribApi?: GribApi;
+  onDownloadGrib?: () => void;
   aisTargets?: AISTarget[];
   aisState?: AISBackendState | null;
   showAIS?: boolean;
@@ -98,6 +101,8 @@ const MapViewSimple: React.FC<MapViewSimpleProps> = ({
   onRoutingPickRequest,
   routingRoute,
   onRoutingCompute,
+  gribApi,
+  onDownloadGrib,
   aisTargets = [],
   aisState = null,
   showAIS = false,
@@ -1010,6 +1015,8 @@ const MapViewSimple: React.FC<MapViewSimpleProps> = ({
             onClose={() => setActiveMapTool(null)}
             routeCalc={routingRoute}
             onComputeRoute={onRoutingCompute}
+            gribCalc={gribApi}
+            onDownloadGrib={onDownloadGrib}
           />
         )}
         {!leafletError && !leafletLoaded && (

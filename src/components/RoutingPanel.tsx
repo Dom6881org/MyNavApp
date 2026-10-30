@@ -1,6 +1,7 @@
 import React from 'react';
 import { RoutingInput } from '../hooks/useRoutingInput';
 import { RoutingRouteApi } from '../hooks/useRoutingRoute';
+import { GribApi } from '../hooks/useGrib';
 
 export type RoutingPickTarget = 'start' | 'finish';
 
@@ -11,11 +12,24 @@ interface RoutingPanelProps {
   onClose: () => void;
   routeCalc?: RoutingRouteApi;
   onComputeRoute?: () => void;
+  gribCalc?: GribApi;
+  onDownloadGrib?: () => void;
 }
 
 const formatEta = (etaS: number): string => {
   const hours = etaS / 3600;
   return `${hours >= 10 ? hours.toFixed(0) : hours.toFixed(1)} h`;
+};
+
+const formatClock = (epochS: number): string =>
+  new Date(epochS * 1000).toLocaleString(undefined, { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
+
+const gribStatusLabel = (status: GribApi['status']): { text: string; ok: boolean } => {
+  if (!status || !status.available) return { text: 'No GRIB on board — constant wind fallback', ok: false };
+  if (status.fresh && status.validUntil !== null) {
+    return { text: `GRIB fresh · valid until ${formatClock(status.validUntil)}`, ok: true };
+  }
+  return { text: 'GRIB expired — constant wind fallback', ok: false };
 };
 
 const pickButtonLabel = (target: RoutingPickTarget, active: boolean): string => {
@@ -35,7 +49,9 @@ const RoutingPanel: React.FC<RoutingPanelProps> = ({
   onRequestPick,
   onClose,
   routeCalc,
-  onComputeRoute
+  onComputeRoute,
+  gribCalc,
+  onDownloadGrib
 }) => {
   const coordinateRow = (
     label: string,
@@ -129,6 +145,25 @@ const RoutingPanel: React.FC<RoutingPanelProps> = ({
         </select>
       </div>
 
+      {gribCalc && onDownloadGrib && (
+        <div className="control-section routing-section">
+          <h3>Wind</h3>
+          {(() => {
+            const label = gribStatusLabel(gribCalc.status);
+            return <p className={label.ok ? 'routing-ok' : 'routing-error'}>{label.text}</p>;
+          })()}
+          <button
+            type="button"
+            className="routing-pick-button"
+            disabled={!routing.plan || gribCalc.isDownloading}
+            onClick={onDownloadGrib}
+          >
+            {gribCalc.isDownloading ? 'Downloading…' : 'Download GRIB (zone + 72 h)'}
+          </button>
+          {gribCalc.error && <p className="routing-error">{gribCalc.error}</p>}
+        </div>
+      )}
+
       {routeCalc && onComputeRoute && (
         <div className="control-section routing-section">
           <h3>Route</h3>
@@ -143,7 +178,7 @@ const RoutingPanel: React.FC<RoutingPanelProps> = ({
           {routeCalc.error && <p className="routing-error">{routeCalc.error}</p>}
           {routeCalc.route?.found && (
             <p className="routing-ok">
-              Route · ETA {formatEta(routeCalc.route.etaS)} · wind {routeCalc.route.wind.speedKts.toFixed(0)} kt
+              Route · ETA {formatEta(routeCalc.route.etaS)} · {routeCalc.route.windSource === 'grib' ? 'GRIB wind' : `constant ${routeCalc.route.wind.speedKts.toFixed(0)} kt`}
             </p>
           )}
           {routeCalc.route && !routeCalc.route.found && routeCalc.route.message && (
