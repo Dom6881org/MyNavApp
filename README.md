@@ -24,7 +24,7 @@ The LAN mode is an early development feature: the API and Vite server do not yet
 
 ### Offline charts
 
-The chart loads Leaflet and its rotation plugin from the app bundle (no CDN), and requests tiles from the backend at `/api/tiles/{osm|seamark}/{z}/{x}/{y}.png`. Tiles found in the local `tiles/` directory (configurable with `TILES_DIR`, ignored by Git) are served from disk; when a tile is missing the layer falls back to the online source, so the chart works at sea without Internet inside the pre-downloaded area. Before departure, cache your cruising area:
+The chart loads Leaflet and its rotation plugin from the app bundle (no CDN), and requests tiles from the backend at `/api/tiles/{osm|seamark}/{z}/{x}/{y}.png`. Tiles found in the local `tiles/` directory (configurable with `TILES_DIR`, ignored by Git) are served from disk; when a tile is missing the backend fetches it from the online provider, keeping browser tile requests same-origin. Pre-download your cruising area to use the chart without Internet:
 
 ```bash
 python tools/download_tiles.py --bbox 47.0,-5.0,48.2,-2.5 --zooms 8-16
