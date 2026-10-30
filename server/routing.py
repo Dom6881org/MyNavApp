@@ -128,3 +128,24 @@ def compute_route(
         "min_dist_nm": result.min_dist_nm,
         "geojson": to_geojson(result),
     }
+
+
+ROUTING_POLARS_DIR = os.path.join(os.path.dirname(__file__), os.pardir, "config")
+
+
+def list_polars() -> list[dict[str, str]]:
+    """Liste les polaires .pol disponibles dans config/ (issue #15)."""
+    directory = os.path.abspath(ROUTING_POLARS_DIR)
+    if not os.path.isdir(directory):
+        return []
+    polars = []
+    for filename in sorted(os.listdir(directory)):
+        if not filename.lower().endswith(".pol"):
+            continue
+        identifier = filename[: -len(".pol")]
+        polars.append({
+            "id": identifier,
+            "name": identifier.replace("-", " ").replace("_", " ").strip(),
+            "path": os.path.join(directory, filename),
+        })
+    return polars

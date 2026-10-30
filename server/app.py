@@ -17,6 +17,7 @@ from dotenv import load_dotenv
 
 from server.ais import LocalAISDecoder, parse_internet_message
 from server.nmea import parse_nmea_sentence
+from server.routing import list_polars
 from server.tracks import (
     TrackNotFoundError,
     TrackRecorder,
@@ -516,6 +517,8 @@ class RequestHandler(BaseHTTPRequestHandler):
             self._send_events()
         elif path.startswith("/api/tiles/"):
             self._send_tile(path)
+        elif path == "/api/routing/polars":
+            self._send_json(200, {"polars": list_polars()})
         elif path == "/api/tracks":
             self._send_json(200, {
                 "recorder": track_recorder.status(),

@@ -1,0 +1,136 @@
+import React from 'react';
+import { RoutingInput } from '../hooks/useRoutingInput';
+
+export type RoutingPickTarget = 'start' | 'finish';
+
+interface RoutingPanelProps {
+  routing: RoutingInput;
+  pickTarget: RoutingPickTarget | null;
+  onRequestPick: (target: RoutingPickTarget) => void;
+  onClose: () => void;
+}
+
+const pickButtonLabel = (target: RoutingPickTarget, active: boolean): string => {
+  if (active) return 'Click on the chart…';
+  return target === 'start' ? 'Pick departure on chart' : 'Pick destination on chart';
+};
+
+/**
+ * Panneau de saisie du plan de routage (issue #15) :
+ * départ (position courante, manuelle ou clic carte), arrivée (coordonnées
+ * ou clic carte), polaire du bateau, avec validation en direct.
+ * Overlay "map tool" ancré à la colonne d'outils, comme le panneau réglages.
+ */
+const RoutingPanel: React.FC<RoutingPanelProps> = ({
+  routing,
+  pickTarget,
+  onRequestPick,
+  onClose
+}) => {
+  const coordinateRow = (
+    label: string,
+    values: { latitude: string; longitude: string },
+    onChange: (next: { latitude: string; longitude: string }) => void,
+    disabled: boolean
+  ) => (
+    <div className="routing-coord-row">
+      <input
+        type="text"
+        inputMode="decimal"
+        className="routing-input"
+        disabled={disabled}
+        value={values.latitude}
+        placeholder="lat"
+        aria-label={`${label} latitude`}
+        onChange={event => onChange({ ...values, latitude: event.target.value })}
+      />
+      <input
+        type="text"
+        inputMode="decimal"
+        className="routing-input"
+        disabled={disabled}
+        value={values.longitude}
+        placeholder="lon"
+        aria-label={`${label} longitude`}
+        onChange={event => onChange({ ...values, longitude: event.target.value })}
+      />
+    </div>
+  );
+
+  const polarName = routing.polars.find(polar => polar.id === routing.polarId)?.name ?? routing.polarId ?? '';
+
+  return (
+    <section id="map-routing-panel" className="map-tool-panel map-routing-panel" aria-label="Routing">
+      <div className="map-settings-heading">
+        <strong>ROUTING</strong>
+        <button
+          type="button"
+          aria-label="Close routing panel"
+          title="Close routing panel"
+          onClick={onClose}
+        >
+          ×
+        </button>
+      </div>
+
+      <div className="control-section routing-section">
+        <h3>Departure</h3>
+        <label className="routing-toggle">
+          <input
+            type="checkbox"
+            checked={routing.useCurrentPosition}
+            onChange={event => routing.setUseCurrentPosition(event.target.checked)}
+          />
+          <span>Use current position</span>
+        </label>
+        {coordinateRow('Departure', routing.startText, routing.setStartText, routing.useCurrentPosition)}
+        <button
+          type="button"
+          className={`routing-pick-button ${pickTarget === 'start' ? 'active' : ''}`}
+          disabled={routing.useCurrentPosition}
+          onClick={() => onRequestPick('start')}
+        >
+          {pickButtonLabel('start', pickTarget === 'start')}
+        </button>
+      </div>
+
+      <div className="control-section routing-section">
+        <h3>Destination</h3>
+        {coordinateRow('Destination', routing.finishText, routing.setFinishText, false)}
+        <button
+          type="button"
+          className={`routing-pick-button ${pickTarget === 'finish' ? 'active' : ''}`}
+          onClick={() => onRequestPick('finish')}
+        >
+          {pickButtonLabel('finish', pickTarget === 'finish')}
+        </button>
+      </div>
+
+      <div className="control-section routing-section">
+        <h3>Polar</h3>
+        <select
+          className="routing-input routing-select"
+          value={routing.polarId ?? ''}
+          onChange={event => routing.setPolarId(event.target.value || null)}
+        >
+          {routing.polars.map(polar => (
+            <option key={polar.id} value={polar.id}>{polar.name}</option>
+          ))}
+        </select>
+      </div>
+
+      <div className="routing-status">
+        {routing.polarError && <p className="routing-error">{routing.polarError}</p>}
+        {routing.errors.start && <p className="routing-error">{routing.errors.start}</p>}
+        {routing.errors.finish && <p className="routing-error">{routing.errors.finish}</p>}
+        {routing.errors.same && <p className="routing-error">{routing.errors.same}</p>}
+        {routing.errors.polar && <p className="routing-error">{routing.errors.polar}</p>}
+        {routing.plan && routing.distanceNm !== null && (
+          <p className="routing-ok">Plan ready · {routing.distanceNm.toFixed(1)} NM · {polarName}</p>
+        )}
+      </div>
+    </section>
+  );
+};
+
+export default RoutingPanel;

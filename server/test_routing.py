@@ -11,7 +11,7 @@ except ImportError:
     ROUTING_AVAILABLE = False
 
 from server import routing
-from server.routing import RoutingError, compute_route, load_polar
+from server.routing import RoutingError, compute_route, list_polars, load_polar
 
 POLAR_PATH = os.path.join(os.path.dirname(__file__), os.pardir, "config", "polaire-sugar.pol")
 START = (42.62, 3.02)
@@ -78,6 +78,17 @@ class TestRoutingUnavailable(unittest.TestCase):
         with self.assertRaises(RoutingError) as context:
             compute_route(START, FINISH)
         self.assertIn("n'est pas installé", str(context.exception))
+
+
+class TestListPolars(unittest.TestCase):
+    def test_liste_les_polaires_embarquees(self):
+        polars = list_polars()
+        self.assertTrue(any(polar["id"] == "polaire-sugar" for polar in polars))
+        for polar in polars:
+            self.assertTrue(polar["id"])
+            self.assertTrue(polar["name"])
+            self.assertTrue(polar["path"].endswith(".pol"))
+            self.assertTrue(os.path.isfile(polar["path"]))
 
 
 if __name__ == "__main__":

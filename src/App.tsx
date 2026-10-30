@@ -1,6 +1,7 @@
 import React from 'react';
-import { useAISSettings, useNavigationData, useDashboardLayout, useTrackRecorder } from './hooks';
+import { useAISSettings, useNavigationData, useDashboardLayout, useTrackRecorder, useRoutingInput } from './hooks';
 import { InstrumentPanel } from './components';
+import { Position } from './types';
 import MapView from './components/MapView';
 import './App.css';
 
@@ -26,6 +27,22 @@ const App: React.FC = () => {
 
   const aisSettings = useAISSettings(backendStatus.isConnected, aisState);
   const trackRecorder = useTrackRecorder();
+
+  // Routage (issue #15) : saisie départ/arrivée + polaire, panneau outil de la carte.
+  const routing = useRoutingInput(navigationData.position);
+  const { setStartFromPosition, setFinishFromPosition } = routing;
+  const [routingPickTarget, setRoutingPickTarget] = React.useState<'start' | 'finish' | null>(null);
+  const handleRoutingPickRequest = React.useCallback((target: 'start' | 'finish') => {
+    setRoutingPickTarget(target);
+  }, []);
+  const handleRoutingMapPick = React.useCallback((position: Position) => {
+    if (routingPickTarget === 'start') {
+      setStartFromPosition(position);
+    } else {
+      setFinishFromPosition(position);
+    }
+    setRoutingPickTarget(null);
+  }, [routingPickTarget, setStartFromPosition, setFinishFromPosition]);
 
   // Apply the selected theme to the document.
   React.useEffect(() => {
@@ -88,6 +105,10 @@ const App: React.FC = () => {
               backendStatus={backendStatus}
               trackRecorder={trackRecorder}
               size={{ width: '100%', height: '100%' }}
+              onRoutingMapPick={handleRoutingMapPick}
+              routingPickTarget={routingPickTarget}
+              routing={routing}
+              onRoutingPickRequest={handleRoutingPickRequest}
             />
           </div>
 
