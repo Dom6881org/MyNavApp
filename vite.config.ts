@@ -1,3 +1,4 @@
+/// <reference types="vitest" />
 import { defineConfig, loadEnv } from 'vite'
 import react from '@vitejs/plugin-react'
 import { readFile } from 'node:fs/promises'
@@ -32,6 +33,11 @@ export default defineConfig(async ({ mode }) => {
     plugins: [react()],
     define: {
       __APP_VERSION__: JSON.stringify(pkg.version)
+    },
+    test: {
+      environment: 'jsdom',
+      setupFiles: ['./src/test/setup.ts'],
+      include: ['src/**/*.{test,spec}.{ts,tsx}']
     },
     server: {
       host: process.env.VITE_HOST ?? '127.0.0.1',
