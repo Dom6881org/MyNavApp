@@ -3310,6 +3310,110 @@ html {
   outline-color: #0b78a8;
 }
 
+/* Light theme for map sub menu cards (AIS, weather, GPS, recording, settings) */
+.theme-light .map-tool-panel {
+  border-color: rgba(39, 95, 112, 0.2);
+  background: linear-gradient(145deg, #fff, #eaf2f5);
+  box-shadow: 0 8px 22px rgba(29, 66, 78, 0.1), inset 0 1px 0 #fff;
+  color: #1a2733;
+}
+
+.theme-light .gps-map-readout strong,
+.theme-light .map-settings-heading,
+.theme-light .map-settings-panel .control-section h3 {
+  color: #0b78a8;
+}
+
+.theme-light .wind-map-readout strong {
+  color: #0b78a8;
+}
+
+.theme-light .wind-map-updated,
+.theme-light .track-map-status,
+.theme-light .track-map-item-info span,
+.theme-light .ais-map-source,
+.theme-light .ais-map-status,
+.theme-light .ais-map-coverage,
+.theme-light .ais-map-target-count,
+.theme-light .map-settings-panel .control-gps-status {
+  color: #3d5565;
+}
+
+.theme-light .ais-map-target-count strong {
+  color: #b7791f;
+}
+
+.theme-light .ais-map-source select,
+.theme-light .map-settings-panel .unit-group select,
+.theme-light .track-map-list-heading button,
+.theme-light .map-settings-heading button {
+  border-color: rgba(16, 32, 42, 0.25);
+  background: #fff;
+  color: #1a2733;
+}
+
+.theme-light .map-settings-heading button:hover {
+  border-color: #0b78a8;
+  background: #d3ebf5;
+}
+
+.theme-light .ais-map-zoom {
+  border-color: rgba(183, 121, 31, 0.7);
+  background: rgba(183, 121, 31, 0.1);
+  color: #7a4e0c;
+}
+
+.theme-light .track-map-item {
+  border-color: rgba(39, 95, 112, 0.2);
+  background: rgba(255, 255, 255, 0.7);
+}
+
+.theme-light .track-map-item-actions a {
+  border-color: rgba(11, 120, 168, 0.55);
+  background: rgba(11, 120, 168, 0.1);
+  color: #0b5f86;
+}
+
+.theme-light .track-map-item-actions button {
+  border-color: rgba(160, 32, 32, 0.5);
+  background: rgba(160, 32, 32, 0.08);
+  color: #a02020;
+}
+
+.theme-light .map-settings-panel .control-section {
+  border-color: rgba(39, 95, 112, 0.2);
+  background: rgba(255, 255, 255, 0.6);
+}
+
+.theme-light .map-settings-panel .control-gps-status {
+  background: rgba(16, 32, 42, 0.06);
+}
+
+.theme-light .map-settings-panel .control-gps-status.connected {
+  color: #1b7a43;
+}
+
+.theme-light .map-settings-panel .control-gps-status.disconnected {
+  color: #b35c00;
+}
+
+.theme-light .map-settings-panel .instrument-visibility-option,
+.theme-light .map-settings-panel .unit-group {
+  color: #1a2733;
+}
+
+.theme-light .map-settings-panel .theme-button {
+  border-color: rgba(16, 32, 42, 0.22);
+  background: #fff;
+  color: #1a2733;
+}
+
+.theme-light .map-settings-panel .theme-button.active {
+  border-color: #0b78a8;
+  background: #d3ebf5;
+  color: #0b5f86;
+}
+
 .theme-night .map-tools-toolbar {
   border: 1px solid rgba(0, 255, 0, 0.3);
   background: rgba(4, 12, 6, 0.92);

@@ -1117,27 +1117,15 @@ const formatTrackSize = (sizeBytes: number): string => sizeBytes >= 1_048_576
   : `${Math.max(1, Math.round(sizeBytes / 1024))} KB`;
 
 /**
- * Tile layer served by the navigation backend from the local offline cache
- * (tiles/osm and tiles/seamark directories). When a tile is missing (outside
- * the cached area), the layer switches to the online source once; without
- * Internet the missing tiles simply stay blank.
+ * Tile layer served by the navigation backend from its offline cache or online
+ * tile provider, keeping browser tile requests same-origin.
  */
 const createTileLayer = (
   leaflet: LeafletObject,
   layer: 'osm' | 'seamark',
   options: Record<string, unknown>
 ): LeafletObject => {
-  const remoteUrl = layer === 'osm'
-    ? 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png'
-    : 'https://tiles.openseamap.org/seamark/{z}/{x}/{y}.png';
-  const tileLayer = leaflet.tileLayer(`/api/tiles/${layer}/{z}/{x}/{y}.png`, options);
-  let usingRemote = false;
-  tileLayer.on('tileerror', () => {
-    if (usingRemote) return;
-    usingRemote = true;
-    tileLayer.setUrl(remoteUrl, false);
-  });
-  return tileLayer;
+  return leaflet.tileLayer(`/api/tiles/${layer}/{z}/{x}/{y}.png`, options);
 };
 
 const getGPSStatusMessage = (
