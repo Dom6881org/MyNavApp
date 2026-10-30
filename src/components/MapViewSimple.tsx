@@ -317,7 +317,7 @@ const MapViewSimple: React.FC<MapViewSimpleProps> = ({
       : result.coords;
     if (latlngs.length < 2) return;
     L.polyline(latlngs, {
-      color: '#ffd166',
+      color: '#a78bfa',
       weight: 3,
       opacity: 0.95,
       lineCap: 'round',
@@ -326,16 +326,16 @@ const MapViewSimple: React.FC<MapViewSimpleProps> = ({
     }).addTo(mapInstance.routingLayer);
     L.circleMarker(latlngs[0], {
       radius: 5,
-      color: '#ffd166',
+      color: '#a78bfa',
       weight: 2,
       fillColor: '#102532',
       fillOpacity: 1
     }).bindTooltip('Departure', { className: TOOLTIP_CLASS, direction: 'top' }).addTo(mapInstance.routingLayer);
     L.circleMarker(latlngs[latlngs.length - 1], {
       radius: 5,
-      color: '#ffd166',
+      color: '#a78bfa',
       weight: 2,
-      fillColor: '#ffd166',
+      fillColor: '#a78bfa',
       fillOpacity: 1
     }).bindTooltip('Destination', { className: TOOLTIP_CLASS, direction: 'top' }).addTo(mapInstance.routingLayer);
   }, [mapInstance, leafletLoaded, leafletError, routingRoute?.route]);
