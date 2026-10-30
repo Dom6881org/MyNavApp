@@ -16,7 +16,10 @@ from server.routing import RoutingError, compute_route, load_polar
 POLAR_PATH = os.path.join(os.path.dirname(__file__), os.pardir, "config", "polaire-sugar.pol")
 START = (42.62, 3.02)
 FINISH = (42.62, 3.5)
-WEST_WIND_12KT = lambda: ConstantWind(direction_from_deg=270, speed_kts=12)  # noqa: E731
+
+
+def west_wind_12kt():
+    return ConstantWind(direction_from_deg=270, speed_kts=12)
 
 
 @unittest.skipUnless(ROUTING_AVAILABLE, "mynav-routing non installé")
@@ -38,7 +41,7 @@ class TestLoadPolar(unittest.TestCase):
 @unittest.skipUnless(ROUTING_AVAILABLE, "mynav-routing non installé")
 class TestComputeRoute(unittest.TestCase):
     def test_route_vent_arriere(self):
-        result = compute_route(START, FINISH, wind=WEST_WIND_12KT(), polar_path=POLAR_PATH)
+        result = compute_route(START, FINISH, wind=west_wind_12kt(), polar_path=POLAR_PATH)
         self.assertTrue(result["found"])
         self.assertTrue(3 * 3600 < result["eta_s"] < 6 * 3600)
         self.assertEqual(result["coords"][0], START)
@@ -50,18 +53,18 @@ class TestComputeRoute(unittest.TestCase):
     def test_horizon_depasse(self):
         with self.assertRaises(RoutingError) as context:
             compute_route(
-                START, FINISH, wind=WEST_WIND_12KT(), polar_path=POLAR_PATH, horizon_h=2.0
+                START, FINISH, wind=west_wind_12kt(), polar_path=POLAR_PATH, horizon_h=2.0
             )
         self.assertIn("Aucune route trouvée", str(context.exception))
 
     def test_positions_invalides(self):
         for position in [(91.0, 3.0), (42.0, 200.0), None]:
             with self.assertRaises(RoutingError):
-                compute_route(position, FINISH, wind=WEST_WIND_12KT(), polar_path=POLAR_PATH)
+                compute_route(position, FINISH, wind=west_wind_12kt(), polar_path=POLAR_PATH)
 
     def test_depart_egale_arrivee(self):
         with self.assertRaises(RoutingError):
-            compute_route(START, START, wind=WEST_WIND_12KT(), polar_path=POLAR_PATH)
+            compute_route(START, START, wind=west_wind_12kt(), polar_path=POLAR_PATH)
 
     def test_sans_vent(self):
         with self.assertRaises(RoutingError):

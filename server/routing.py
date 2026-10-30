@@ -12,7 +12,7 @@ import os
 from typing import Any
 
 try:
-    from mynav_routing import Polar, WindField, route, to_geojson
+    from mynav_routing import route, to_geojson
 
     ROUTING_AVAILABLE = True
 except ImportError:
@@ -29,7 +29,7 @@ class RoutingError(Exception):
 
 def load_polar(path: str | None = None) -> Any:
     """Charge une polaire .pol, avec un message d'erreur exploitable."""
-    from mynav_routing import Polar  # noqa: F811  (défini aussi dans le try ci-dessus)
+    from mynav_routing import Polar
 
     resolved = os.path.abspath(path or DEFAULT_POLAR_PATH)
     if not os.path.isfile(resolved):
@@ -52,15 +52,13 @@ def _validate_position(name: str, position: Any) -> tuple[float, float]:
         raise RoutingError(f"Position {name} invalide : deux nombres attendus (lat, lon).") from error
     if not -90.0 <= latitude <= 90.0 or not -180.0 <= longitude <= 180.0:
         raise RoutingError(f"Position {name} hors limites : lat {latitude}, lon {longitude}.")
-    if abs(latitude) == 90.0 and abs(longitude) == 180.0:
-        raise RoutingError(f"Position {name} invalide.")
     return latitude, longitude
 
 
 def compute_route(
     start: Any,
     finish: Any,
-    wind: WindField | None = None,
+    wind: Any = None,
     polar_path: str | None = None,
     horizon_h: float = 72.0,
     dt: float = 1800.0,
@@ -73,8 +71,8 @@ def compute_route(
 
     start, finish : (lat, lon) en degrés décimaux.
     wind : WindField du moteur (GRIBWindField, ConstantWind...).
-    Retourne un dict : found, coords, times_s, sog_kts, eta_s, min_dist_nm,
-    geojson (None si aucune route trouvée).
+    Retourne un dict : found, coords, times_s, sog_kts, headings_deg,
+    eta_s, min_dist_nm, geojson.
     Lève RoutingError avec un message clair en cas d'erreur.
     """
     if not ROUTING_AVAILABLE:
@@ -109,16 +107,20 @@ def compute_route(
     except ValueError as error:
         raise RoutingError(f"Le calcul de routage a échoué : {error}") from error
 
-    geojson = None
-    if result.found:
-        geojson = to_geojson(result)
+    if not result.found:
+        raise RoutingError(
+            "Aucune route trouvée : horizon dépassé "
+            f"(meilleure progression à {result.min_dist_nm:.1f} mn de l'arrivée). "
+            "Augmentez l'horizon ou rapprochez le point d'arrivée."
+        )
+
     return {
-        "found": result.found,
+        "found": True,
         "coords": result.coords,
         "times_s": result.times_s,
         "sog_kts": result.sog_kts,
         "headings_deg": result.headings_deg,
         "eta_s": result.eta_s,
         "min_dist_nm": result.min_dist_nm,
-        "geojson": geojson,
+        "geojson": to_geojson(result),
     }
