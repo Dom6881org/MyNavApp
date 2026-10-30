@@ -158,4 +158,6 @@ export const useRoutingInput = (currentPosition: Position | null) => {
   };
 };
 
+export type RoutingInput = ReturnType<typeof useRoutingInput>;
+
 export default useRoutingInput;

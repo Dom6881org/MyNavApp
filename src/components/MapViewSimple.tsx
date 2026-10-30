@@ -4,8 +4,10 @@ import 'leaflet/dist/leaflet.css';
 import '@tomickigrzegorz/leaflet-rotate';
 import { AISBackendState, AISSource, AISTarget, DashboardLayout, NavigationData, Position, TrackRecorderStatus, TrackSummary, UnitChangeHandler, WindData } from '../types';
 import ControlPanel, { MapBaseStyle } from './ControlPanel';
+import RoutingPanel from './RoutingPanel';
 import MapPositionReadout from './MapPositionReadout';
 import AppLogo from './AppLogo';
+import { RoutingInput } from '../hooks/useRoutingInput';
 
 // Extend Window interface for Leaflet
 declare global {
@@ -26,6 +28,8 @@ interface MapViewSimpleProps {
   onWindGridRequest?: (visible: Position[], prefetch?: Position[]) => void;
   onRoutingMapPick?: (position: Position) => void;
   routingPickActive?: boolean;
+  routing?: RoutingInput;
+  onRoutingPickStart?: () => void;
   aisTargets?: AISTarget[];
   aisState?: AISBackendState | null;
   showAIS?: boolean;
@@ -66,7 +70,7 @@ const ORIENTATION_LABELS: Record<MapOrientation, string> = {
 const ORIENTATION_BADGES: Record<MapOrientation, string> = { north: 'N', heading: 'H', course: 'C' };
 const nextOrientation = (current: MapOrientation): MapOrientation =>
   ORIENTATION_ORDER[(ORIENTATION_ORDER.indexOf(current) + 1) % ORIENTATION_ORDER.length];
-type MapToolPanel = 'ais' | 'weather' | 'gps' | 'track' | 'settings' | 'about' | null;
+type MapToolPanel = 'ais' | 'weather' | 'gps' | 'track' | 'routing' | 'settings' | 'about' | null;
 const NAVIGATION_SOURCE_LABELS: Record<NonNullable<MapViewSimpleProps['navigationSource']>, string> = {
   nmea: 'NMEA (backend)',
   browser: 'Browser GPS',
@@ -87,6 +91,8 @@ const MapViewSimple: React.FC<MapViewSimpleProps> = ({
   onWindGridRequest,
   onRoutingMapPick,
   routingPickActive = false,
+  routing,
+  onRoutingPickStart,
   aisTargets = [],
   aisState = null,
   showAIS = false,
@@ -269,6 +275,7 @@ const MapViewSimple: React.FC<MapViewSimpleProps> = ({
   }, [mapInstance]);
 
   // Routage (issue #15) : transmet les clics carte au panneau de saisie quand il choisit l'arrivée.
+  // Le panneau se rouvre automatiquement une fois la destination sélectionnée.
   useEffect(() => {
     if (!mapInstance || !routingPickActive || !onRoutingMapPick) return;
     // leaflet-rotate exposes latlng as a plain object {lat, lng}, while stock
@@ -277,6 +284,7 @@ const MapViewSimple: React.FC<MapViewSimpleProps> = ({
       const toNumber = (value: number | (() => number)): number =>
         typeof value === 'function' ? value() : value;
       onRoutingMapPick({ latitude: toNumber(event.latlng.lat), longitude: toNumber(event.latlng.lng) });
+      setActiveMapTool('routing');
     };
     mapInstance.map.on('click', handleRoutingPick);
     const container = mapInstance.map.getContainer() as HTMLElement;
@@ -681,6 +689,35 @@ const MapViewSimple: React.FC<MapViewSimpleProps> = ({
                       onMapBaseStyleChange={changeMapBaseStyle}
                     />
                   </section>
+                )}
+              </div>
+            )}
+            {routing && (
+              <div className="map-tool-item">
+                <button
+                  className={`map-tool-button ${activeMapTool === 'routing' ? 'layer-visible' : ''}`}
+                  type="button"
+                  aria-label="Routing"
+                  title="Routing"
+                  aria-expanded={activeMapTool === 'routing'}
+                  aria-controls="map-routing-panel"
+                  onClick={() => setActiveMapTool(activeMapTool === 'routing' ? null : 'routing')}
+                >
+                  <svg viewBox="0 0 24 24" aria-hidden="true">
+                    <circle cx="12" cy="12" r="9" />
+                    <path d="M15.5 8.5 13.2 13.2 8.5 15.5 10.8 10.8Z" />
+                  </svg>
+                </button>
+                {activeMapTool === 'routing' && (
+                  <RoutingPanel
+                    routing={routing}
+                    pickActive={routingPickActive}
+                    onRequestPick={() => {
+                      setActiveMapTool(null);
+                      onRoutingPickStart?.();
+                    }}
+                    onClose={() => setActiveMapTool(null)}
+                  />
                 )}
               </div>
             )}

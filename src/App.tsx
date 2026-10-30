@@ -1,6 +1,6 @@
 import React from 'react';
-import { useAISSettings, useNavigationData, useDashboardLayout, useTrackRecorder } from './hooks';
-import { InstrumentPanel, RoutingPanel } from './components';
+import { useAISSettings, useNavigationData, useDashboardLayout, useTrackRecorder, useRoutingInput } from './hooks';
+import { InstrumentPanel } from './components';
 import { Position } from './types';
 import MapView from './components/MapView';
 import './App.css';
@@ -28,13 +28,17 @@ const App: React.FC = () => {
   const aisSettings = useAISSettings(backendStatus.isConnected, aisState);
   const trackRecorder = useTrackRecorder();
 
-  // Routage (issue #15) : sélection de l'arrivée sur la carte + panneau de saisie.
+  // Routage (issue #15) : saisie départ/arrivée + polaire, panneau outil de la carte.
+  const routing = useRoutingInput(navigationData.position);
+  const { setFinishFromPosition } = routing;
   const [routingPickActive, setRoutingPickActive] = React.useState(false);
-  const [routingPickedPosition, setRoutingPickedPosition] = React.useState<Position | null>(null);
-  const handleRoutingMapPick = React.useCallback((position: Position) => {
-    setRoutingPickedPosition(position);
-    setRoutingPickActive(false);
+  const handleRoutingPickStart = React.useCallback(() => {
+    setRoutingPickActive(true);
   }, []);
+  const handleRoutingMapPick = React.useCallback((position: Position) => {
+    setFinishFromPosition(position);
+    setRoutingPickActive(false);
+  }, [setFinishFromPosition]);
 
   // Apply the selected theme to the document.
   React.useEffect(() => {
@@ -99,12 +103,8 @@ const App: React.FC = () => {
               size={{ width: '100%', height: '100%' }}
               onRoutingMapPick={handleRoutingMapPick}
               routingPickActive={routingPickActive}
-            />
-            <RoutingPanel
-              currentPosition={navigationData.position}
-              pickedPosition={routingPickedPosition}
-              pickActive={routingPickActive}
-              onRequestPick={() => setRoutingPickActive(true)}
+              routing={routing}
+              onRoutingPickStart={handleRoutingPickStart}
             />
           </div>
 

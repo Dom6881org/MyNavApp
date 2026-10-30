@@ -555,6 +555,122 @@
   outline-offset: 2px;
 }
 
+/* Routing input panel (issue #15): same overlay recipe as the settings panel. */
+.map-routing-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 0.55rem;
+  width: min(17rem, calc(100vw - 7rem));
+  max-height: min(70vh, 26rem);
+}
+
+.map-routing-panel .control-section {
+  padding: 0.65rem;
+  border: 1px solid rgba(175, 210, 221, 0.24);
+  border-radius: 7px;
+  background: linear-gradient(145deg, rgba(27, 72, 84, 0.52), rgba(16, 37, 50, 0.8));
+}
+
+.map-routing-panel .control-section h3 {
+  margin: 0 0 0.55rem;
+  color: #74e3e5;
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.routing-toggle {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  margin-bottom: 0.45rem;
+  cursor: pointer;
+}
+
+.routing-toggle input {
+  accent-color: #39c978;
+}
+
+.routing-coord-row {
+  display: flex;
+  gap: 0.4rem;
+}
+
+.routing-input {
+  flex: 1;
+  min-width: 0;
+  padding: 0.3rem 0.45rem;
+  border: 1px solid rgba(175, 210, 221, 0.32);
+  border-radius: 5px;
+  background: rgba(8, 20, 30, 0.85);
+  color: #f4f8fb;
+  font: inherit;
+  font-size: 0.75rem;
+}
+
+.routing-input:focus-visible {
+  outline: 2px solid #74e3e5;
+  outline-offset: 1px;
+}
+
+.routing-input:disabled {
+  opacity: 0.55;
+}
+
+.routing-pick-button {
+  width: 100%;
+  margin-top: 0.45rem;
+  padding: 0.35rem 0.5rem;
+  border: 1px solid rgba(175, 210, 221, 0.32);
+  border-radius: 5px;
+  background: #102532;
+  color: #f4f8fb;
+  cursor: pointer;
+  font: inherit;
+  font-size: 0.75rem;
+}
+
+.routing-pick-button:hover,
+.routing-pick-button.active {
+  border-color: #74e3e5;
+  background: #1b4854;
+}
+
+.routing-pick-button.active {
+  background: rgba(116, 227, 229, 0.18);
+  color: #d9f7f7;
+}
+
+.routing-pick-button:focus-visible {
+  outline: 2px solid #74e3e5;
+  outline-offset: 2px;
+}
+
+.routing-select {
+  width: 100%;
+}
+
+.routing-status {
+  display: grid;
+  gap: 0.2rem;
+}
+
+.routing-error,
+.routing-ok {
+  margin: 0;
+  font-size: 0.72rem;
+  line-height: 1.25;
+}
+
+.routing-error {
+  color: #ffb56b;
+}
+
+.routing-ok {
+  color: #74e3e5;
+}
+
 @media (max-width: 480px) {
   .map-settings-panel .control-panel {
     grid-template-columns: minmax(0, 1fr);
@@ -1967,6 +2083,11 @@ html {
   .map-tool-panel {
     width: min(14rem, calc(100vw - 7rem));
     max-height: min(65vh, 12rem);
+  }
+
+  /* Form panel: keep enough height for departure/destination/polar sections. */
+  .map-routing-panel {
+    max-height: min(70vh, 22rem);
   }
 
   /* Both columns pinned to the top corners to leave room for the bottom readouts. */
