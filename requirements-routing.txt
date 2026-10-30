@@ -1,8 +1,8 @@
 # Moteur de routage meteo (issue #14, milestone Routing v1).
 # Depôt privé : pip a besoin d'un acces authentifie a GitHub.
 # En local :  pip install -r requirements.txt -r requirements-routing.txt
-# Le tag v0.1.0 sera utilise une fois publie ; en attendant on epingle le commit.
-mynav-routing @ git+https://github.com/Dom6881org/mynav-routing.git@9e85fe79058b108cee41aacd577d1fab013d89af
+# 650d771 = main apres PR#3 (fix unites GRIB : sample() convertit m/s en noeuds).
+mynav-routing @ git+https://github.com/Dom6881org/mynav-routing.git@650d771d3dbe260e07e96c658a1b015488aef227
 # GRIB (issue #16) : lecture/ecriture via ecCodes.
 # Windows : la librairie native n'est pas embarquee par pip ; installer via
 # conda-forge (conda install -c conda-forge eccodes) et avoir les DLL dans le PATH.

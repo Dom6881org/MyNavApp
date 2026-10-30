@@ -126,8 +126,9 @@ class TestDownloadGrib(unittest.TestCase):
         # Critère d'acceptation #16 : le moteur charge le fichier sans erreur.
         # Vent d'ouest 5 m/s : vecteur vers l'est, positif.
         self.assertGreater(u[0], 0.0)
-        # Contrat actuel du moteur : sample() retourne u10 (m/s) / 1.94384.
-        self.assertAlmostEqual(u[0], 5.0 / grib.MS_TO_KNOTS, places=3)
+        # Contrat du moteur (fix mynav-routing PR#3) : sample() convertit m/s en
+        # nœuds -> 5 m/s ≈ 9.72 nœuds.
+        self.assertAlmostEqual(u[0], 5.0 * grib.MS_TO_KNOTS, places=3)
 
     def test_erreur_reseau_message_clair(self):
         def broken_opener(url):
