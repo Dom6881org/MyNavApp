@@ -271,8 +271,12 @@ const MapViewSimple: React.FC<MapViewSimpleProps> = ({
   // Routage (issue #15) : transmet les clics carte au panneau de saisie quand il choisit l'arrivée.
   useEffect(() => {
     if (!mapInstance || !routingPickActive || !onRoutingMapPick) return;
-    const handleRoutingPick = (event: { latlng: { lat: () => number; lng: () => number } }) => {
-      onRoutingMapPick({ latitude: event.latlng.lat(), longitude: event.latlng.lng() });
+    // leaflet-rotate exposes latlng as a plain object {lat, lng}, while stock
+    // Leaflet provides LatLng instances with lat()/lng() methods: support both.
+    const handleRoutingPick = (event: { latlng: { lat: number | (() => number); lng: number | (() => number) } }) => {
+      const toNumber = (value: number | (() => number)): number =>
+        typeof value === 'function' ? value() : value;
+      onRoutingMapPick({ latitude: toNumber(event.latlng.lat), longitude: toNumber(event.latlng.lng) });
     };
     mapInstance.map.on('click', handleRoutingPick);
     const container = mapInstance.map.getContainer() as HTMLElement;
