@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Position, RoutingPlan, RoutingPolarSummary } from '../types';
 
 const POLARS_FALLBACK: RoutingPolarSummary[] = [
@@ -39,6 +39,10 @@ export const useRoutingInput = (currentPosition: Position | null) => {
   const [startText, setStartText] = useState({ latitude: '', longitude: '' });
   const [finishText, setFinishText] = useState({ latitude: '', longitude: '' });
   const [polarId, setPolarId] = useState<string | null>(null);
+  // Distigue le choix explicite de l'utilisateur (select du panneau) du choix
+  // automatique : la préférence localStorage doit pouvoir s'appliquer quand
+  // les polaires du backend arrivent après le défaut embarqué.
+  const userPickedPolarRef = useRef(false);
   const [polars, setPolars] = useState<RoutingPolarSummary[]>(POLARS_FALLBACK);
   const [polarError, setPolarError] = useState<string | null>(null);
 
@@ -65,25 +69,36 @@ export const useRoutingInput = (currentPosition: Position | null) => {
   }, []);
 
   useEffect(() => {
-    if (polarId !== null && polars.some(polar => polar.id === polarId)) return;
+    if (userPickedPolarRef.current) return;
     let stored: string | null = null;
     try {
       stored = localStorage.getItem(POLAR_STORAGE_KEY);
     } catch {
       stored = null;
     }
-    const selection = polars.find(polar => polar.id === stored) ?? polars[0];
-    if (selection) setPolarId(selection.id);
+    // La préférence de la session précédente prime sur le défaut, même si le
+    // défaut embarqué a déjà été sélectionné en attendant les polaires du backend.
+    if (stored !== null && polars.some(polar => polar.id === stored)) {
+      if (polarId !== stored) setPolarId(stored);
+      return;
+    }
+    if (polarId === null || !polars.some(polar => polar.id === polarId)) {
+      if (polars[0]) setPolarId(polars[0].id);
+    }
   }, [polars, polarId]);
 
-  useEffect(() => {
-    if (polarId === null) return;
+  // Persiste uniquement les choix explicites : l'effet de sélection
+  // automatique ne doit pas écraser la préférence de la session précédente.
+  const selectPolar = useCallback((id: string | null) => {
+    userPickedPolarRef.current = true;
+    setPolarId(id);
+    if (id === null) return;
     try {
-      localStorage.setItem(POLAR_STORAGE_KEY, polarId);
+      localStorage.setItem(POLAR_STORAGE_KEY, id);
     } catch {
       // Stockage indisponible : le choix ne dure que la session.
     }
-  }, [polarId]);
+  }, []);
 
   const setFinishFromPosition = useCallback((position: Position) => {
     setFinishText({
@@ -143,7 +158,7 @@ export const useRoutingInput = (currentPosition: Position | null) => {
     polars,
     polarError,
     polarId,
-    setPolarId,
+    setPolarId: selectPolar,
     useCurrentPosition,
     setUseCurrentPosition,
     startText,
