@@ -63,7 +63,7 @@ def compute_route(
     horizon_h: float = 72.0,
     dt: float = 1800.0,
     heading_step: float = 5.0,
-    bin_deg: float = 0.25,
+    bin_deg: float = 0.05,
     arrival_nm: float = 5.0,
     tws_max: float | None = None,
 ) -> dict[str, Any]:
@@ -71,6 +71,10 @@ def compute_route(
 
     start, finish : (lat, lon) en degrés décimaux.
     wind : WindField du moteur (GRIBWindField, ConstantWind...).
+    bin_deg : maille d'élagage des isochrones ; elle doit être de l'ordre du
+    déplacement par pas (vitesse * dt / 3600 en degrés) sinon le front
+    s'effondre sur un point unique et le routage échoue (défaut 0.05°
+    ≈ 3 mn pour 30 min à 6 nds).
     Retourne un dict : found, coords, times_s, sog_kts, headings_deg,
     eta_s, min_dist_nm, geojson.
     Lève RoutingError avec un message clair en cas d'erreur.
