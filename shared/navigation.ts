@@ -161,3 +161,15 @@ export type UnitChangeHandler = <K extends keyof DashboardLayout['units']>(
   unitType: K,
   value: DashboardLayout['units'][K]
 ) => void;
+
+export interface RoutingPolarSummary {
+  id: string;
+  name: string;
+}
+
+export interface RoutingPlan {
+  useCurrentPosition: boolean;
+  startPosition: Position | null;
+  finishPosition: Position | null;
+  polarId: string | null;
+}

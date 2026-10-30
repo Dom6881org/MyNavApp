@@ -5,3 +5,4 @@ export * from './useRealGPS';
 export * from './useNavigationBackend';
 export * from './useAISSettings';
 export * from './useTrackRecorder';
+export * from './useRoutingInput';

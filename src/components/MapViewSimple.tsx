@@ -24,6 +24,8 @@ const POPUP_OPTIONS = { className: 'nav-popup', closeButton: false, minWidth: 17
 interface MapViewSimpleProps {
   data: NavigationData;
   onWindGridRequest?: (visible: Position[], prefetch?: Position[]) => void;
+  onRoutingMapPick?: (position: Position) => void;
+  routingPickActive?: boolean;
   aisTargets?: AISTarget[];
   aisState?: AISBackendState | null;
   showAIS?: boolean;
@@ -83,6 +85,8 @@ type GPSStatus = {
 const MapViewSimple: React.FC<MapViewSimpleProps> = ({
   data,
   onWindGridRequest,
+  onRoutingMapPick,
+  routingPickActive = false,
   aisTargets = [],
   aisState = null,
   showAIS = false,
@@ -263,6 +267,21 @@ const MapViewSimple: React.FC<MapViewSimpleProps> = ({
       mapInstance.map.off('dragstart', stopFollowing);
     };
   }, [mapInstance]);
+
+  // Routage (issue #15) : transmet les clics carte au panneau de saisie quand il choisit l'arrivée.
+  useEffect(() => {
+    if (!mapInstance || !routingPickActive || !onRoutingMapPick) return;
+    const handleRoutingPick = (event: { latlng: { lat: () => number; lng: () => number } }) => {
+      onRoutingMapPick({ latitude: event.latlng.lat(), longitude: event.latlng.lng() });
+    };
+    mapInstance.map.on('click', handleRoutingPick);
+    const container = mapInstance.map.getContainer() as HTMLElement;
+    container.style.cursor = 'crosshair';
+    return () => {
+      mapInstance.map.off('click', handleRoutingPick);
+      container.style.cursor = '';
+    };
+  }, [mapInstance, routingPickActive, onRoutingMapPick]);
 
   useEffect(() => {
     if (!mapInstance || !followVessel || !data.position) return;

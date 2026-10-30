@@ -1,6 +1,7 @@
 import React from 'react';
 import { useAISSettings, useNavigationData, useDashboardLayout, useTrackRecorder } from './hooks';
-import { InstrumentPanel } from './components';
+import { InstrumentPanel, RoutingPanel } from './components';
+import { Position } from './types';
 import MapView from './components/MapView';
 import './App.css';
 
@@ -26,6 +27,14 @@ const App: React.FC = () => {
 
   const aisSettings = useAISSettings(backendStatus.isConnected, aisState);
   const trackRecorder = useTrackRecorder();
+
+  // Routage (issue #15) : sélection de l'arrivée sur la carte + panneau de saisie.
+  const [routingPickActive, setRoutingPickActive] = React.useState(false);
+  const [routingPickedPosition, setRoutingPickedPosition] = React.useState<Position | null>(null);
+  const handleRoutingMapPick = React.useCallback((position: Position) => {
+    setRoutingPickedPosition(position);
+    setRoutingPickActive(false);
+  }, []);
 
   // Apply the selected theme to the document.
   React.useEffect(() => {
@@ -88,6 +97,14 @@ const App: React.FC = () => {
               backendStatus={backendStatus}
               trackRecorder={trackRecorder}
               size={{ width: '100%', height: '100%' }}
+              onRoutingMapPick={handleRoutingMapPick}
+              routingPickActive={routingPickActive}
+            />
+            <RoutingPanel
+              currentPosition={navigationData.position}
+              pickedPosition={routingPickedPosition}
+              pickActive={routingPickActive}
+              onRequestPick={() => setRoutingPickActive(true)}
             />
           </div>
 
