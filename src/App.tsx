@@ -15,8 +15,7 @@ const App: React.FC = () => {
     backendStatus,
     aisState,
     hasGPS,
-    toggleGPSConnection,
-    gpxReplay
+    toggleGPSConnection
   } = useNavigationData();
   
   const {
@@ -71,9 +70,6 @@ const App: React.FC = () => {
           <div className="map-container">
             <MapView
               data={navigationData}
-              isReplay={gpxReplay.isActive}
-              replayTrack={gpxReplay.trackPositions}
-              replayTrackIndex={gpxReplay.trackIndex}
               onWindGridRequest={requestWindGrid}
               aisTargets={aisState?.source === aisSettings.source ? aisState.targets : []}
               aisState={aisState}
@@ -85,8 +81,6 @@ const App: React.FC = () => {
               onThemeChange={setTheme}
               onUnitChange={setUnit}
               onToggleGPSConnection={toggleGPSConnection}
-              showReplayControls={import.meta.env.DEV}
-              gpxReplay={gpxReplay}
               gpsStatus={gpsStatus}
               navigationSource={navigationSource}
               hasGPS={hasGPS}

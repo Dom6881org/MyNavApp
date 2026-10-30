@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import type { BackendNavigationSnapshot, BrowserNavigationUpdate, Position } from '../types';
+import type { BackendNavigationSnapshot, BrowserNavigationUpdate } from '../types';
 
 interface BackendStatus {
   isConnected: boolean;
@@ -10,7 +10,6 @@ export const useNavigationBackend = () => {
   const [snapshot, setSnapshot] = useState<BackendNavigationSnapshot | null>(null);
   const [status, setStatus] = useState<BackendStatus>({ isConnected: false, error: null });
   const lastPostError = useRef<string | null>(null);
-  const lastReplayPositionError = useRef<string | null>(null);
 
   useEffect(() => {
     const events = new EventSource('/api/navigation/events');
@@ -57,23 +56,5 @@ export const useNavigationBackend = () => {
     }
   }, []);
 
-  const postAISReplayPosition = useCallback(async (position: Position | null) => {
-    try {
-      const response = await fetch('/api/ais/replay-position', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ position })
-      });
-      if (!response.ok) {
-        throw new Error(`Local navigation backend returned status ${response.status}.`);
-      }
-      lastReplayPositionError.current = null;
-    } catch (error) {
-      const message = error instanceof Error ? error.message : 'Unable to send AIS replay position.';
-      if (lastReplayPositionError.current !== message) console.error(message, error);
-      lastReplayPositionError.current = message;
-    }
-  }, []);
-
-  return { snapshot, status, postBrowserNavigation, postAISReplayPosition };
+  return { snapshot, status, postBrowserNavigation };
 };

@@ -45,6 +45,19 @@
   transition: none;
 }
 
+/* Leaflet positions markers, tooltips and popups with transforms; the blanket
+   transition above makes freshly added markers fly in from the pane corner. */
+.instrument .leaflet-marker-icon,
+.instrument .leaflet-tooltip,
+.instrument .leaflet-popup {
+  transition: none;
+}
+
+/* Keep Leaflet's own zoom animation for markers when the map zooms. */
+.leaflet-zoom-anim .instrument .leaflet-marker-icon {
+  transition: transform 0.25s cubic-bezier(0, 0, 0.25, 1);
+}
+
 .wind-map-readout {
   display: flex;
   flex-direction: column;
@@ -52,54 +65,17 @@
   line-height: 1.35;
 }
 
-.gps-map-readout,
-.replay-map-controls {
+.gps-map-readout {
   display: flex;
   flex-direction: column;
   gap: 0.45rem;
   line-height: 1.35;
 }
 
-.gps-map-readout strong,
-.replay-map-controls > strong {
+.gps-map-readout strong {
   color: #74e3e5;
   font-size: 0.68rem;
   letter-spacing: 0.06em;
-}
-
-.replay-map-controls label {
-  display: flex;
-  flex-direction: column;
-  gap: 0.25rem;
-  color: #c4d8df;
-  font-size: 0.7rem;
-  font-weight: 650;
-}
-
-.replay-map-controls select {
-  width: 100%;
-  min-height: 2rem;
-  padding: 0.25rem 0.4rem;
-  border: 1px solid rgba(175, 210, 221, 0.38);
-  border-radius: 5px;
-  background: #102532;
-  color: #f4f8fb;
-  font: inherit;
-}
-
-.replay-map-controls progress {
-  width: 100%;
-  height: 0.45rem;
-  accent-color: #74e3e5;
-}
-
-.replay-map-controls select:focus-visible {
-  outline: 2px solid #74e3e5;
-  outline-offset: 2px;
-}
-
-.gpx-replay-error {
-  color: #ffaaa5;
 }
 
 .map-global-legend {
@@ -210,6 +186,12 @@
   transform: translateY(-50%);
 }
 
+/* Display column: anchored on the left edge, panels open towards the chart. */
+.map-tools--left {
+  right: auto;
+  left: 0.75rem;
+}
+
 .map-tools-toolbar {
   display: flex;
   flex-direction: column;
@@ -222,6 +204,13 @@
 
 .map-tool-item {
   position: relative;
+}
+
+/* Thin separator between button groups inside a toolbar column. */
+.map-tool-divider {
+  height: 1px;
+  margin: 0.15rem 0.3rem;
+  background: rgba(175, 210, 221, 0.32);
 }
 
 .map-tool-button {
@@ -264,12 +253,6 @@
 .map-tool-button:disabled {
   cursor: wait;
   opacity: 0.6;
-}
-
-.map-tool-button.replay-active {
-  border-color: #ffd166;
-  background: #473d22;
-  color: #ffe3a1;
 }
 
 .map-tool-button.track-record-button:not(.layer-visible) svg {
@@ -395,6 +378,12 @@
   color: #f4f8fb;
   font-size: 0.75rem;
   transform: translateY(-50%);
+}
+
+/* Panels of the left column open on their right, towards the chart centre. */
+.map-tools--left .map-tool-panel {
+  right: auto;
+  left: calc(100% + 0.5rem);
 }
 
 .map-settings-panel {
@@ -750,8 +739,7 @@
 
 .ais-map-source select:focus-visible,
 .ais-map-visibility input:focus-visible,
-.ais-map-zoom:focus-visible,
-.replay-map-controls select:focus-visible {
+.ais-map-zoom:focus-visible {
   outline: 2px solid #74e3e5;
   outline-offset: 2px;
 }
@@ -1897,6 +1885,33 @@ html {
   letter-spacing: 0.05em;
 }
 
+/* REC chip shown in the date/time readout while a track is being recorded. */
+.map-rec-indicator {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  padding: 0.05rem 0.4rem;
+  border: 1px solid rgba(255, 107, 107, 0.55);
+  border-radius: 5px;
+  color: #ff9b9b;
+  font-weight: 650;
+  letter-spacing: 0.05em;
+}
+
+.map-rec-indicator-dot {
+  width: 0.45rem;
+  height: 0.45rem;
+  border-radius: 50%;
+  background: #ff5252;
+  animation: map-rec-indicator-pulse 1.6s ease-in-out infinite;
+}
+
+@keyframes map-rec-indicator-pulse {
+  50% {
+    opacity: 0.3;
+  }
+}
+
 .theme-light .map-position-readout {
   border-color: rgba(16, 32, 42, 0.16);
   background: rgba(255, 255, 255, 0.94);
@@ -1952,6 +1967,14 @@ html {
   .map-tool-panel {
     width: min(14rem, calc(100vw - 7rem));
     max-height: min(65vh, 12rem);
+  }
+
+  /* Both columns pinned to the top corners to leave room for the bottom readouts. */
+  .map-tools,
+  .map-tools--left,
+  .map-tools--right {
+    top: 0.75rem;
+    transform: none;
   }
 }
 .main-layout-instruments-top .map-view > .instrument-header {
@@ -2997,8 +3020,6 @@ html {
 .map-about-panel {
   display: grid;
   gap: 0.35rem;
-  top: 0;
-  transform: none;
 }
 
 .map-about-panel strong {
@@ -3061,6 +3082,15 @@ html {
   box-shadow: 0 3px 12px rgba(16, 32, 42, 0.2);
 }
 
+.theme-light .map-tool-divider {
+  background: rgba(16, 32, 42, 0.16);
+}
+
+.theme-light .map-rec-indicator {
+  border-color: rgba(160, 32, 32, 0.45);
+  color: #a02020;
+}
+
 .theme-light .map-tool-button {
   border-color: rgba(16, 32, 42, 0.2);
   background: #eef4f7;
@@ -3081,12 +3111,6 @@ html {
 
 .theme-light .map-tool-button.recenter-map-button:not(.layer-visible) {
   color: #1b7a43;
-}
-
-.theme-light .map-tool-button.replay-active {
-  border-color: #c78a00;
-  background: #fff1c9;
-  color: #7a5200;
 }
 
 .theme-light .gps-map-button.gps-connected {
@@ -3121,6 +3145,15 @@ html {
 .theme-night .map-tools-toolbar {
   border: 1px solid rgba(0, 255, 0, 0.3);
   background: rgba(4, 12, 6, 0.92);
+}
+
+.theme-night .map-tool-divider {
+  background: rgba(0, 255, 0, 0.3);
+}
+
+.theme-night .map-rec-indicator {
+  border-color: rgba(255, 80, 80, 0.5);
+  color: #ff8f8f;
 }
 
 .theme-night .map-tool-button {
