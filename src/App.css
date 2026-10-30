@@ -3341,3 +3341,204 @@ html {
   background: #040a05;
   color: #3f9f3f;
 }
+
+/* Light theme for map sub-menu panels and their cards (routing, settings, tracks, AIS, weather, GPS).
+   Base styles above are dark-only; these overrides make the sub menus readable in light mode. */
+.theme-light .map-tool-panel {
+  border-color: rgba(16, 32, 42, 0.16);
+  background: rgba(255, 255, 255, 0.96);
+  box-shadow: 0 3px 12px rgba(16, 32, 42, 0.18);
+  color: #1a2733;
+}
+
+.theme-light .map-tool-panel .control-section {
+  border-color: rgba(16, 32, 42, 0.14);
+  background: linear-gradient(145deg, #ffffff, #eef4f7);
+}
+
+.theme-light .map-tool-panel .control-section h3 {
+  color: #0b78a8;
+}
+
+.theme-light .map-settings-heading {
+  color: #0b78a8;
+}
+
+.theme-light .map-settings-heading button {
+  border-color: rgba(16, 32, 42, 0.2);
+  background: #eef4f7;
+  color: #1a2733;
+}
+
+.theme-light .map-settings-heading button:hover {
+  border-color: #0b78a8;
+  background: #d3ebf5;
+}
+
+.theme-light .map-settings-heading button:focus-visible {
+  outline-color: #0b78a8;
+}
+
+/* Routing sub-menu card controls */
+.theme-light .routing-input {
+  border-color: rgba(16, 32, 42, 0.24);
+  background: #ffffff;
+  color: #1a2733;
+}
+
+.theme-light .routing-input:focus-visible,
+.theme-light .routing-pick-button:focus-visible,
+.theme-light .routing-clear-button:focus-visible {
+  outline-color: #0b78a8;
+}
+
+.theme-light .routing-pick-button {
+  border-color: rgba(16, 32, 42, 0.24);
+  background: #eef4f7;
+  color: #1a2733;
+}
+
+.theme-light .routing-pick-button:hover,
+.theme-light .routing-pick-button.active {
+  border-color: #0b78a8;
+  background: #d3ebf5;
+  color: #0b5f86;
+}
+
+.theme-light .routing-pick-button.active {
+  background: rgba(11, 120, 168, 0.14);
+}
+
+.theme-light .routing-pick-button:disabled {
+  border-color: rgba(16, 32, 42, 0.14);
+  background: #f4f7f9;
+  color: #8aa0ab;
+}
+
+.theme-light .routing-clear-button {
+  color: #5c7480;
+}
+
+.theme-light .routing-clear-button:hover {
+  color: #1a2733;
+}
+
+.theme-light .routing-error {
+  color: #b35c00;
+}
+
+.theme-light .routing-ok {
+  color: #0b78a8;
+}
+
+/* Settings sub-menu controls inside the cards */
+.theme-light .map-settings-panel .control-gps-status {
+  background: rgba(16, 32, 42, 0.06);
+  color: #415f6a;
+}
+
+.theme-light .map-settings-panel .control-gps-status.connected {
+  color: #1b7a43;
+}
+
+.theme-light .map-settings-panel .control-gps-status.disconnected {
+  color: #b35c00;
+}
+
+.theme-light .map-settings-panel .theme-button {
+  border-color: rgba(16, 32, 42, 0.2);
+  background: #ffffff;
+  color: #1a2733;
+}
+
+.theme-light .map-settings-panel .theme-button.active {
+  border-color: #0b78a8;
+  background: rgba(11, 120, 168, 0.12);
+  color: #0b5f86;
+}
+
+.theme-light .map-settings-panel .unit-group,
+.theme-light .map-settings-panel .instrument-visibility-option {
+  color: #1a2733;
+}
+
+.theme-light .map-settings-panel .unit-group select {
+  border-color: rgba(16, 32, 42, 0.24);
+  background: #ffffff;
+  color: #1a2733;
+}
+
+.theme-light .map-settings-panel .unit-group select:focus-visible {
+  outline-color: #0b78a8;
+}
+
+/* Texts inside the sub-menu panels */
+.theme-light .track-map-status,
+.theme-light .track-map-item-info span,
+.theme-light .ais-map-source,
+.theme-light .ais-map-status,
+.theme-light .ais-map-coverage,
+.theme-light .ais-map-target-count {
+  color: #415f6a;
+}
+
+.theme-light .ais-map-target-count strong {
+  color: #b35c00;
+}
+
+.theme-light .wind-map-readout strong,
+.theme-light .gps-map-readout strong {
+  color: #0b78a8;
+}
+
+.theme-light .wind-map-updated {
+  color: rgba(26, 39, 51, 0.62);
+}
+
+/* Track list cards */
+.theme-light .track-map-item {
+  border-color: rgba(16, 32, 42, 0.16);
+  background: #f2f7f9;
+}
+
+.theme-light .track-map-list-heading button {
+  border-color: rgba(16, 32, 42, 0.2);
+  background: #eef4f7;
+  color: #1a2733;
+}
+
+.theme-light .track-map-item-actions a,
+.theme-light .track-map-item-actions button {
+  border-color: rgba(11, 120, 168, 0.5);
+  background: rgba(11, 120, 168, 0.1);
+  color: #0b5f86;
+}
+
+.theme-light .track-map-item-actions button {
+  border-color: rgba(160, 32, 32, 0.45);
+  background: rgba(160, 32, 32, 0.08);
+  color: #a02020;
+}
+
+/* AIS sub-menu controls */
+.theme-light .ais-map-source select {
+  border-color: rgba(16, 32, 42, 0.24);
+  background: #ffffff;
+  color: #1a2733;
+}
+
+.theme-light .ais-map-source select:focus-visible,
+.theme-light .ais-map-visibility input:focus-visible,
+.theme-light .ais-map-zoom:focus-visible {
+  outline-color: #0b78a8;
+}
+
+.theme-light .ais-map-visibility {
+  color: #1a2733;
+}
+
+.theme-light .ais-map-zoom {
+  border-color: rgba(179, 92, 0, 0.5);
+  background: rgba(179, 92, 0, 0.1);
+  color: #b35c00;
+}
