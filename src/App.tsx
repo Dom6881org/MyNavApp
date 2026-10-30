@@ -1,5 +1,5 @@
 import React from 'react';
-import { useAISSettings, useNavigationData, useDashboardLayout, useTrackRecorder, useRoutingInput } from './hooks';
+import { useAISSettings, useNavigationData, useDashboardLayout, useTrackRecorder, useRoutingInput, useRoutingRoute } from './hooks';
 import { InstrumentPanel } from './components';
 import { Position } from './types';
 import MapView from './components/MapView';
@@ -43,6 +43,17 @@ const App: React.FC = () => {
     }
     setRoutingPickTarget(null);
   }, [routingPickTarget, setStartFromPosition, setFinishFromPosition]);
+
+  // Calcul de la route (issue #17) : plan courant + vent instruments -> moteur.
+  const routingRoute = useRoutingRoute();
+  const { compute: computeRoute } = routingRoute;
+  const handleComputeRoute = React.useCallback(() => {
+    if (!routing.plan) return;
+    const wind = navigationData.wind
+      ? { directionFromDeg: navigationData.wind.direction, speedKts: navigationData.wind.speed }
+      : null;
+    void computeRoute(routing.plan, wind);
+  }, [routing.plan, navigationData.wind, computeRoute]);
 
   // Apply the selected theme to the document.
   React.useEffect(() => {
@@ -109,6 +120,8 @@ const App: React.FC = () => {
               routingPickTarget={routingPickTarget}
               routing={routing}
               onRoutingPickRequest={handleRoutingPickRequest}
+              routingRoute={routingRoute}
+              onRoutingCompute={handleComputeRoute}
             />
           </div>
 

@@ -6,3 +6,4 @@ export * from './useNavigationBackend';
 export * from './useAISSettings';
 export * from './useTrackRecorder';
 export * from './useRoutingInput';
+export * from './useRoutingRoute';

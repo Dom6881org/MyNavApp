@@ -173,3 +173,36 @@ export interface RoutingPlan {
   finishPosition: Position | null;
   polarId: string | null;
 }
+
+/** Vent constant transmis au moteur de routage (issue #17). */
+export interface RoutingWindInput {
+  directionFromDeg: number;
+  speedKts: number;
+}
+
+/** GeoJSON produit par to_geojson() : LineString [lon, lat] du départ à l'arrivée. */
+export interface RoutingRouteGeoJson {
+  type: 'FeatureCollection';
+  features: Array<{
+    type: 'Feature';
+    geometry: {
+      type: 'LineString';
+      coordinates: [number, number][];
+    };
+    properties: Record<string, unknown>;
+  }>;
+}
+
+/** Réponse de POST /api/routing/compute (issue #17). */
+export interface RoutingRouteResult {
+  found: boolean;
+  coords: [number, number][];
+  etaS: number;
+  minDistNm: number;
+  message: string | null;
+  geojson: RoutingRouteGeoJson | null;
+  wind: RoutingWindInput;
+  polarId: string;
+  start: Position;
+  finish: Position;
+}

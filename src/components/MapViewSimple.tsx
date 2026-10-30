@@ -8,6 +8,7 @@ import RoutingPanel, { RoutingPickTarget } from './RoutingPanel';
 import MapPositionReadout from './MapPositionReadout';
 import AppLogo from './AppLogo';
 import { RoutingInput } from '../hooks/useRoutingInput';
+import { RoutingRouteApi } from '../hooks/useRoutingRoute';
 
 // Extend Window interface for Leaflet
 declare global {
@@ -30,6 +31,8 @@ interface MapViewSimpleProps {
   routingPickTarget?: RoutingPickTarget | null;
   routing?: RoutingInput;
   onRoutingPickRequest?: (target: RoutingPickTarget) => void;
+  routingRoute?: RoutingRouteApi;
+  onRoutingCompute?: () => void;
   aisTargets?: AISTarget[];
   aisState?: AISBackendState | null;
   showAIS?: boolean;
@@ -93,6 +96,8 @@ const MapViewSimple: React.FC<MapViewSimpleProps> = ({
   routingPickTarget = null,
   routing,
   onRoutingPickRequest,
+  routingRoute,
+  onRoutingCompute,
   aisTargets = [],
   aisState = null,
   showAIS = false,
@@ -295,6 +300,45 @@ const MapViewSimple: React.FC<MapViewSimpleProps> = ({
       container.style.cursor = '';
     };
   }, [mapInstance, routingPickTarget, onRoutingMapPick]);
+
+  // Route calculée (issue #17) : LineString GeoJSON (ou meilleure progression
+  // si found=false) + marqueurs départ/arrivée, sur une couche dédiée.
+  useEffect(() => {
+    if (!mapInstance || !leafletLoaded || leafletError || !window.L) return;
+    const L = window.L;
+    const map = mapInstance.map;
+    if (!mapInstance.routingLayer) mapInstance.routingLayer = L.layerGroup().addTo(map);
+    mapInstance.routingLayer.clearLayers();
+    const result = routingRoute?.route;
+    if (!result) return;
+    // GeoJSON : LineString [lon, lat] ; found=false : coords moteur [lat, lon].
+    const latlngs: Array<[number, number]> = result.found && result.geojson
+      ? result.geojson.features[0]?.geometry.coordinates.map(([lon, lat]) => [lat, lon]) ?? []
+      : result.coords;
+    if (latlngs.length < 2) return;
+    L.polyline(latlngs, {
+      color: '#ffd166',
+      weight: 3,
+      opacity: 0.95,
+      lineCap: 'round',
+      lineJoin: 'round',
+      dashArray: result.found ? undefined : '5 6'
+    }).addTo(mapInstance.routingLayer);
+    L.circleMarker(latlngs[0], {
+      radius: 5,
+      color: '#ffd166',
+      weight: 2,
+      fillColor: '#102532',
+      fillOpacity: 1
+    }).bindTooltip('Departure', { className: TOOLTIP_CLASS, direction: 'top' }).addTo(mapInstance.routingLayer);
+    L.circleMarker(latlngs[latlngs.length - 1], {
+      radius: 5,
+      color: '#ffd166',
+      weight: 2,
+      fillColor: '#ffd166',
+      fillOpacity: 1
+    }).bindTooltip('Destination', { className: TOOLTIP_CLASS, direction: 'top' }).addTo(mapInstance.routingLayer);
+  }, [mapInstance, leafletLoaded, leafletError, routingRoute?.route]);
 
   useEffect(() => {
     if (!mapInstance || !followVessel || !data.position) return;
@@ -964,6 +1008,8 @@ const MapViewSimple: React.FC<MapViewSimpleProps> = ({
               onRoutingPickRequest?.(target);
             }}
             onClose={() => setActiveMapTool(null)}
+            routeCalc={routingRoute}
+            onComputeRoute={onRoutingCompute}
           />
         )}
         {!leafletError && !leafletLoaded && (
