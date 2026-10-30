@@ -16,7 +16,11 @@
     "editor.defaultFormatter": "dbaeumer.vscode-eslint"
   },
   "eslint.useFlatConfig": true,
-  "eslint.workingDirectories": [{ "mode": "auto" }],
+  "eslint.workingDirectories": [
+    {
+      "mode": "auto"
+    }
+  ],
   "files.exclude": {
     "**/__pycache__": true,
     "**/.pytest_cache": true
@@ -25,5 +29,8 @@
     "**/package-lock.json": true,
     "**/tracks": true
   },
-  "git.branchProtection": ["main"]
+  "git.branchProtection": [
+    "main"
+  ],
+  "python.terminal.useEnvFile": true
 }
