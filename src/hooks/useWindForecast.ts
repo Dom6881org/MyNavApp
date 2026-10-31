@@ -27,6 +27,16 @@ interface GridRequest {
   prefetch: Position[];
 }
 
+const GRIB_SAMPLE_URL = '/api/grib/sample';
+
+/** Vent échantillonné depuis le GRIB local (option B, #36). */
+interface GribSampleWind {
+  latitude: number;
+  longitude: number;
+  speed: number;
+  direction: number;
+}
+
 const pointKey = (point: Position) => `${point.latitude.toFixed(5)},${point.longitude.toFixed(5)}`;
 const normalizeLongitude = (longitude: number) => ((((longitude + 180) % 360) + 360) % 360) - 180;
 
@@ -141,6 +151,40 @@ export const useWindForecast = (position: Position | null) => {
     }
   }, [getResponseError]);
 
+  const fetchGribSample = useCallback(async (points: Position[], signal: AbortSignal): Promise<{ fresh: boolean; wind: GribSampleWind[] } | null> => {
+    try {
+      const response = await fetch(GRIB_SAMPLE_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ points }),
+        signal
+      });
+      if (!response.ok) return null;
+      const payload: unknown = await response.json();
+      if (!isRecord(payload) || typeof payload.fresh !== 'boolean' || !Array.isArray(payload.wind)) return null;
+      const wind: GribSampleWind[] = [];
+      for (const entry of payload.wind) {
+        if (
+          isRecord(entry) &&
+          typeof entry.latitude === 'number' && Number.isFinite(entry.latitude) &&
+          typeof entry.longitude === 'number' && Number.isFinite(entry.longitude) &&
+          typeof entry.speed === 'number' && Number.isFinite(entry.speed) && entry.speed >= 0 &&
+          typeof entry.direction === 'number' && Number.isFinite(entry.direction)
+        ) {
+          wind.push({
+            latitude: entry.latitude,
+            longitude: entry.longitude,
+            speed: entry.speed,
+            direction: entry.direction
+          });
+        }
+      }
+      return { fresh: payload.fresh, wind };
+    } catch {
+      return null;
+    }
+  }, []);
+
   const processGridQueue = useCallback(async () => {
     if (gridRunningRef.current) return;
     gridRunningRef.current = true;
@@ -151,6 +195,19 @@ export const useWindForecast = (position: Position | null) => {
       while (!controller.signal.aborted) {
         const request = latestGridRequestRef.current;
         if (!request) break;
+
+        // Option B (#36) : servir le maillage visible depuis le GRIB local frais
+        // (zéro appel Open-Météo) ; sinon repli sur le lattice point par point.
+        const grib = await fetchGribSample(request.visible, controller.signal);
+        if (controller.signal.aborted) break;
+        if (grib && grib.fresh && grib.wind.length > 0) {
+          setWindGrid(grib.wind.map(entry => ({
+            position: { latitude: entry.latitude, longitude: entry.longitude },
+            wind: { speed: entry.speed, direction: entry.direction, gust: entry.speed, source: 'GRIB' }
+          })));
+          setStatus(previous => ({ ...previous, gridError: null }));
+          break;
+        }
 
         const now = Date.now();
         const missing: Position[] = [];
@@ -199,7 +256,7 @@ export const useWindForecast = (position: Position | null) => {
     } finally {
       gridRunningRef.current = false;
     }
-  }, [fetchWindChunk, publishGrid]);
+  }, [fetchGribSample, fetchWindChunk, publishGrid]);
 
   const requestWindGrid = useCallback((visible: Position[], prefetch: Position[] = []) => {
     latestGridRequestRef.current = { visible, prefetch };
