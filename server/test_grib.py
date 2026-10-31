@@ -179,6 +179,7 @@ class TestDownloadGrib(unittest.TestCase):
         self.assertIn("HTTP 400", message)
         self.assertIn("same number of elements", message)
 
+    @unittest.skipUnless(grib.ECCODES_AVAILABLE, "ecCodes non installé")
     def test_index_cfgrib_obsolète_purgé(self):
         # Un .idx plus ancien que le GRIB réécrit fait crier ecCodes
         # (« Ignoring index file ... older than GRIB file ») : il est supprimé.
