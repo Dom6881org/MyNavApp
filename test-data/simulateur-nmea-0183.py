@@ -278,8 +278,9 @@ def s_vtg(cog, sog):
     return fmt("IIVTG,%.1f,T,%.1f,M,%.1f,N,%.1f,K" % (cog, cog, sog, sog * 1.852))
 
 
-def s_mwv_true(twa, tws):
-    return fmt("WIMWV,%.1f,T,%.1f,N,A" % (norm360(twa), tws))
+def s_mwv_true(twd_deg, tws):
+    # NMEA 0183 : le drapeau 'T' signifie "relatif au nord vrai" -> TWD absolu.
+    return fmt("WIMWV,%.1f,T,%.1f,N,A" % (norm360(twd_deg), tws))
 
 
 def s_mwv_apparent(awa, aws):
@@ -473,7 +474,6 @@ def main():
             tws = max(0.0, args.wind_speed + args.wind_gust * math.sin(sim_secs / 90.0))
             # Vent apparent déduit du mouvement
             awa, aws = true_to_apparent(heading, sog, twd, tws)
-            twa = norm360(twd - heading)
 
             # Profondeur (bruit optionnel)
             depth = max(0.0, args.depth + (args.depth_noise * rand_pm1() if args.depth_noise else 0.0))
@@ -487,7 +487,7 @@ def main():
                 s_hdt(heading) +
                 s_vhw(heading, sog) +
                 s_vtg(cog, sog) +
-                s_mwv_true(twa, tws) +
+                s_mwv_true(twd, tws) +
                 s_mwv_apparent(awa, aws) +
                 s_dpt(depth) +
                 s_dbt(depth)

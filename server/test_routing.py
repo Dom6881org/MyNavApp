@@ -15,7 +15,9 @@ from server import routing
 from server.routing import RoutingError, compute_route, compute_route_payload, list_polars, load_polar
 
 POLAR_PATH = os.path.join(os.path.dirname(__file__), os.pardir, "config", "polaire-sugar.pol")
-START = (42.62, 3.02)
+# Départ en pleine eau (~4 mn au large de Saint-Cyprien) : (42.62, 3.02) est
+# classé "terre" par le masque Natural Earth (raster 10 m) et serait ramené à l'eau.
+START = (42.62, 3.10)
 FINISH = (42.62, 3.5)
 
 
@@ -61,6 +63,58 @@ class TestComputeRoute(unittest.TestCase):
         self.assertGreater(len(result["coords"]), 0)
         self.assertIsNone(result["geojson"])
         self.assertGreater(result["min_dist_nm"], 0.0)
+
+    def test_depart_a_terre_rapproche_de_leau(self):
+        # Point côtier (près de Colera, Espagne) classé "terre" par le masque
+        # Natural Earth : le départ est ramené à l'eau la plus proche et la
+        # route est trouvée (sinon le front s'effondre au premier pas).
+        coastal_start = (42.39452716666666, 3.1637153333333337)
+        coastal_finish = (42.41861, 3.22986)
+        result = compute_route(coastal_start, coastal_finish, wind=west_wind_12kt(), polar_path=POLAR_PATH)
+        self.assertTrue(result["found"])
+        self.assertIsNotNone(result["start_adjusted"])
+        self.assertGreater(result["start_adjusted"]["offset_nm"], 0.0)
+        self.assertLessEqual(result["start_adjusted"]["offset_nm"], 2.0)
+        self.assertAlmostEqual(result["coords"][0][0], result["start_adjusted"]["latitude"])
+        self.assertAlmostEqual(result["coords"][0][1], result["start_adjusted"]["longitude"])
+        self.assertIsNone(result["finish_adjusted"])
+
+    def test_route_longue_au_pres_ne_zigzague_pas(self):
+        # Colera -> Frioul, vent 355/7.2 nd : la maille d'élagage est déduite du
+        # déplacement par pas (sinon la route oscille entre cellules adjacentes,
+        # trace en zigzag et ETA dégradée).
+        import math
+
+        result = compute_route(
+            (42.39325, 3.17302), (43.27649, 5.31225),
+            wind=ConstantWind(direction_from_deg=355.0, speed_kts=7.2),
+            polar_path=POLAR_PATH,
+        )
+        self.assertTrue(result["found"])
+        self.assertLess(result["eta_s"], 30 * 3600)
+        coords = result["coords"]
+        caps = []
+        for i in range(1, len(coords)):
+            la1, lo1 = coords[i - 1]
+            la2, lo2 = coords[i]
+            caps.append(math.degrees(math.atan2(
+                (lo2 - lo1) * math.cos(math.radians((la1 + la2) / 2)), la2 - la1
+            )) % 360)
+        turns = [
+            min(abs(caps[i] - caps[i - 1]), 360 - abs(caps[i] - caps[i - 1]))
+            for i in range(1, len(caps))
+        ]
+        avg_turn = sum(turns) / max(len(turns), 1)
+        self.assertLess(avg_turn, 20.0)  # ~29 deg avec une maille trop large
+
+    def test_depart_trop_a_terre(self):
+        # Au milieu des terres (Paris) : aucune eau à moins de 2 mn -> message
+        # explicite au lieu d'un faux "horizon dépassé".
+        result = compute_route((48.8566, 2.3522), FINISH, wind=west_wind_12kt(), polar_path=POLAR_PATH)
+        self.assertFalse(result["found"])
+        self.assertIn("à terre", result["message"])
+        self.assertIsNone(result["geojson"])
+        self.assertEqual(result["coords"], [(48.8566, 2.3522)])
 
     def test_positions_invalides(self):
         for position in [(91.0, 3.0), (42.0, 200.0), None]:
@@ -111,7 +165,9 @@ class TestComputeRoutePayload(unittest.TestCase):
         return base
 
     def test_payload_complet_route_trouvee(self):
-        result = compute_route_payload(self.payload())
+        # Cache GRIB neutralisé : le test ne dépend pas d'un éventuel GRIB frais.
+        with patch("server.grib.load_wind_field", return_value=None):
+            result = compute_route_payload(self.payload())
         self.assertTrue(result["found"])
         self.assertGreater(result["etaS"], 0.0)
         self.assertEqual(result["geojson"]["type"], "FeatureCollection")
@@ -132,6 +188,20 @@ class TestComputeRoutePayload(unittest.TestCase):
         result = compute_route_payload(self.payload(wind=None))
         self.assertTrue(result["found"])
         self.assertEqual(result["wind"], {"directionFromDeg": 270.0, "speedKts": 12.0})
+
+    def test_payload_depart_a_terre_rapproche(self):
+        result = compute_route_payload(self.payload(
+            start={"latitude": 42.39452716666666, "longitude": 3.1637153333333337},
+            finish={"latitude": 42.41861, "longitude": 3.22986},
+        ))
+        self.assertTrue(result["found"])
+        self.assertIsNotNone(result["startAdjusted"])
+        self.assertGreater(result["startAdjusted"]["offsetNm"], 0.0)
+        self.assertIsNone(result["finishAdjusted"])
+        # Le point demandé est renvoyé tel quel, l'ajustement est à part.
+        self.assertEqual(
+            result["start"], {"latitude": 42.39452716666666, "longitude": 3.1637153333333337}
+        )
 
     def test_polaire_inconnue(self):
         with self.assertRaises(RoutingError) as context:

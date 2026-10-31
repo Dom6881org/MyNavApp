@@ -1,19 +1,24 @@
 import React from 'react';
+
 import { RoutingInput } from '../hooks/useRoutingInput';
+
 import { RoutingRouteApi } from '../hooks/useRoutingRoute';
+
 import { GribApi } from '../hooks/useGrib';
+
+import { Position } from '../types';
 
 export type RoutingPickTarget = 'start' | 'finish';
 
 interface RoutingPanelProps {
   routing: RoutingInput;
+  polarName?: string;
   pickTarget: RoutingPickTarget | null;
   onRequestPick: (target: RoutingPickTarget) => void;
   onClose: () => void;
   routeCalc?: RoutingRouteApi;
   onComputeRoute?: () => void;
   gribCalc?: GribApi;
-  onDownloadGrib?: () => void;
 }
 
 const formatEta = (etaS: number): string => {
@@ -24,7 +29,25 @@ const formatEta = (etaS: number): string => {
 const formatClock = (epochS: number): string =>
   new Date(epochS * 1000).toLocaleString(undefined, { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
 
-const gribStatusLabel = (status: GribApi['status']): { text: string; ok: boolean } => {
+const formatPosition = (position: Position | null): string =>
+  position ? `${position.latitude.toFixed(5)}, ${position.longitude.toFixed(5)}` : 'Not set';
+
+const routeDistanceNm = (coords: [number, number][]): number => {
+  const toRadians = Math.PI / 180;
+  let total = 0;
+  for (let i = 1; i < coords.length; i += 1) {
+    const [lat1, lon1] = coords[i - 1];
+    const [lat2, lon2] = coords[i];
+    const dLat = (lat2 - lat1) * toRadians;
+    const dLon = (lon2 - lon1) * toRadians;
+    const a = Math.sin(dLat / 2) ** 2 + Math.cos(lat1 * toRadians) * Math.cos(lat2 * toRadians) * Math.sin(dLon / 2) ** 2;
+    total += 2 * 3437.75 * Math.asin(Math.sqrt(a));
+  }
+  return total;
+};
+
+const gribStatusLabel = (status: GribApi['status'], isDownloading: boolean): { text: string; ok: boolean } => {
+  if (isDownloading) return { text: 'Downloading GRIB for the route zone…', ok: true };
   if (!status || !status.available) return { text: 'No GRIB on board — constant wind fallback', ok: false };
   if (status.fresh && status.validUntil !== null) {
     return { text: `GRIB fresh · valid until ${formatClock(status.validUntil)}`, ok: true };
@@ -38,33 +61,37 @@ const pickButtonLabel = (target: RoutingPickTarget, active: boolean): string => 
 };
 
 /**
- * Panneau de saisie du plan de routage (issue #15) :
- * départ (position courante, manuelle ou clic carte), arrivée (coordonnées
- * ou clic carte), polaire du bateau, avec validation en direct.
- * Overlay "map tool" ancré à la colonne d'outils, comme le panneau réglages.
+ * Panneau de routage (issue #15) : une ligne par extrémité (From / To) avec
+ * pastille de coordonnées lisible, bouton "Chart" pour choisir en un clic sur
+ * la carte et bouton "Edit" pour la saisie manuelle (champs dépliés à la
+ * demande). Le vent (GRIB) est téléchargé automatiquement par l'application ;
+ * le panneau n'affiche que son statut, en avertissement s'il est indisponible.
+ * Bouton de calcul discret, résultat (ETA, distance) mis en avant.
+ * La polaire est un réglage global de l'application (voir useRoutingPolar).
  */
 const RoutingPanel: React.FC<RoutingPanelProps> = ({
   routing,
+  polarName = '',
   pickTarget,
   onRequestPick,
   onClose,
   routeCalc,
   onComputeRoute,
-  gribCalc,
-  onDownloadGrib
+  gribCalc
 }) => {
+  const [editingStart, setEditingStart] = React.useState(false);
+  const [editingFinish, setEditingFinish] = React.useState(false);
+
   const coordinateRow = (
     label: string,
     values: { latitude: string; longitude: string },
-    onChange: (next: { latitude: string; longitude: string }) => void,
-    disabled: boolean
+    onChange: (next: { latitude: string; longitude: string }) => void
   ) => (
     <div className="routing-coord-row">
       <input
         type="text"
         inputMode="decimal"
         className="routing-input"
-        disabled={disabled}
         value={values.latitude}
         placeholder="lat"
         aria-label={`${label} latitude`}
@@ -74,7 +101,6 @@ const RoutingPanel: React.FC<RoutingPanelProps> = ({
         type="text"
         inputMode="decimal"
         className="routing-input"
-        disabled={disabled}
         value={values.longitude}
         placeholder="lon"
         aria-label={`${label} longitude`}
@@ -83,7 +109,47 @@ const RoutingPanel: React.FC<RoutingPanelProps> = ({
     </div>
   );
 
-  const polarName = routing.polars.find(polar => polar.id === routing.polarId)?.name ?? routing.polarId ?? '';
+  const endpointRow = (
+    target: RoutingPickTarget,
+    label: string,
+    chip: string,
+    editing: boolean,
+    onToggleEdit: () => void,
+    disabled: boolean
+  ) => (
+    <div className="routing-endpoint">
+        <span className="routing-endpoint-label">{label}</span>
+        <span className="routing-chip" title={chip}>{chip}</span>
+        <button
+          type="button"
+          className={`routing-mini-button ${pickTarget === target ? 'active' : ''}`}
+          aria-label={pickButtonLabel(target, pickTarget === target)}
+          title={pickButtonLabel(target, pickTarget === target)}
+          disabled={disabled}
+          onClick={() => onRequestPick(target)}
+        >
+          {pickTarget === target ? 'Click chart…' : 'Chart'}
+        </button>
+        <button
+          type="button"
+          className={`routing-mini-button ${editing ? 'active' : ''}`}
+          aria-label={target === 'start' ? 'Edit departure coordinates' : 'Edit destination coordinates'}
+          title="Enter coordinates manually"
+          aria-pressed={editing}
+          disabled={disabled}
+          onClick={onToggleEdit}
+        >
+          {editing ? 'Hide' : 'Edit'}
+        </button>
+      </div>
+  );
+
+  const startChip = routing.useCurrentPosition
+    ? (routing.startPosition ? `GPS · ${formatPosition(routing.startPosition)}` : 'Waiting for GPS…')
+    : formatPosition(routing.startPosition);
+  const finishChip = formatPosition(routing.finishPosition);
+
+  const route = routeCalc?.route ?? null;
 
   return (
     <section id="map-routing-panel" className="map-tool-panel map-routing-panel" aria-label="Routing">
@@ -100,112 +166,89 @@ const RoutingPanel: React.FC<RoutingPanelProps> = ({
       </div>
 
       <div className="control-section routing-section">
-        <h3>Departure</h3>
-        <label className="routing-toggle">
+        <span className="routing-section-label">Route</span>
+
+        {endpointRow('start', 'From', startChip, editingStart, () => setEditingStart(value => !value), routing.useCurrentPosition)}
+        <label className="routing-gps-toggle">
           <input
             type="checkbox"
             checked={routing.useCurrentPosition}
+            aria-label="Use current position"
             onChange={event => routing.setUseCurrentPosition(event.target.checked)}
           />
-          <span>Use current position</span>
+          <span>Use current GPS position</span>
         </label>
-        {coordinateRow('Departure', routing.startText, routing.setStartText, routing.useCurrentPosition)}
-        <button
-          type="button"
-          className={`routing-pick-button ${pickTarget === 'start' ? 'active' : ''}`}
-          disabled={routing.useCurrentPosition}
-          onClick={() => onRequestPick('start')}
-        >
-          {pickButtonLabel('start', pickTarget === 'start')}
-        </button>
+        {editingStart && !routing.useCurrentPosition && coordinateRow('Departure', routing.startText, routing.setStartText)}
+
+        {endpointRow('finish', 'To', finishChip, editingFinish, () => setEditingFinish(value => !value), false)}
+        {editingFinish && coordinateRow('Destination', routing.finishText, routing.setFinishText)}
+
+        <div className="routing-status">
+          {routing.errors.start && <p className="routing-error">{routing.errors.start}</p>}
+          {routing.errors.finish && <p className="routing-error">{routing.errors.finish}</p>}
+          {routing.errors.same && <p className="routing-error">{routing.errors.same}</p>}
+          {routing.errors.polar && <p className="routing-error">{routing.errors.polar}</p>}
+          {routing.plan && routing.distanceNm !== null && (
+            <p className="routing-ok">
+              Plan ready · {routing.distanceNm.toFixed(1)} NM{polarName ? ` · ${polarName}` : ''}
+            </p>
+          )}
+        </div>
       </div>
 
-      <div className="control-section routing-section">
-        <h3>Destination</h3>
-        {coordinateRow('Destination', routing.finishText, routing.setFinishText, false)}
-        <button
-          type="button"
-          className={`routing-pick-button ${pickTarget === 'finish' ? 'active' : ''}`}
-          onClick={() => onRequestPick('finish')}
-        >
-          {pickButtonLabel('finish', pickTarget === 'finish')}
-        </button>
-      </div>
-
-      <div className="control-section routing-section">
-        <h3>Polar</h3>
-        <select
-          className="routing-input routing-select"
-          value={routing.polarId ?? ''}
-          onChange={event => routing.setPolarId(event.target.value || null)}
-        >
-          {routing.polars.map(polar => (
-            <option key={polar.id} value={polar.id}>{polar.name}</option>
-          ))}
-        </select>
-      </div>
-
-      {gribCalc && onDownloadGrib && (
-        <div className="control-section routing-section">
-          <h3>Wind</h3>
+      {gribCalc && (
+        <div className="control-section routing-section routing-wind">
+          <span className="routing-section-label">Wind</span>
           {(() => {
-            const label = gribStatusLabel(gribCalc.status);
-            return <p className={label.ok ? 'routing-ok' : 'routing-error'}>{label.text}</p>;
+            const label = gribStatusLabel(gribCalc.status, gribCalc.isDownloading);
+            return <p className={label.ok ? 'routing-ok' : 'routing-warn'}>{label.text}</p>;
           })()}
-          <button
-            type="button"
-            className="routing-pick-button"
-            disabled={!routing.plan || gribCalc.isDownloading}
-            onClick={onDownloadGrib}
-          >
-            {gribCalc.isDownloading ? 'Downloading…' : 'Download GRIB (zone + 72 h)'}
-          </button>
           {gribCalc.error && <p className="routing-error">{gribCalc.error}</p>}
         </div>
       )}
 
       {routeCalc && onComputeRoute && (
-        <div className="control-section routing-section">
-          <h3>Route</h3>
+        <div className="routing-actions">
           <button
             type="button"
-            className="routing-pick-button"
+            className="routing-compute-button"
             disabled={!routing.plan || routeCalc.isLoading}
             onClick={onComputeRoute}
           >
             {routeCalc.isLoading ? 'Computing…' : 'Compute route'}
           </button>
-          {routeCalc.error && <p className="routing-error">{routeCalc.error}</p>}
-          {routeCalc.route?.found && (
-            <p className="routing-ok">
-              Route · ETA {formatEta(routeCalc.route.etaS)} · {routeCalc.route.windSource === 'grib' ? 'GRIB wind' : `constant ${routeCalc.route.wind.speedKts.toFixed(0)} kt`}
-            </p>
-          )}
-          {routeCalc.route && !routeCalc.route.found && routeCalc.route.message && (
-            <p className="routing-error">{routeCalc.route.message}</p>
-          )}
-          {routeCalc.route && (
-            <button
-              type="button"
-              className="routing-clear-button"
-              onClick={routeCalc.clear}
-            >
-              Clear route
-            </button>
-          )}
         </div>
       )}
 
-      <div className="routing-status">
-        {routing.polarError && <p className="routing-error">{routing.polarError}</p>}
-        {routing.errors.start && <p className="routing-error">{routing.errors.start}</p>}
-        {routing.errors.finish && <p className="routing-error">{routing.errors.finish}</p>}
-        {routing.errors.same && <p className="routing-error">{routing.errors.same}</p>}
-        {routing.errors.polar && <p className="routing-error">{routing.errors.polar}</p>}
-        {routing.plan && routing.distanceNm !== null && (
-          <p className="routing-ok">Plan ready · {routing.distanceNm.toFixed(1)} NM · {polarName}</p>
-        )}
-      </div>
+      {routeCalc?.error && <p className="routing-error routing-calc-error">{routeCalc.error}</p>}
+
+      {route && (
+        <div className={`routing-result ${route.found ? 'routing-result-found' : ''}`}>
+          {route.found ? (
+            <>
+              <div className="routing-result-main">
+                <span className="routing-result-eta">{formatEta(route.etaS)}</span>
+                <span className="routing-result-eta-label">ETA</span>
+                <span className="routing-result-dist">{routeDistanceNm(route.coords).toFixed(1)} NM</span>
+              </div>
+              <p className="routing-ok routing-result-sub">
+                {route.windSource === 'grib'
+                  ? 'GRIB wind'
+                  : `constant ${route.wind.speedKts.toFixed(0)} kt from ${route.wind.directionFromDeg.toFixed(0)}°`}
+              </p>
+            </>
+          ) : (
+            route.message && <p className="routing-error">{route.message}</p>
+          )}
+          <button
+            type="button"
+            className="routing-clear-button"
+            onClick={routeCalc?.clear}
+          >
+            Clear route
+          </button>
+        </div>
+      )}
     </section>
   );
 };

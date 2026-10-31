@@ -52,12 +52,19 @@ const WindIndicator: React.FC<WindIndicatorProps> = ({
   const trueSpeed = trueWind === null
     ? null
     : trueWind.speedKnots * (unit === 'kmh' ? 1.852 : unit === 'mph' ? 1.15078 : 1);
-  const trueDialAngle = trueWind === null
+  // WIMWV 'T' = TWD absolu (nord vrai) ; le repli calculé depuis le vent apparent
+  // est déjà relatif (TWA). On ramène tout en TWA = TWD - cap quand le cap est connu.
+  const trueWindAngleDegrees = trueWind === null
     ? null
-    : ((trueWind.angleDegrees + 180) % 360 + 360) % 360 - 180;
-  const trueAngleDisplay = trueWind === null
+    : measuredTrueWind !== null && headingDegrees !== null
+      ? (((measuredTrueWind.angleDegrees - headingDegrees) % 360) + 360) % 360
+      : trueWind.angleDegrees;
+  const trueDialAngle = trueWindAngleDegrees === null
     ? null
-    : ((trueWind.angleDegrees % 360) + 360) % 360;
+    : ((trueWindAngleDegrees + 180) % 360 + 360) % 360 - 180;
+  const trueAngleDisplay = trueWindAngleDegrees === null
+    ? null
+    : ((trueWindAngleDegrees % 360) + 360) % 360;
   const dialLabel = apparentWind
     ? `Apparent wind angle ${apparentWind.angleDegrees.toFixed(0)} degrees relative to the boat${trueWind ? `; true wind ${trueWind.speedKnots.toFixed(1)} knots at ${trueAngleDisplay?.toFixed(0)} degrees relative to the boat` : ''}`
     : forecastWind && dialAngle !== null && headingDegrees !== null

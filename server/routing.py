@@ -22,6 +22,13 @@ except ImportError:
 
 DEFAULT_POLAR_PATH = os.path.join(os.path.dirname(__file__), os.pardir, "config", "polaire-sugar.pol")
 
+# Rapprochement d'un point à terre vers l'eau la plus proche (masque Natural Earth) :
+# un départ GPS côtier peut être classé "terre" par le masque 10 m alors que le
+# bateau flotte à quelques centaines de mètres du rivage.
+SNAP_MAX_NM = 2.0
+SNAP_STEP_NM = 0.1
+SNAP_BEARING_STEP_DEG = 5.0
+
 
 class RoutingError(Exception):
     """Erreur de routage avec un message clair pour l'utilisateur."""
@@ -41,6 +48,74 @@ def load_polar(path: str | None = None) -> Any:
             f"Format de polaire non reconnu ({os.path.basename(resolved)}). "
             "Vérifiez que le fichier .pol est bien au format OpenCPN/qtVlm."
         ) from error
+
+
+MINOR_ISLANDS_URL = (
+    "https://raw.githubusercontent.com/nvkelso/natural-earth-vector/master/"
+    "geojson/ne_10m_minor_islands.geojson"
+)
+
+
+def _load_land_mask() -> Any:
+    """Charge le masque de terre utilisé par le moteur (Natural Earth, cache local).
+
+    ne_10m_land est fusionné avec ne_10m_minor_islands : les petites îles
+    (ex. îlots méditerranéens) sont absentes de ne_10m_land seul et le routage
+    passerait sinon dessus. Si le fichier des îles est indisponible (hors
+    ligne, pas de cache), on retombe sur ne_10m_land seul.
+    Retourne None si les données sont indisponibles : dans ce cas on n'impose
+    pas de masque à route(), qui chargera le sien par défaut et lèvera
+    LandDataError (traduit en RoutingError) si les données manquent aussi.
+    """
+    try:
+        from mynav_routing.land import OPEN_LAND_URL, LandMask, _load_open_land_geojson
+
+        land_data = _load_open_land_geojson(OPEN_LAND_URL)
+        features = list(land_data.get("features", []))
+        try:
+            minor_data = _load_open_land_geojson(MINOR_ISLANDS_URL)
+            features += minor_data.get("features", [])
+        except ValueError:
+            pass  # îles mineures indisponibles : masque ne_10m_land seul
+        return LandMask.from_geojson({"type": "FeatureCollection", "features": features})
+    except ValueError:
+        return None
+
+
+def _nearest_water(land_mask: Any, position: tuple[float, float], max_nm: float = SNAP_MAX_NM):
+    """Ramène une position classée "terre" au point d'eau le plus proche.
+
+    Recherche en anneaux (pas de SNAP_STEP_NM jusqu'à max_nm, tous les caps).
+    Retourne (point, ajustement) : si la position est déjà en mer, ajustement
+    vaut None ; si aucune eau n'est trouvée, point vaut None.
+    """
+    import numpy as np
+
+    from mynav_routing.engine.isochrones import move_nm
+
+    lat, lon = position
+    if not land_mask.is_land([lat], [lon])[0]:
+        return (lat, lon), None
+    bearings = np.arange(0.0, 360.0, SNAP_BEARING_STEP_DEG)
+    radius = SNAP_STEP_NM
+    while radius <= max_nm:
+        lats, lons = move_nm(
+            np.full(bearings.shape, lat),
+            np.full(bearings.shape, lon),
+            bearings,
+            np.full(bearings.shape, radius),
+        )
+        water = ~land_mask.is_land(lats, lons)
+        if water.any():
+            i = int(np.flatnonzero(water)[0])
+            snapped = (float(lats[i]), float(lons[i]))
+            return snapped, {
+                "latitude": snapped[0],
+                "longitude": snapped[1],
+                "offset_nm": float(radius),
+            }
+        radius += SNAP_STEP_NM
+    return None, None
 
 
 def _validate_position(name: str, position: Any) -> tuple[float, float]:
@@ -63,20 +138,23 @@ def compute_route(
     horizon_h: float = 72.0,
     dt: float = 1800.0,
     heading_step: float = 5.0,
-    bin_deg: float = 0.05,
-    arrival_nm: float = 5.0,
+    bin_deg: float | None = None,
+    arrival_nm: float = 2.0,
     tws_max: float | None = None,
 ) -> dict[str, Any]:
     """Calcule la route la plus rapide de start vers finish.
 
     start, finish : (lat, lon) en degrés décimaux.
     wind : WindField du moteur (GRIBWindField, ConstantWind...).
-    bin_deg : maille d'élagage des isochrones ; elle doit être de l'ordre du
-    déplacement par pas (vitesse * dt / 3600 en degrés) sinon le front
-    s'effondre sur un point unique et le routage échoue (défaut 0.05°
-    ≈ 3 mn pour 30 min à 6 nds).
+    bin_deg : maille d'élagage des isochrones ; si None, elle est déduite du
+    déplacement par pas (vitesse max de la polaire * dt, divisé par 3, borné à
+    [0.01°, 0.05°]) — une maille plus grande que le pas fait osciller la route
+    entre cellules adjacentes (trace en zigzag) et dégrade l'ETA.
+    Si le masque de terre classe le départ ou l'arrivée "à terre", le point est
+    ramené à l'eau la plus proche (moins de SNAP_MAX_NM mn) avant le calcul.
     Retourne un dict : found, coords, times_s, sog_kts, headings_deg,
-    eta_s, min_dist_nm, geojson.
+    eta_s, min_dist_nm, geojson, start_adjusted, finish_adjusted
+    (ajustements vers l'eau : {latitude, longitude, offset_nm} ou None).
     Lève RoutingError avec un message clair en cas d'erreur.
     """
     if not ROUTING_AVAILABLE:
@@ -95,19 +173,61 @@ def compute_route(
         raise RoutingError("Le point de départ et le point d'arrivée sont identiques.")
 
     polar = load_polar(polar_path)
+
+    if bin_deg is None:
+        # Maille d'élagage sous le déplacement par pas : sinon le front tient
+        # un seul point par cellule et la route trace des zigzags entre cellules.
+        step_deg = float(polar.speeds.max()) * dt / 3600.0 / 60.0
+        bin_deg = min(0.05, max(0.01, step_deg / 3.0))
+
+    # Masque de terre partagé avec le moteur : si le départ (ou l'arrivée) est
+    # classé "terre" — GPS côtier dans la tolérance du masque — on le ramène au
+    # point d'eau le plus proche, sinon le front d'isochrones s'effondre dès le
+    # premier pas et le routage échoue avec un faux "horizon dépassé".
+    land_mask = _load_land_mask()
+    route_start, start_adjusted = start_position, None
+    route_finish, finish_adjusted = finish_position, None
+    if land_mask is not None:
+        route_start, start_adjusted = _nearest_water(land_mask, start_position)
+        route_finish, finish_adjusted = _nearest_water(land_mask, finish_position)
+        if route_start is None or route_finish is None:
+            from mynav_routing.engine.isochrones import haversine_nm
+
+            name = "de départ" if route_start is None else "d'arrivée"
+            return {
+                "found": False,
+                "coords": [start_position],
+                "times_s": [0.0],
+                "sog_kts": [0.0],
+                "headings_deg": [0.0],
+                "eta_s": 0.0,
+                "min_dist_nm": float(
+                    haversine_nm([start_position[0]], [start_position[1]], finish_position[0], finish_position[1])[0]
+                ),
+                "geojson": None,
+                "start_adjusted": start_adjusted,
+                "finish_adjusted": finish_adjusted,
+                "message": (
+                    f"Aucune route trouvée : le point {name} est à terre "
+                    f"(aucun point d'eau à moins de {SNAP_MAX_NM:.0f} mn selon le masque de côtes). "
+                    "Choisissez un point en mer."
+                ),
+            }
+
+    route_kwargs: dict[str, Any] = {
+        "polar": polar,
+        "wind": wind,
+        "horizon_h": horizon_h,
+        "dt": dt,
+        "heading_step": heading_step,
+        "bin_deg": bin_deg,
+        "arrival_nm": arrival_nm,
+        "tws_max": tws_max,
+    }
+    if land_mask is not None:
+        route_kwargs["land"] = land_mask
     try:
-        result = route(
-            start_position,
-            finish_position,
-            polar=polar,
-            wind=wind,
-            horizon_h=horizon_h,
-            dt=dt,
-            heading_step=heading_step,
-            bin_deg=bin_deg,
-            arrival_nm=arrival_nm,
-            tws_max=tws_max,
-        )
+        result = route(route_start, route_finish, **route_kwargs)
     except ValueError as error:
         raise RoutingError(f"Le calcul de routage a échoué : {error}") from error
 
@@ -123,6 +243,8 @@ def compute_route(
             "eta_s": 0.0,
             "min_dist_nm": result.min_dist_nm,
             "geojson": None,
+            "start_adjusted": start_adjusted,
+            "finish_adjusted": finish_adjusted,
             "message": (
                 "Aucune route trouvée : horizon dépassé "
                 f"(meilleure progression à {result.min_dist_nm:.1f} mn de l'arrivée). "
@@ -140,6 +262,8 @@ def compute_route(
         "min_dist_nm": result.min_dist_nm,
         "geojson": to_geojson(result),
         "message": None,
+        "start_adjusted": start_adjusted,
+        "finish_adjusted": finish_adjusted,
     }
 
 
@@ -150,7 +274,9 @@ def compute_route_payload(payload: Any) -> dict[str, Any]:
     (voir list_polars), wind = {directionFromDeg, speedKts} (optionnel :
     vent constant de test 270°/12 nds par défaut).
     Retourne un dict JSON-ready : found, coords, etaS, minDistNm, message,
-    geojson, wind, polarId.
+    geojson, wind, polarId, startAdjusted, finishAdjusted (rapprochement à
+    l'eau si le point demandé était classé "à terre" : {latitude, longitude,
+    offsetNm} ou null).
     Lève RoutingError (message utilisateur) si les entrées sont invalides.
     """
     if not isinstance(payload, dict):
@@ -203,6 +329,15 @@ def compute_route_payload(payload: Any) -> dict[str, Any]:
     start = position_tuple(payload.get("start"))
     finish = position_tuple(payload.get("finish"))
 
+    def adjustment_json(adjustment: Any) -> Any:
+        if adjustment is None:
+            return None
+        return {
+            "latitude": adjustment["latitude"],
+            "longitude": adjustment["longitude"],
+            "offsetNm": adjustment["offset_nm"],
+        }
+
     result = compute_route(start, finish, wind=wind_field, polar_path=polar["path"])
 
     start_position = _validate_position("de départ", start)
@@ -219,6 +354,8 @@ def compute_route_payload(payload: Any) -> dict[str, Any]:
         "polarId": polar_id,
         "start": {"latitude": start_position[0], "longitude": start_position[1]},
         "finish": {"latitude": finish_position[0], "longitude": finish_position[1]},
+        "startAdjusted": adjustment_json(result["start_adjusted"]),
+        "finishAdjusted": adjustment_json(result["finish_adjusted"]),
     }
 
 

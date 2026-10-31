@@ -1,5 +1,5 @@
 import React from 'react';
-import { render, screen, waitFor } from '@testing-library/react';
+import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 import RoutingPanel, { RoutingPickTarget } from './RoutingPanel';
@@ -9,14 +9,8 @@ import { GribApi } from '../hooks/useGrib';
 import { Position, GribStatus, RoutingRouteResult } from '../types';
 
 const POSITION: Position = { latitude: 47.5, longitude: -4.5 };
-
-const stubPolarsFetch = () => {
-  vi.stubGlobal('fetch', vi.fn().mockResolvedValue({
-    json: () => Promise.resolve({
-      polars: [{ id: 'polaire-sugar', name: 'Sugar (Bavaria 36)' }]
-    })
-  }));
-};
+const POLAR_ID = 'polaire-sugar';
+const POLAR_NAME = 'Sugar (Bavaria 36)';
 
 const ROUTE_FOUND: RoutingRouteResult = {
   found: true,
@@ -34,7 +28,7 @@ const ROUTE_FOUND: RoutingRouteResult = {
   },
   windSource: 'constant',
   wind: { directionFromDeg: 270, speedKts: 12 },
-  polarId: 'polaire-sugar',
+  polarId: POLAR_ID,
   start: { latitude: 47.5, longitude: -4.5 },
   finish: { latitude: 47.6, longitude: -4.6 }
 };
@@ -63,9 +57,9 @@ const GRIB_FRESH: GribStatus = {
   steps: 25
 };
 
-const stubGrib = (status: GribStatus | null): GribApi => ({
+const stubGrib = (status: GribStatus | null, isDownloading = false): GribApi => ({
   status,
-  isDownloading: false,
+  isDownloading,
   error: null,
   download: vi.fn(),
   refresh: vi.fn()
@@ -79,7 +73,6 @@ interface HarnessProps {
   routeCalc?: RoutingRouteApi;
   onComputeRoute?: () => void;
   gribCalc?: GribApi;
-  onDownloadGrib?: () => void;
 }
 
 const Harness: React.FC<HarnessProps> = ({
@@ -89,20 +82,19 @@ const Harness: React.FC<HarnessProps> = ({
   onClose,
   routeCalc,
   onComputeRoute,
-  gribCalc,
-  onDownloadGrib
+  gribCalc
 }) => {
-  const routing = useRoutingInput(currentPosition);
+  const routing = useRoutingInput(currentPosition, POLAR_ID);
   return (
     <RoutingPanel
       routing={routing}
+      polarName={POLAR_NAME}
       pickTarget={pickTarget}
       onRequestPick={onRequestPick}
       onClose={onClose}
       routeCalc={routeCalc}
       onComputeRoute={onComputeRoute}
       gribCalc={gribCalc}
-      onDownloadGrib={onDownloadGrib}
     />
   );
 };
@@ -117,38 +109,40 @@ const renderPanel = (overrides: Partial<HarnessProps> = {}) => render(
   />
 );
 
+const enterDestination = async (user: ReturnType<typeof userEvent.setup>) => {
+  await user.click(screen.getByRole('button', { name: 'Edit destination coordinates' }));
+  await user.type(screen.getByLabelText('Destination latitude'), '47.6');
+  await user.type(screen.getByLabelText('Destination longitude'), '-4.6');
+};
+
 describe('RoutingPanel', () => {
-  it('affiche le titre et les sections Départ / Arrivée / Polaire', async () => {
-    stubPolarsFetch();
+  it('affiche le titre et les lignes From / To avec pastilles de coordonnées', () => {
     renderPanel();
 
     expect(screen.getByText('ROUTING')).toBeVisible();
-    expect(screen.getByRole('heading', { name: 'Departure' })).toBeInTheDocument();
-    expect(screen.getByRole('heading', { name: 'Destination' })).toBeInTheDocument();
-    expect(screen.getByRole('heading', { name: 'Polar' })).toBeInTheDocument();
-    await waitFor(() => {
-      expect(screen.getByRole('combobox')).toHaveValue('polaire-sugar');
-    });
-    expect(screen.getByRole('combobox')).toHaveDisplayValue('Sugar (Bavaria 36)');
+    expect(screen.getByText('From')).toBeInTheDocument();
+    expect(screen.getByText('To')).toBeInTheDocument();
+    expect(screen.getByText('GPS · 47.50000, -4.50000')).toBeInTheDocument();
+    expect(screen.getByText('Not set')).toBeInTheDocument();
   });
 
-  it('le bouton de sélection du départ est désactivé tant que la position courante est utilisée', async () => {
-    stubPolarsFetch();
+  it('les boutons pick/edit du départ sont désactivés tant que la position courante est utilisée', async () => {
     renderPanel();
     const user = userEvent.setup();
 
     expect(screen.getByRole('button', { name: 'Pick departure on chart' })).toBeDisabled();
-    await user.click(screen.getByRole('checkbox'));
+    expect(screen.getByRole('button', { name: 'Edit departure coordinates' })).toBeDisabled();
+    await user.click(screen.getByRole('checkbox', { name: 'Use current position' }));
     expect(screen.getByRole('button', { name: 'Pick departure on chart' })).toBeEnabled();
+    expect(screen.getByRole('button', { name: 'Edit departure coordinates' })).toBeEnabled();
   });
 
   it('les boutons de sélection demandent la bonne cible', async () => {
-    stubPolarsFetch();
     const onRequestPick = vi.fn();
     renderPanel({ onRequestPick });
     const user = userEvent.setup();
 
-    await user.click(screen.getByRole('checkbox'));
+    await user.click(screen.getByRole('checkbox', { name: 'Use current position' }));
     await user.click(screen.getByRole('button', { name: 'Pick departure on chart' }));
     expect(onRequestPick).toHaveBeenCalledWith('start');
 
@@ -157,7 +151,6 @@ describe('RoutingPanel', () => {
   });
 
   it('la cible active met son bouton en état sélection', () => {
-    stubPolarsFetch();
     renderPanel({ pickTarget: 'finish' });
 
     const destinationButton = screen.getByRole('button', { name: 'Click on the chart…' });
@@ -165,32 +158,26 @@ describe('RoutingPanel', () => {
     expect(screen.queryByRole('button', { name: 'Pick destination on chart' })).not.toBeInTheDocument();
   });
 
-  it('affiche les erreurs de validation en direct', async () => {
-    stubPolarsFetch();
-    renderPanel({ currentPosition: null });
-
-    await waitFor(() => {
-      expect(screen.getByText(/En attente/i)).toBeInTheDocument();
-    });
-    expect(screen.queryByText(/Plan ready/i)).not.toBeInTheDocument();
-  });
-
-  it('saisie d’une arrivée valide : plan prêt avec distance et polaire', async () => {
-    stubPolarsFetch();
+  it('édition manuelle de l’arrivée : plan prêt avec distance et polaire', async () => {
     renderPanel();
     const user = userEvent.setup();
 
-    await waitFor(() => expect(screen.getByRole('combobox')).toHaveValue('polaire-sugar'));
-    await user.type(screen.getByLabelText('Destination latitude'), '47.6');
-    await user.type(screen.getByLabelText('Destination longitude'), '-4.6');
+    await enterDestination(user);
 
     const status = await screen.findByText(/Plan ready/i);
     expect(status).toHaveTextContent(/NM/);
     expect(status).toHaveTextContent(/Sugar \(Bavaria 36\)/);
+    expect(screen.getByText('47.60000, -4.60000')).toBeInTheDocument();
+  });
+
+  it('affiche les erreurs de validation en direct', () => {
+    renderPanel({ currentPosition: null });
+
+    expect(screen.getByText(/En attente/i)).toBeInTheDocument();
+    expect(screen.queryByText(/Plan ready/i)).not.toBeInTheDocument();
   });
 
   it('le bouton de fermeture appelle onClose', async () => {
-    stubPolarsFetch();
     const onClose = vi.fn();
     renderPanel({ onClose });
     const user = userEvent.setup();
@@ -199,16 +186,7 @@ describe('RoutingPanel', () => {
     expect(onClose).toHaveBeenCalledTimes(1);
   });
 
-  it('section Route masquée sans routeCalc fourni', () => {
-    stubPolarsFetch();
-    renderPanel();
-
-    expect(screen.queryByRole('heading', { name: 'Route' })).not.toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: 'Compute route' })).not.toBeInTheDocument();
-  });
-
   it('Compute route désactivé sans plan, activé et cliqué avec une arrivée valide', async () => {
-    stubPolarsFetch();
     const onComputeRoute = vi.fn();
     renderPanel({ routeCalc: stubRouteCalc(), onComputeRoute });
     const user = userEvent.setup();
@@ -217,71 +195,64 @@ describe('RoutingPanel', () => {
     await user.click(screen.getByRole('button', { name: 'Compute route' }));
     expect(onComputeRoute).not.toHaveBeenCalled();
 
-    await user.type(screen.getByLabelText('Destination latitude'), '47.6');
-    await user.type(screen.getByLabelText('Destination longitude'), '-4.6');
+    await enterDestination(user);
     await user.click(screen.getByRole('button', { name: 'Compute route' }));
     expect(onComputeRoute).toHaveBeenCalledTimes(1);
   });
 
-  it('route trouvée : ETA et vent affichés, Clear appelle clear', async () => {
-    stubPolarsFetch();
+  it('route trouvée : ETA et distance en grand, vent affiché, Clear appelle clear', async () => {
     const routeCalc = stubRouteCalc(ROUTE_FOUND);
     renderPanel({ routeCalc, onComputeRoute: vi.fn() });
     const user = userEvent.setup();
 
-    expect(screen.getByText(/Route · ETA 3\.5 h/)).toBeInTheDocument();
-    expect(screen.getByText(/constant 12 kt/i)).toBeInTheDocument();
+    expect(screen.getByText('3.5 h')).toBeInTheDocument();
+    expect(screen.getByText('ETA')).toBeInTheDocument();
+    expect(screen.getByText(/7\.\d NM/)).toBeInTheDocument();
+    expect(screen.getByText(/constant 12 kt from 270°/i)).toBeInTheDocument();
 
     await user.click(screen.getByRole('button', { name: 'Clear route' }));
     expect(routeCalc.clear).toHaveBeenCalledTimes(1);
   });
 
   it('route non trouvée : message de meilleure progression affiché', () => {
-    stubPolarsFetch();
     const partialRoute = { ...ROUTE_FOUND, found: false, geojson: null, etaS: 0, message: 'Aucune route trouvée : horizon dépassé (meilleure progression à 14.4 mn de l\'arrivée).' };
     renderPanel({ routeCalc: stubRouteCalc(partialRoute), onComputeRoute: vi.fn() });
 
     expect(screen.getByText(/Aucune route trouvée/i)).toBeInTheDocument();
     expect(screen.getByText(/14\.4 mn/i)).toBeInTheDocument();
-    expect(screen.queryByText(/Route · ETA/i)).not.toBeInTheDocument();
+    expect(screen.queryByText('ETA')).not.toBeInTheDocument();
   });
 
-  it('erreur de calcul affichée avec bouton actif', () => {
-    stubPolarsFetch();
+  it('erreur de calcul affichée', () => {
     renderPanel({ routeCalc: stubRouteCalc(null, 'Polaire inconnue : inconnue.'), onComputeRoute: vi.fn() });
 
     expect(screen.getByText(/Polaire inconnue/i)).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Clear route' })).not.toBeInTheDocument();
   });
 
-  it('section Wind masquée sans gribCalc fourni', () => {
-    stubPolarsFetch();
+  it('section Wind masquée sans gribCalc, et sans bouton de téléchargement manuel', () => {
     renderPanel();
 
-    expect(screen.queryByRole('heading', { name: 'Wind' })).not.toBeInTheDocument();
+    expect(screen.queryByText(/GRIB/i)).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: /Download GRIB/i })).not.toBeInTheDocument();
   });
 
-  it('GRIB frais : statut valide jusqu’au, bouton téléchargement actif avec plan', async () => {
-    stubPolarsFetch();
-    const onDownloadGrib = vi.fn();
-    renderPanel({ gribCalc: stubGrib(GRIB_FRESH), onDownloadGrib });
-    const user = userEvent.setup();
+  it('GRIB frais : statut valide affiché', () => {
+    renderPanel({ gribCalc: stubGrib(GRIB_FRESH) });
 
     expect(screen.getByText(/GRIB fresh · valid until/i)).toBeInTheDocument();
-    const downloadButton = screen.getByRole('button', { name: /Download GRIB/i });
-    expect(downloadButton).toBeDisabled();
-
-    await user.type(screen.getByLabelText('Destination latitude'), '47.6');
-    await user.type(screen.getByLabelText('Destination longitude'), '-4.6');
-    await user.click(downloadButton);
-    expect(onDownloadGrib).toHaveBeenCalledTimes(1);
+    expect(screen.queryByRole('button', { name: /Download GRIB/i })).not.toBeInTheDocument();
   });
 
-  it('GRIB absent : repli vent constant affiché', () => {
-    stubPolarsFetch();
-    renderPanel({ gribCalc: stubGrib(null), onDownloadGrib: vi.fn() });
+  it('GRIB absent : avertissement de repli vent constant', () => {
+    renderPanel({ gribCalc: stubGrib(null) });
 
     expect(screen.getByText(/No GRIB on board — constant wind fallback/i)).toBeInTheDocument();
+  });
+
+  it('téléchargement GRIB en cours : statut affiché', () => {
+    renderPanel({ gribCalc: stubGrib(null, true) });
+
+    expect(screen.getByText(/Downloading GRIB/i)).toBeInTheDocument();
   });
 });

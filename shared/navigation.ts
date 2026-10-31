@@ -217,6 +217,13 @@ export interface GribStatus {
   steps: number | null;
 }
 
+/** Rapprochement d'un point demandé vers l'eau la plus proche (point classé « à terre »). */
+export interface RoutingRouteAdjustment {
+  latitude: number;
+  longitude: number;
+  offsetNm: number;
+}
+
 /** Réponse de POST /api/routing/compute (issue #17). */
 export interface RoutingRouteResult {
   found: boolean;
@@ -230,4 +237,6 @@ export interface RoutingRouteResult {
   polarId: string;
   start: Position;
   finish: Position;
+  startAdjusted?: RoutingRouteAdjustment | null;
+  finishAdjusted?: RoutingRouteAdjustment | null;
 }

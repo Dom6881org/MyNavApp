@@ -15,17 +15,68 @@ import json
 import math
 import os
 import time
+import urllib.error
 import urllib.parse
 import urllib.request
 from datetime import datetime, timedelta, timezone
 from typing import Any, Callable
 
-try:
-    import eccodes
+def _register_eccodes_library() -> bool:
+    """Localise la bibliothèque native ecCodes et l'ajoute au chemin de chargement.
 
-    ECCODES_AVAILABLE = True
-except Exception:  # pragma: no cover - environnement sans librairie native
-    ECCODES_AVAILABLE = False
+    Sans conda sur Windows : le paquet ecCodes de conda-forge extrait dans
+    ~/eccodes-win (ou tout dossier pointé par MYNAV_ECCODES_BIN, ou
+    <repo>/eccodes-win) fournit Library/bin/eccodes.dll et ses dépendances.
+    Retourne True si un dossier contenant la bibliothèque a été enregistré.
+    """
+    import glob
+
+    lib_name = "eccodes.dll" if os.name == "nt" else "libeccodes.so"
+    candidates: list[str] = []
+    env_bin = os.environ.get("MYNAV_ECCODES_BIN")
+    if env_bin:
+        candidates.append(env_bin)
+    repo_root = os.path.abspath(os.path.join(os.path.dirname(__file__), os.pardir))
+    candidates.append(os.path.join(repo_root, "eccodes-win", "root", "Library", "bin"))
+    candidates.extend(glob.glob(os.path.join(os.path.expanduser("~"), "eccodes-win*", "root", "Library", "bin")))
+    for directory in candidates:
+        if os.path.isfile(os.path.join(directory, lib_name)):
+            if os.name == "nt":
+                try:
+                    os.add_dll_directory(directory)
+                except (AttributeError, OSError):
+                    pass
+            os.environ["PATH"] = directory + os.pathsep + os.environ.get("PATH", "")
+            return True
+    return False
+
+
+def _import_eccodes() -> bool:
+    """Importe eccodes (global du module) en enregistrant d'abord la bibliothèque
+    native si l'import direct échoue (Windows sans conda, DLL hors du PATH)."""
+    try:
+        import eccodes as eccodes_module
+
+        globals()["eccodes"] = eccodes_module
+        return True
+    except Exception:
+        pass
+    if not _register_eccodes_library():
+        return False
+    import sys
+
+    for module in [m for m in sys.modules if m.split(".")[0] in ("eccodes", "gribapi")]:
+        del sys.modules[module]
+    try:
+        import eccodes as eccodes_module
+
+        globals()["eccodes"] = eccodes_module
+        return True
+    except Exception:
+        return False
+
+
+ECCODES_AVAILABLE = _import_eccodes()
 
 GRIB_CACHE_DIR = os.path.join(os.path.dirname(__file__), os.pardir, "cache", "grib")
 GRIB_FILE = "latest.grib2"
@@ -70,9 +121,13 @@ def _fetch_open_meteo(lats: list[float], lons: list[float], horizon_h: float,
     Retourne (times, u_ms, v_ms) : u_ms[t][j][i] composante est du vent (m/s).
     opener injectable pour les tests.
     """
+    # Open-Météo apparie latitude et longitude élément par élément (pas de
+    # produit cartésien) et refuse la requête (HTTP 400) si les deux listes
+    # n'ont pas la même longueur : on aplatit donc la grille, point p = j*n_lon+i.
+    n_lon = len(lons)
     params = urllib.parse.urlencode({
-        "latitude": ",".join(str(lat) for lat in lats),
-        "longitude": ",".join(str(lon) for lon in lons),
+        "latitude": ",".join(str(lat) for lat in lats for _ in range(n_lon)),
+        "longitude": ",".join(str(lon) for _ in lats for lon in lons),
         "hourly": "wind_speed_10m,wind_direction_10m",
         "wind_speed_unit": "ms",
         "timezone": "UTC",
@@ -83,6 +138,19 @@ def _fetch_open_meteo(lats: list[float], lons: list[float], horizon_h: float,
         open_url = opener or (lambda target: urllib.request.urlopen(target, timeout=HTTP_TIMEOUT_S))
         with open_url(url) as response:
             payload = json.loads(response.read().decode("utf-8"))
+    except urllib.error.HTTPError as error:
+        # Le corps de l'erreur Open-Météo contient la raison exacte (ex. listes
+        # latitude/longitude de longueurs différentes) : on la relaie telle quelle.
+        detail = ""
+        try:
+            body = error.read().decode("utf-8", "replace")
+            reason = json.loads(body).get("reason")
+            detail = str(reason) if reason else body[:200]
+        except (OSError, ValueError, AttributeError):
+            detail = str(error)
+        raise GribError(
+            f"Téléchargement Open-Météo refusé (HTTP {error.code}) : {detail}"
+        ) from error
     except (OSError, ValueError) as error:
         raise GribError(
             "Téléchargement Open-Météo impossible : vérifiez la connexion internet. " f"({error})"
@@ -207,6 +275,7 @@ def download_grib(south: float, north: float, west: float, east: float,
     os.makedirs(GRIB_CACHE_DIR, exist_ok=True)
     grib_path = os.path.join(GRIB_CACHE_DIR, GRIB_FILE)
     write_grib(grib_path, lats, lons, selected, u_ms, v_ms)
+    _purge_stale_index(grib_path)
 
     meta = {
         "createdAt": time.time(),
@@ -224,6 +293,18 @@ def download_grib(south: float, north: float, west: float, east: float,
     with open(os.path.join(GRIB_CACHE_DIR, GRIB_META), "w", encoding="utf-8") as meta_file:
         json.dump(meta, meta_file, indent=2)
     return meta
+
+
+def _purge_stale_index(grib_path: str) -> None:
+    """Supprime les index cfgrib (*.idx) du GRIB : s'ils sont plus anciens que le
+    fichier réécrit, ecCodes affiche « Ignoring index file ... older than GRIB file »."""
+    import glob
+
+    for index_path in glob.glob(grib_path + ".*.idx"):
+        try:
+            os.unlink(index_path)
+        except OSError:
+            pass
 
 
 def status() -> dict[str, Any]:

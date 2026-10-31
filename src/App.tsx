@@ -1,5 +1,5 @@
 import React from 'react';
-import { useAISSettings, useNavigationData, useDashboardLayout, useTrackRecorder, useRoutingInput, useRoutingRoute, useGrib } from './hooks';
+import { useAISSettings, useNavigationData, useDashboardLayout, useTrackRecorder, useRoutingInput, useRoutingPolar, useRoutingRoute, useGrib } from './hooks';
 import { InstrumentPanel } from './components';
 import { Position } from './types';
 import MapView from './components/MapView';
@@ -28,8 +28,10 @@ const App: React.FC = () => {
   const aisSettings = useAISSettings(backendStatus.isConnected, aisState);
   const trackRecorder = useTrackRecorder();
 
-  // Routage (issue #15) : saisie départ/arrivée + polaire, panneau outil de la carte.
-  const routing = useRoutingInput(navigationData.position);
+  // Routage (issue #15) : saisie départ/arrivée, panneau outil de la carte.
+  // La polaire du bateau est un paramètre global de l'app (réglages carte).
+  const routingPolar = useRoutingPolar();
+  const routing = useRoutingInput(navigationData.position, routingPolar.polarId);
   const { setStartFromPosition, setFinishFromPosition } = routing;
   const [routingPickTarget, setRoutingPickTarget] = React.useState<'start' | 'finish' | null>(null);
   const handleRoutingPickRequest = React.useCallback((target: 'start' | 'finish') => {
@@ -55,18 +57,32 @@ const App: React.FC = () => {
     void computeRoute(routing.plan, wind);
   }, [routing.plan, navigationData.wind, computeRoute]);
 
-  // GRIB à terre (issue #16) : téléchargement de la zone départ/arrivée + horizon.
+  // GRIB (issue #16) : téléchargé automatiquement par l'app dès qu'un plan est
+  // prêt et que le cache n'est pas frais (zone départ/arrivée + 72 h). À bord,
+  // sans réseau, le téléchargement échoue et le panneau affiche l'avertissement
+  // de repli sur vent constant.
   const grib = useGrib();
-  const { download: downloadGrib } = grib;
-  const handleDownloadGrib = React.useCallback(() => {
-    if (!routing.plan) return;
+  const lastGribRequestRef = React.useRef<string | null>(null);
+  React.useEffect(() => {
+    if (!routing.plan || grib.isDownloading) return;
+    if (grib.status?.fresh) {
+      lastGribRequestRef.current = null;
+      return;
+    }
     const margin = 1.0;
-    const south = Math.max(-90, Math.min(routing.plan.startPosition?.latitude ?? 0, routing.plan.finishPosition?.latitude ?? 0) - margin);
-    const north = Math.min(90, Math.max(routing.plan.startPosition?.latitude ?? 0, routing.plan.finishPosition?.latitude ?? 0) + margin);
-    const west = Math.max(-180, Math.min(routing.plan.startPosition?.longitude ?? 0, routing.plan.finishPosition?.longitude ?? 0) - margin);
-    const east = Math.min(180, Math.max(routing.plan.startPosition?.longitude ?? 0, routing.plan.finishPosition?.longitude ?? 0) + margin);
-    void downloadGrib({ south, north, west, east }, 72);
-  }, [routing.plan, downloadGrib]);
+    const start = routing.plan.startPosition ?? { latitude: 0, longitude: 0 };
+    const finish = routing.plan.finishPosition ?? { latitude: 0, longitude: 0 };
+    const bounds = {
+      south: Math.max(-90, Math.min(start.latitude, finish.latitude) - margin),
+      north: Math.min(90, Math.max(start.latitude, finish.latitude) + margin),
+      west: Math.max(-180, Math.min(start.longitude, finish.longitude) - margin),
+      east: Math.min(180, Math.max(start.longitude, finish.longitude) + margin)
+    };
+    const key = JSON.stringify({ ...bounds, horizonH: 72 });
+    if (lastGribRequestRef.current === key) return;
+    lastGribRequestRef.current = key;
+    void grib.download(bounds, 72);
+  }, [routing.plan, grib]);
 
   // Apply the selected theme to the document.
   React.useEffect(() => {
@@ -136,7 +152,7 @@ const App: React.FC = () => {
               routingRoute={routingRoute}
               onRoutingCompute={handleComputeRoute}
               gribApi={grib}
-              onDownloadGrib={handleDownloadGrib}
+              routingPolar={routingPolar}
             />
           </div>
 
