@@ -1,0 +1,12 @@
+# Moteur de routage meteo (issue #14, milestone Routing v1).
+# Depôt privé : pip a besoin d'un acces authentifie a GitHub.
+# En local :  pip install -r requirements.txt -r requirements-routing.txt
+mynav-routing @ git+https://github.com/Dom6881org/mynav-routing.git@v0.3.3
+# GRIB (issues #16, #42) : lecture/ecriture via ecCodes.
+# Depuis ecCodes 2.43, la roue pip embarque la librairie native :
+# - Linux/macOS : via la dependance 'eccodeslib' (wheels binaires)
+# - Windows : incluse directement dans la roue 'eccodes'
+# pip suffit : ni conda, ni installation systeme.
+eccodes>=2.43
+xarray>=2024.1
+cfgrib>=0.9.14
