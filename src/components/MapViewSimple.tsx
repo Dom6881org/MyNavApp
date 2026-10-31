@@ -408,7 +408,10 @@ const MapViewSimple: React.FC<MapViewSimpleProps> = ({
     const map = mapInstance.map;
     let debounceId: number | undefined;
     const buildLattice = (bounds: { getSouth(): number; getNorth(): number; getWest(): number; getEast(): number }, zoom: number): Position[] => {
-      const step = 202.5 / 2 ** zoom;
+      // Constant screen density across zoom levels: this step keeps roughly 85 px
+      // between barbs at the equator (~62 px at Mediterranean latitudes), so
+      // unzoomed views show a readable number of wind readouts (fixes #21).
+      const step = 120 / 2 ** zoom;
       const south = Math.max(bounds.getSouth(), -85);
       const north = Math.min(bounds.getNorth(), 85);
       const points: Position[] = [];
