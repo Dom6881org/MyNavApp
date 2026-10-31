@@ -21,62 +21,14 @@ import urllib.request
 from datetime import datetime, timedelta, timezone
 from typing import Any, Callable
 
-def _register_eccodes_library() -> bool:
-    """Localise la bibliothèque native ecCodes et l'ajoute au chemin de chargement.
+try:
+    import eccodes as _eccodes_module
 
-    Sans conda sur Windows : le paquet ecCodes de conda-forge extrait dans
-    ~/eccodes-win (ou tout dossier pointé par MYNAV_ECCODES_BIN, ou
-    <repo>/eccodes-win) fournit Library/bin/eccodes.dll et ses dépendances.
-    Retourne True si un dossier contenant la bibliothèque a été enregistré.
-    """
-    import glob
-
-    lib_name = "eccodes.dll" if os.name == "nt" else "libeccodes.so"
-    candidates: list[str] = []
-    env_bin = os.environ.get("MYNAV_ECCODES_BIN")
-    if env_bin:
-        candidates.append(env_bin)
-    repo_root = os.path.abspath(os.path.join(os.path.dirname(__file__), os.pardir))
-    candidates.append(os.path.join(repo_root, "eccodes-win", "root", "Library", "bin"))
-    candidates.extend(glob.glob(os.path.join(os.path.expanduser("~"), "eccodes-win*", "root", "Library", "bin")))
-    for directory in candidates:
-        if os.path.isfile(os.path.join(directory, lib_name)):
-            if os.name == "nt":
-                try:
-                    os.add_dll_directory(directory)
-                except (AttributeError, OSError):
-                    pass
-            os.environ["PATH"] = directory + os.pathsep + os.environ.get("PATH", "")
-            return True
-    return False
-
-
-def _import_eccodes() -> bool:
-    """Importe eccodes (global du module) en enregistrant d'abord la bibliothèque
-    native si l'import direct échoue (Windows sans conda, DLL hors du PATH)."""
-    try:
-        import eccodes as eccodes_module
-
-        globals()["eccodes"] = eccodes_module
-        return True
-    except Exception:
-        pass
-    if not _register_eccodes_library():
-        return False
-    import sys
-
-    for module in [m for m in sys.modules if m.split(".")[0] in ("eccodes", "gribapi")]:
-        del sys.modules[module]
-    try:
-        import eccodes as eccodes_module
-
-        globals()["eccodes"] = eccodes_module
-        return True
-    except Exception:
-        return False
-
-
-ECCODES_AVAILABLE = _import_eccodes()
+    eccodes = _eccodes_module
+    ECCODES_AVAILABLE = True
+except Exception:  # ecCodes absent : mode degrade (ConstantWind), pas d'erreur bloquante
+    eccodes = None
+    ECCODES_AVAILABLE = False
 
 GRIB_CACHE_DIR = os.path.join(os.path.dirname(__file__), os.pardir, "cache", "grib")
 GRIB_FILE = "latest.grib2"
