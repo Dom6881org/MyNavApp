@@ -1,5 +1,7 @@
 # Moteur de routage meteo (issue #14, milestone Routing v1).
 # Depôt privé : pip a besoin d'un acces authentifie a GitHub.
 # En local :  pip install -r requirements.txt -r requirements-routing.txt
-# Le tag v0.1.0 sera utilise une fois publie ; en attendant on epingle le commit.
-mynav-routing @ git+https://github.com/Dom6881org/mynav-routing.git@9e85fe79058b108cee41aacd577d1fab013d89af
+# Le tag sera utilise une fois publie ; en attendant on epingle le commit.
+# f600e64 : v0.3 - masque terre Natural Earth (cache disque, repli hors ligne)
+# + masque de profondeur GEBCO -> la route evite la terre sans changer l'API.
+mynav-routing @ git+https://github.com/Dom6881org/mynav-routing.git@f600e6497e91d9bc93edbf3d5b9bf0f5c4a1d51b
