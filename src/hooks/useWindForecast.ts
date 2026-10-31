@@ -8,12 +8,14 @@ const emptyStatus: WindForecastStatus = {
   gridError: null
 };
 
-const CACHE_TTL_MS = 20 * 60 * 1000;
+// Open-Meteo refreshes its forecast roughly hourly; a 60 min cache avoids
+// redundant requests while keeping data fresh enough for display and routing (#36).
+const CACHE_TTL_MS = 60 * 60 * 1000;
 const MAX_CACHE_ENTRIES = 2000;
 const CHUNK_SIZE = 50;
 const CHUNK_INTERVAL_MS = 300;
 const ERROR_RETRY_MS = 30 * 1000;
-const FORECAST_REFRESH_INTERVAL_MS = 15 * 60 * 1000;
+const FORECAST_REFRESH_INTERVAL_MS = 30 * 60 * 1000;
 const RATE_LIMIT_BACKOFF_MS = 5 * 60 * 1000;
 const MAX_RATE_LIMIT_BACKOFF_MS = 60 * 60 * 1000;
 
