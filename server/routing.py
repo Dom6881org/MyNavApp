@@ -141,6 +141,8 @@ def compute_route(
     bin_deg: float | None = None,
     arrival_nm: float = 2.0,
     tws_max: float | None = None,
+    use_bathy: bool = True,
+    min_depth_m: float | None = None,
 ) -> dict[str, Any]:
     """Calcule la route la plus rapide de start vers finish.
 
@@ -242,6 +244,7 @@ def compute_route(
             "headings_deg": result.headings_deg,
             "eta_s": 0.0,
             "min_dist_nm": result.min_dist_nm,
+            "bathy_active": bathy is not None,
             "geojson": None,
             "start_adjusted": start_adjusted,
             "finish_adjusted": finish_adjusted,
@@ -260,6 +263,7 @@ def compute_route(
         "headings_deg": result.headings_deg,
         "eta_s": result.eta_s,
         "min_dist_nm": result.min_dist_nm,
+        "bathy_active": bathy is not None,
         "geojson": to_geojson(result),
         "message": None,
         "start_adjusted": start_adjusted,
@@ -347,6 +351,7 @@ def compute_route_payload(payload: Any) -> dict[str, Any]:
         "coords": result["coords"],
         "etaS": result["eta_s"],
         "minDistNm": result["min_dist_nm"],
+        "bathyActive": result["bathy_active"],
         "message": result["message"],
         "geojson": result["geojson"],
         "windSource": wind_source,

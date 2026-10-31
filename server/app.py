@@ -11,6 +11,8 @@ import time
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from urllib.parse import parse_qs, unquote, urlsplit
+from urllib.error import HTTPError, URLError
+from urllib.request import Request, urlopen
 from typing import Any
 
 from dotenv import load_dotenv
@@ -46,6 +48,8 @@ NMEA_HOST = os.environ.get("NMEA_UDP_HOST", "0.0.0.0")
 TILES_DIR = os.environ.get("TILES_DIR", str(PROJECT_ROOT / "tiles"))
 TRACKS_DIR = os.environ.get("TRACKS_DIR", str(PROJECT_ROOT / "tracks"))
 TILE_LAYERS = ("osm", "seamark")
+TILE_USER_AGENT = "MyNavApp/1.0 (map tile proxy)"
+MAX_TILE_BYTES = 1_048_576
 AISSTREAM_API_KEY = os.environ.get("AISSTREAM_API_KEY", "").strip()
 IS_PRODUCTION = os.environ.get("NODE_ENV") == "production"
 NMEA_FRESHNESS_MS = 5000
@@ -452,6 +456,26 @@ def _tile_path(segments: list[str]) -> Path | None:
     return tile
 
 
+def _fetch_remote_tile(layer: str, z: int, x: int, y: int) -> bytes:
+    if layer == "osm":
+        subdomain = ("a", "b", "c")[(x + y + z) % 3]
+        url = f"https://{subdomain}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+    elif layer == "seamark":
+        url = f"https://tiles.openseamap.org/seamark/{z}/{x}/{y}.png"
+    else:
+        raise ValueError("Invalid tile layer.")
+
+    request = Request(url, headers={"User-Agent": TILE_USER_AGENT})
+    with urlopen(request, timeout=10) as response:
+        content_type = response.headers.get("Content-Type", "").split(";", 1)[0].strip().lower()
+        if content_type != "image/png":
+            raise ValueError("Tile provider returned a non-PNG response.")
+        body = response.read(MAX_TILE_BYTES + 1)
+    if len(body) > MAX_TILE_BYTES or not body.startswith(b"\x89PNG\r\n\x1a\n"):
+        raise ValueError("Tile provider returned an invalid PNG.")
+    return body
+
+
 class NavigationHTTPServer(ThreadingHTTPServer):
     daemon_threads = True
     # On Windows allow_reuse_address lets two instances silently share the
@@ -489,11 +513,20 @@ class RequestHandler(BaseHTTPRequestHandler):
             self.wfile.write(body)
 
     def _send_tile(self, path: str) -> None:
-        tile = _tile_path(path[len("/api/tiles/"):].split("/"))
-        if tile is None or not tile.is_file():
+        segments = path[len("/api/tiles/"):].split("/")
+        tile = _tile_path(segments)
+        if tile is None:
             self._send_json(404, {"error": "Tile not found."})
             return
-        body = tile.read_bytes()
+        if tile.is_file():
+            body = tile.read_bytes()
+        else:
+            layer, z, x, y = segments[0], int(segments[1]), int(segments[2]), int(segments[3].removesuffix(".png"))
+            try:
+                body = _fetch_remote_tile(layer, z, x, y)
+            except (HTTPError, URLError, TimeoutError, OSError, ValueError):
+                self._send_json(502, {"error": "Tile provider unavailable."})
+                return
         self.send_response(200)
         self.send_header("Content-Type", "image/png")
         self.send_header("Cache-Control", "public, max-age=86400")

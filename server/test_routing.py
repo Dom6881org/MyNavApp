@@ -218,6 +218,86 @@ class TestComputeRoutePayload(unittest.TestCase):
         with self.assertRaises(RoutingError):
             compute_route_payload("pas un dict")
 
+    def test_payload_bathy_active_flag(self):
+        result = compute_route_payload(self.payload(useBathy=False))
+        self.assertTrue(result["found"])
+        self.assertFalse(result["bathyActive"])
+
+    def test_payload_min_depth_invalide(self):
+        with self.assertRaises(RoutingError):
+            compute_route_payload(self.payload(minDepthM=-5))
+        with self.assertRaises(RoutingError):
+            compute_route_payload(self.payload(minDepthM="profond"))
+        with self.assertRaises(RoutingError):
+            compute_route_payload(self.payload(useBathy="oui"))
+
+
+def _synthetic_bathy():
+    """Grille GEBCO synthétique : haut-fond (-2 m) en travers de la route directe
+    (lat >= 42.55, lon 3.15..3.32), départ/arrivée en eau profonde, passage au sud."""
+    import numpy as np
+    from mynav_routing import DepthMask
+
+    lats = np.linspace(42.40, 42.75, 36)
+    lons = np.linspace(2.95, 3.60, 66)
+    elev = np.full((lats.size, lons.size), -100.0, dtype=np.float32)
+    shallow = (
+        (lats >= 42.55)[:, None]
+        & (lons >= 3.15)[None, :]
+        & (lons <= 3.32)[None, :]
+    )
+    elev[shallow] = -2.0
+    return DepthMask.from_arrays(lats, lons, elev, default_min_depth_m=10.0)
+
+
+@unittest.skipUnless(ROUTING_AVAILABLE, "mynav-routing non installé")
+class TestBathy(unittest.TestCase):
+    """Contrainte de profondeur GEBCO (issue #13)."""
+
+    def setUp(self):
+        self.saved_load = routing.load_bathy
+        self.bathy = _synthetic_bathy()
+        routing.load_bathy = lambda: self.bathy
+
+    def tearDown(self):
+        routing.load_bathy = self.saved_load
+
+    def test_haut_fond_evite(self):
+        """La route contourne le haut-fond : aucun point intermédiaire à moins de 10 m."""
+        result = compute_route(
+            START, FINISH, wind=west_wind_12kt(), polar_path=POLAR_PATH
+        )
+        self.assertTrue(result["found"])
+        self.assertTrue(result["bathy_active"])
+        for latitude, longitude in result["coords"]:
+            if (latitude, longitude) == (42.62, 3.02):
+                continue
+            is_shallow = self.bathy.is_shallow(latitude, longitude)
+            self.assertFalse(bool(is_shallow), f"point en eau peu profonde : {latitude}, {longitude}")
+
+    def test_sans_bathy_passe_le_haut_fond(self):
+        """Désactivée, la contrainte de profondeur ne change pas le routage."""
+        routing.load_bathy = lambda: None
+        result = compute_route(
+            START, FINISH, wind=west_wind_12kt(), polar_path=POLAR_PATH, use_bathy=True
+        )
+        self.assertTrue(result["found"])
+        self.assertFalse(result["bathy_active"])
+
+    def test_use_bathy_false_desactive(self):
+        routing.load_bathy = lambda: self.bathy
+        result = compute_route(
+            START, FINISH, wind=west_wind_12kt(), polar_path=POLAR_PATH, use_bathy=False
+        )
+        self.assertTrue(result["found"])
+        self.assertFalse(result["bathy_active"])
+        # La route directe traverse le haut-fond : au moins un point peu profond.
+        shallow_points = [
+            bool(self.bathy.is_shallow(latitude, longitude))
+            for latitude, longitude in result["coords"]
+        ]
+        self.assertTrue(any(shallow_points))
+
 
 if __name__ == "__main__":
     unittest.main()
