@@ -1,5 +1,5 @@
 import React from 'react';
-import { DashboardLayout, UnitChangeHandler } from '../types';
+import { DashboardLayout, RoutingPolarSummary, UnitChangeHandler } from '../types';
 
 interface ControlPanelProps {
   layout: DashboardLayout;
@@ -16,6 +16,9 @@ interface ControlPanelProps {
   onUnitChange: UnitChangeHandler;
   mapBaseStyle?: MapBaseStyle;
   onMapBaseStyleChange?: (style: MapBaseStyle) => void;
+  routingPolars?: RoutingPolarSummary[];
+  routingPolarId?: string | null;
+  onRoutingPolarChange?: (id: string) => void;
 }
 
 export type MapBaseStyle = 'standard' | 'muted' | 'faded';
@@ -34,7 +37,10 @@ const ControlPanel: React.FC<ControlPanelProps> = ({
   onThemeChange,
   onUnitChange,
   mapBaseStyle,
-  onMapBaseStyleChange
+  onMapBaseStyleChange,
+  routingPolars,
+  routingPolarId,
+  onRoutingPolarChange
 }) => {
 
   return (
@@ -92,6 +98,23 @@ const ControlPanel: React.FC<ControlPanelProps> = ({
                 {MAP_BASE_STYLE_LABELS[style]}
               </button>
             ))}
+          </div>
+        </div>
+      )}
+
+      {routingPolars && routingPolars.length > 0 && onRoutingPolarChange && (
+        <div className="control-section">
+          <h3>Boat polar</h3>
+          <div className="unit-group">
+            <select
+              value={routingPolarId ?? ''}
+              aria-label="Boat polar"
+              onChange={event => onRoutingPolarChange(event.target.value)}
+            >
+              {routingPolars.map(polar => (
+                <option key={polar.id} value={polar.id}>{polar.name}</option>
+              ))}
+            </select>
           </div>
         </div>
       )}

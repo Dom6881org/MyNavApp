@@ -555,6 +555,286 @@
   outline-offset: 2px;
 }
 
+/* Routing panel (issue #15) : compact - une ligne par extremite (From/To) avec
+   pastille de coordonnees, choix en un clic sur la carte et edition manuelle
+   repliee ; bouton de calcul discret ; resultat (ETA, distance) en grand.
+   Ancre au coin haut droit de la carte, ne depasse jamais la carte. */
+.map-routing-panel {
+  z-index: 1100;
+  top: 0.75rem;
+  right: 4.25rem;
+  bottom: auto;
+  transform: none;
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+  width: min(17.5rem, calc(100vw - 7rem));
+  max-height: calc(100% - 1.5rem);
+  overflow-y: auto;
+}
+
+.map-routing-panel > * {
+  flex: 0 0 auto;
+}
+
+.map-routing-panel .control-section {
+  padding: 0.5rem 0.6rem;
+  border: 1px solid rgba(175, 210, 221, 0.24);
+  border-radius: 7px;
+  background: linear-gradient(145deg, rgba(27, 72, 84, 0.52), rgba(16, 37, 50, 0.8));
+}
+
+.routing-section {
+  display: grid;
+  gap: 0.4rem;
+}
+
+/* Une ligne par extremite : label + pastille + boutons icones. */
+.routing-endpoint {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.routing-section-label {
+  display: block;
+  color: #74e3e5;
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.routing-endpoint-label {
+  flex: 0 0 auto;
+  width: 2rem;
+  color: #9fb8c2;
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.routing-gps-toggle {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  cursor: pointer;
+  font-size: 0.72rem;
+  color: #9fb8c2;
+}
+
+.routing-gps-toggle input {
+  margin: 0;
+  accent-color: #39c978;
+}
+
+.routing-chip {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  padding: 0.22rem 0.4rem;
+  border: 1px solid rgba(175, 210, 221, 0.22);
+  border-radius: 5px;
+  background: rgba(8, 20, 30, 0.85);
+  color: #f4f8fb;
+  font-size: 0.72rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.routing-mini-button {
+  flex: 0 0 auto;
+  padding: 0.28rem 0.5rem;
+  border: 1px solid rgba(175, 210, 221, 0.38);
+  border-radius: 5px;
+  background: #102532;
+  color: #f4f8fb;
+  cursor: pointer;
+  font: inherit;
+  font-size: 0.72rem;
+  font-weight: 600;
+  line-height: 1.2;
+}
+
+.routing-mini-button:hover,
+.routing-mini-button.active {
+  border-color: #74e3e5;
+  background: rgba(116, 227, 229, 0.22);
+  color: #d9f7f7;
+}
+
+.routing-mini-button:disabled {
+  border-color: rgba(175, 210, 221, 0.18);
+  background: rgba(8, 20, 30, 0.45);
+  color: #7f98a3;
+  cursor: default;
+  opacity: 0.7;
+}
+
+.routing-mini-button:focus-visible {
+  outline: 2px solid #74e3e5;
+  outline-offset: 2px;
+}
+
+.routing-coord-row {
+  display: flex;
+  gap: 0.4rem;
+}
+
+.routing-input {
+  flex: 1;
+  min-width: 0;
+  padding: 0.3rem 0.45rem;
+  border: 1px solid rgba(175, 210, 221, 0.32);
+  border-radius: 5px;
+  background: rgba(8, 20, 30, 0.85);
+  color: #f4f8fb;
+  font: inherit;
+  font-size: 0.75rem;
+}
+
+.routing-input:focus-visible {
+  outline: 2px solid #74e3e5;
+  outline-offset: 1px;
+}
+
+/* Bouton de calcul discret, aligne a droite. */
+.routing-actions {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.routing-compute-button {
+  padding: 0.32rem 0.85rem;
+  border: 1px solid #74e3e5;
+  border-radius: 5px;
+  background: #1b4854;
+  color: #d9f7f7;
+  cursor: pointer;
+  font: inherit;
+  font-size: 0.78rem;
+  font-weight: 600;
+}
+
+.routing-compute-button:hover:not(:disabled) {
+  background: rgba(116, 227, 229, 0.25);
+}
+
+.routing-compute-button:disabled {
+  border-color: rgba(175, 210, 221, 0.18);
+  background: rgba(8, 20, 30, 0.45);
+  color: #7f98a3;
+  cursor: default;
+  opacity: 0.7;
+}
+
+.routing-compute-button:focus-visible {
+  outline: 2px solid #74e3e5;
+  outline-offset: 2px;
+}
+
+/* Resultat : ETA et distance en grand. */
+.routing-result {
+  padding: 0.5rem 0.6rem;
+  border: 1px solid rgba(175, 210, 221, 0.24);
+  border-radius: 7px;
+  background: linear-gradient(145deg, rgba(27, 72, 84, 0.52), rgba(16, 37, 50, 0.8));
+}
+
+.routing-result-found {
+  border-color: rgba(116, 227, 229, 0.55);
+}
+
+.routing-result-main {
+  display: flex;
+  align-items: baseline;
+  gap: 0.45rem;
+}
+
+.routing-result-eta {
+  color: #74e3e5;
+  font-size: 1.5rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  line-height: 1.1;
+}
+
+.routing-result-eta-label {
+  color: #9fb8c2;
+  font-size: 0.7rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.routing-result-dist {
+  margin-left: auto;
+  color: #f4f8fb;
+  font-size: 1.05rem;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+.routing-result-sub {
+  margin-top: 0.15rem;
+}
+
+/* Retrait du trace : action secondaire, plus discrete que le calcul. */
+.routing-clear-button {
+  width: 100%;
+  margin-top: 0.35rem;
+  padding: 0.22rem 0.5rem;
+  border: 1px solid transparent;
+  border-radius: 5px;
+  background: transparent;
+  color: #9fb8c2;
+  cursor: pointer;
+  font: inherit;
+  font-size: 0.72rem;
+  text-decoration: underline;
+}
+
+.routing-clear-button:hover {
+  color: #f4f8fb;
+}
+
+.routing-clear-button:focus-visible {
+  outline: 2px solid #74e3e5;
+  outline-offset: 2px;
+}
+
+.routing-wind p {
+  margin: 0;
+}
+
+.routing-status {
+  display: grid;
+  gap: 0.2rem;
+}
+
+.routing-error,
+.routing-ok,
+.routing-warn {
+  margin: 0;
+  font-size: 0.72rem;
+  line-height: 1.25;
+}
+
+.routing-error,
+.routing-warn {
+  color: #ffb56b;
+}
+
+.routing-ok {
+  color: #74e3e5;
+}
+
+.routing-calc-error {
+  padding: 0 0.2rem;
+}
+
 @media (max-width: 480px) {
   .map-settings-panel .control-panel {
     grid-template-columns: minmax(0, 1fr);
@@ -1969,6 +2249,11 @@ html {
     max-height: min(65vh, 12rem);
   }
 
+  /* Form panel: keep enough height for departure/destination/polar sections. */
+  .map-routing-panel {
+    max-height: calc(100% - 1.5rem);
+  }
+
   /* Both columns pinned to the top corners to leave room for the bottom readouts. */
   .map-tools,
   .map-tools--left,
@@ -3276,4 +3561,258 @@ html {
 .theme-night .map-tool-button:not(.layer-visible) {
   background: #040a05;
   color: #3f9f3f;
+}
+
+/* Light theme for map sub-menu panels and their cards (routing, settings, tracks, AIS, weather, GPS).
+   Base styles above are dark-only; these overrides make the sub menus readable in light mode. */
+.theme-light .map-tool-panel {
+  border-color: rgba(16, 32, 42, 0.16);
+  background: rgba(255, 255, 255, 0.96);
+  box-shadow: 0 3px 12px rgba(16, 32, 42, 0.18);
+  color: #1a2733;
+}
+
+.theme-light .map-tool-panel .control-section {
+  border-color: rgba(16, 32, 42, 0.14);
+  background: linear-gradient(145deg, #ffffff, #eef4f7);
+}
+
+.theme-light .map-tool-panel .control-section h3 {
+  color: #0b78a8;
+}
+
+.theme-light .map-settings-heading {
+  color: #0b78a8;
+}
+
+.theme-light .map-settings-heading button {
+  border-color: rgba(16, 32, 42, 0.2);
+  background: #eef4f7;
+  color: #1a2733;
+}
+
+.theme-light .map-settings-heading button:hover {
+  border-color: #0b78a8;
+  background: #d3ebf5;
+}
+
+.theme-light .map-settings-heading button:focus-visible {
+  outline-color: #0b78a8;
+}
+
+/* Routing sub-menu card controls */
+.theme-light .routing-input {
+  border-color: rgba(16, 32, 42, 0.24);
+  background: #ffffff;
+  color: #1a2733;
+}
+
+.theme-light .routing-input:focus-visible,
+.theme-light .routing-mini-button:focus-visible,
+.theme-light .routing-compute-button:focus-visible,
+.theme-light .routing-clear-button:focus-visible {
+  outline-color: #0b78a8;
+}
+
+.theme-light .routing-section-label {
+  color: #0b78a8;
+}
+
+.theme-light .routing-endpoint-label {
+  color: #5c7480;
+}
+
+.theme-light .routing-gps-toggle {
+  color: #5c7480;
+}
+
+.theme-light .routing-chip {
+  border-color: rgba(16, 32, 42, 0.24);
+  background: #ffffff;
+  color: #1a2733;
+}
+
+.theme-light .routing-mini-button {
+  border-color: rgba(16, 32, 42, 0.28);
+  background: #eef4f7;
+  color: #1a2733;
+}
+
+.theme-light .routing-mini-button:hover,
+.theme-light .routing-mini-button.active {
+  border-color: #0b78a8;
+  background: #d3ebf5;
+  color: #0b5f86;
+}
+
+.theme-light .routing-mini-button:disabled {
+  border-color: rgba(16, 32, 42, 0.14);
+  background: #f4f7f9;
+  color: #8aa0ab;
+}
+
+.theme-light .routing-compute-button {
+  border-color: #0b78a8;
+  background: #0b78a8;
+  color: #ffffff;
+}
+
+.theme-light .routing-compute-button:hover:not(:disabled) {
+  background: #0b5f86;
+}
+
+.theme-light .routing-compute-button:disabled {
+  border-color: rgba(16, 32, 42, 0.14);
+  background: #f4f7f9;
+  color: #8aa0ab;
+}
+
+.theme-light .routing-result {
+  border-color: rgba(16, 32, 42, 0.14);
+  background: linear-gradient(145deg, #ffffff, #eef4f7);
+}
+
+.theme-light .routing-result-found {
+  border-color: rgba(11, 120, 168, 0.5);
+}
+
+.theme-light .routing-result-eta {
+  color: #0b78a8;
+}
+
+.theme-light .routing-result-eta-label {
+  color: #5c7480;
+}
+
+.theme-light .routing-result-dist {
+  color: #1a2733;
+}
+
+.theme-light .routing-clear-button {
+  color: #5c7480;
+}
+
+.theme-light .routing-clear-button:hover {
+  color: #1a2733;
+}
+
+.theme-light .routing-error,
+.theme-light .routing-warn {
+  color: #b35c00;
+}
+
+.theme-light .routing-ok {
+  color: #0b78a8;
+}
+
+/* Settings sub-menu controls inside the cards */
+.theme-light .map-settings-panel .control-gps-status {
+  background: rgba(16, 32, 42, 0.06);
+  color: #415f6a;
+}
+
+.theme-light .map-settings-panel .control-gps-status.connected {
+  color: #1b7a43;
+}
+
+.theme-light .map-settings-panel .control-gps-status.disconnected {
+  color: #b35c00;
+}
+
+.theme-light .map-settings-panel .theme-button {
+  border-color: rgba(16, 32, 42, 0.2);
+  background: #ffffff;
+  color: #1a2733;
+}
+
+.theme-light .map-settings-panel .theme-button.active {
+  border-color: #0b78a8;
+  background: rgba(11, 120, 168, 0.12);
+  color: #0b5f86;
+}
+
+.theme-light .map-settings-panel .unit-group,
+.theme-light .map-settings-panel .instrument-visibility-option {
+  color: #1a2733;
+}
+
+.theme-light .map-settings-panel .unit-group select {
+  border-color: rgba(16, 32, 42, 0.24);
+  background: #ffffff;
+  color: #1a2733;
+}
+
+.theme-light .map-settings-panel .unit-group select:focus-visible {
+  outline-color: #0b78a8;
+}
+
+/* Texts inside the sub-menu panels */
+.theme-light .track-map-status,
+.theme-light .track-map-item-info span,
+.theme-light .ais-map-source,
+.theme-light .ais-map-status,
+.theme-light .ais-map-coverage,
+.theme-light .ais-map-target-count {
+  color: #415f6a;
+}
+
+.theme-light .ais-map-target-count strong {
+  color: #b35c00;
+}
+
+.theme-light .wind-map-readout strong,
+.theme-light .gps-map-readout strong {
+  color: #0b78a8;
+}
+
+.theme-light .wind-map-updated {
+  color: rgba(26, 39, 51, 0.62);
+}
+
+/* Track list cards */
+.theme-light .track-map-item {
+  border-color: rgba(16, 32, 42, 0.16);
+  background: #f2f7f9;
+}
+
+.theme-light .track-map-list-heading button {
+  border-color: rgba(16, 32, 42, 0.2);
+  background: #eef4f7;
+  color: #1a2733;
+}
+
+.theme-light .track-map-item-actions a,
+.theme-light .track-map-item-actions button {
+  border-color: rgba(11, 120, 168, 0.5);
+  background: rgba(11, 120, 168, 0.1);
+  color: #0b5f86;
+}
+
+.theme-light .track-map-item-actions button {
+  border-color: rgba(160, 32, 32, 0.45);
+  background: rgba(160, 32, 32, 0.08);
+  color: #a02020;
+}
+
+/* AIS sub-menu controls */
+.theme-light .ais-map-source select {
+  border-color: rgba(16, 32, 42, 0.24);
+  background: #ffffff;
+  color: #1a2733;
+}
+
+.theme-light .ais-map-source select:focus-visible,
+.theme-light .ais-map-visibility input:focus-visible,
+.theme-light .ais-map-zoom:focus-visible {
+  outline-color: #0b78a8;
+}
+
+.theme-light .ais-map-visibility {
+  color: #1a2733;
+}
+
+.theme-light .ais-map-zoom {
+  border-color: rgba(179, 92, 0, 0.5);
+  background: rgba(179, 92, 0, 0.1);
+  color: #b35c00;
 }

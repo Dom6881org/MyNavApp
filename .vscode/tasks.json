@@ -1,0 +1,37 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "dev (backend + frontend)",
+      "type": "npm",
+      "script": "dev",
+      "problemMatcher": [],
+      "isDefault": true,
+      "group": { "kind": "build", "isDefault": true }
+    },
+    {
+      "label": "setup : installer les dépendances",
+      "type": "shell",
+      "command": "npm ci && python -m pip install -r requirements.txt -r requirements-routing.txt",
+      "problemMatcher": []
+    },
+    {
+      "label": "lint (eslint + ruff)",
+      "type": "shell",
+      "command": "npm run lint && ruff check server config 2>/dev/null || true",
+      "problemMatcher": []
+    },
+    {
+      "label": "tests serveur",
+      "type": "npm",
+      "script": "test:server",
+      "problemMatcher": []
+    },
+    {
+      "label": "build",
+      "type": "npm",
+      "script": "build",
+      "problemMatcher": ["$tsc"]
+    }
+  ]
+}

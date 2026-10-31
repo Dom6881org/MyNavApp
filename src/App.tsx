@@ -1,6 +1,7 @@
 import React from 'react';
-import { useAISSettings, useNavigationData, useDashboardLayout, useTrackRecorder } from './hooks';
+import { useAISSettings, useNavigationData, useDashboardLayout, useTrackRecorder, useRoutingInput, useRoutingPolar, useRoutingRoute, useGrib } from './hooks';
 import { InstrumentPanel } from './components';
+import { Position } from './types';
 import MapView from './components/MapView';
 import './App.css';
 
@@ -26,6 +27,62 @@ const App: React.FC = () => {
 
   const aisSettings = useAISSettings(backendStatus.isConnected, aisState);
   const trackRecorder = useTrackRecorder();
+
+  // Routage (issue #15) : saisie départ/arrivée, panneau outil de la carte.
+  // La polaire du bateau est un paramètre global de l'app (réglages carte).
+  const routingPolar = useRoutingPolar();
+  const routing = useRoutingInput(navigationData.position, routingPolar.polarId);
+  const { setStartFromPosition, setFinishFromPosition } = routing;
+  const [routingPickTarget, setRoutingPickTarget] = React.useState<'start' | 'finish' | null>(null);
+  const handleRoutingPickRequest = React.useCallback((target: 'start' | 'finish') => {
+    setRoutingPickTarget(target);
+  }, []);
+  const handleRoutingMapPick = React.useCallback((position: Position) => {
+    if (routingPickTarget === 'start') {
+      setStartFromPosition(position);
+    } else {
+      setFinishFromPosition(position);
+    }
+    setRoutingPickTarget(null);
+  }, [routingPickTarget, setStartFromPosition, setFinishFromPosition]);
+
+  // Calcul de la route (issue #17) : plan courant + vent instruments -> moteur.
+  const routingRoute = useRoutingRoute();
+  const { compute: computeRoute } = routingRoute;
+  const handleComputeRoute = React.useCallback(() => {
+    if (!routing.plan) return;
+    const wind = navigationData.wind
+      ? { directionFromDeg: navigationData.wind.direction, speedKts: navigationData.wind.speed }
+      : null;
+    void computeRoute(routing.plan, wind);
+  }, [routing.plan, navigationData.wind, computeRoute]);
+
+  // GRIB (issue #16) : téléchargé automatiquement par l'app dès qu'un plan est
+  // prêt et que le cache n'est pas frais (zone départ/arrivée + 72 h). À bord,
+  // sans réseau, le téléchargement échoue et le panneau affiche l'avertissement
+  // de repli sur vent constant.
+  const grib = useGrib();
+  const lastGribRequestRef = React.useRef<string | null>(null);
+  React.useEffect(() => {
+    if (!routing.plan || grib.isDownloading) return;
+    if (grib.status?.fresh) {
+      lastGribRequestRef.current = null;
+      return;
+    }
+    const margin = 1.0;
+    const start = routing.plan.startPosition ?? { latitude: 0, longitude: 0 };
+    const finish = routing.plan.finishPosition ?? { latitude: 0, longitude: 0 };
+    const bounds = {
+      south: Math.max(-90, Math.min(start.latitude, finish.latitude) - margin),
+      north: Math.min(90, Math.max(start.latitude, finish.latitude) + margin),
+      west: Math.max(-180, Math.min(start.longitude, finish.longitude) - margin),
+      east: Math.min(180, Math.max(start.longitude, finish.longitude) + margin)
+    };
+    const key = JSON.stringify({ ...bounds, horizonH: 72 });
+    if (lastGribRequestRef.current === key) return;
+    lastGribRequestRef.current = key;
+    void grib.download(bounds, 72);
+  }, [routing.plan, grib]);
 
   // Apply the selected theme to the document.
   React.useEffect(() => {
@@ -88,6 +145,14 @@ const App: React.FC = () => {
               backendStatus={backendStatus}
               trackRecorder={trackRecorder}
               size={{ width: '100%', height: '100%' }}
+              onRoutingMapPick={handleRoutingMapPick}
+              routingPickTarget={routingPickTarget}
+              routing={routing}
+              onRoutingPickRequest={handleRoutingPickRequest}
+              routingRoute={routingRoute}
+              onRoutingCompute={handleComputeRoute}
+              gribApi={grib}
+              routingPolar={routingPolar}
             />
           </div>
 

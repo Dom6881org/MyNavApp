@@ -15,7 +15,8 @@ export interface WindData {
   direction: number;
   speed: number;
   gust: number;
-  source: 'Open-Meteo';
+  /** Origine du vent : Open-Météo (point/forecast) ou GRIB local (option B, #36). */
+  source: 'Open-Meteo' | 'GRIB';
 }
 
 export interface ApparentWindData {
@@ -161,3 +162,82 @@ export type UnitChangeHandler = <K extends keyof DashboardLayout['units']>(
   unitType: K,
   value: DashboardLayout['units'][K]
 ) => void;
+
+export interface RoutingPolarSummary {
+  id: string;
+  name: string;
+}
+
+export interface RoutingPlan {
+  useCurrentPosition: boolean;
+  startPosition: Position | null;
+  finishPosition: Position | null;
+  polarId: string | null;
+}
+
+/** Vent constant transmis au moteur de routage (issue #17). */
+export interface RoutingWindInput {
+  directionFromDeg: number;
+  speedKts: number;
+}
+
+/** GeoJSON produit par to_geojson() : LineString [lon, lat] du départ à l'arrivée. */
+export interface RoutingRouteGeoJson {
+  type: 'FeatureCollection';
+  features: Array<{
+    type: 'Feature';
+    geometry: {
+      type: 'LineString';
+      coordinates: [number, number][];
+    };
+    properties: Record<string, unknown>;
+  }>;
+}
+
+/** Réponse de POST /api/grib/download et GET /api/grib/status (issue #16). */
+export interface GribBounds {
+  south: number;
+  north: number;
+  west: number;
+  east: number;
+}
+
+export interface GribStatus {
+  available: boolean;
+  fresh: boolean;
+  reason: string | null;
+  createdAt: number | null;
+  validUntil: number | null;
+  south: number | null;
+  north: number | null;
+  west: number | null;
+  east: number | null;
+  resolutionDeg: number | null;
+  stepH: number | null;
+  points: number | null;
+  steps: number | null;
+}
+
+/** Rapprochement d'un point demandé vers l'eau la plus proche (point classé « à terre »). */
+export interface RoutingRouteAdjustment {
+  latitude: number;
+  longitude: number;
+  offsetNm: number;
+}
+
+/** Réponse de POST /api/routing/compute (issue #17). */
+export interface RoutingRouteResult {
+  found: boolean;
+  coords: [number, number][];
+  etaS: number;
+  minDistNm: number;
+  message: string | null;
+  geojson: RoutingRouteGeoJson | null;
+  windSource: 'grib' | 'constant';
+  wind: RoutingWindInput;
+  polarId: string;
+  start: Position;
+  finish: Position;
+  startAdjusted?: RoutingRouteAdjustment | null;
+  finishAdjusted?: RoutingRouteAdjustment | null;
+}

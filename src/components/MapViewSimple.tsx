@@ -4,8 +4,13 @@ import 'leaflet/dist/leaflet.css';
 import '@tomickigrzegorz/leaflet-rotate';
 import { AISBackendState, AISSource, AISTarget, DashboardLayout, NavigationData, Position, TrackRecorderStatus, TrackSummary, UnitChangeHandler, WindData } from '../types';
 import ControlPanel, { MapBaseStyle } from './ControlPanel';
+import RoutingPanel, { RoutingPickTarget } from './RoutingPanel';
 import MapPositionReadout from './MapPositionReadout';
 import AppLogo from './AppLogo';
+import { RoutingInput } from '../hooks/useRoutingInput';
+import { RoutingPolarApi } from '../hooks/useRoutingPolar';
+import { RoutingRouteApi } from '../hooks/useRoutingRoute';
+import { GribApi } from '../hooks/useGrib';
 
 // Extend Window interface for Leaflet
 declare global {
@@ -24,6 +29,14 @@ const POPUP_OPTIONS = { className: 'nav-popup', closeButton: false, minWidth: 17
 interface MapViewSimpleProps {
   data: NavigationData;
   onWindGridRequest?: (visible: Position[], prefetch?: Position[]) => void;
+  onRoutingMapPick?: (position: Position) => void;
+  routingPickTarget?: RoutingPickTarget | null;
+  routing?: RoutingInput;
+  onRoutingPickRequest?: (target: RoutingPickTarget) => void;
+  routingRoute?: RoutingRouteApi;
+  onRoutingCompute?: () => void;
+  gribApi?: GribApi;
+  routingPolar?: RoutingPolarApi;
   aisTargets?: AISTarget[];
   aisState?: AISBackendState | null;
   showAIS?: boolean;
@@ -64,7 +77,7 @@ const ORIENTATION_LABELS: Record<MapOrientation, string> = {
 const ORIENTATION_BADGES: Record<MapOrientation, string> = { north: 'N', heading: 'H', course: 'C' };
 const nextOrientation = (current: MapOrientation): MapOrientation =>
   ORIENTATION_ORDER[(ORIENTATION_ORDER.indexOf(current) + 1) % ORIENTATION_ORDER.length];
-type MapToolPanel = 'ais' | 'weather' | 'gps' | 'track' | 'settings' | 'about' | null;
+type MapToolPanel = 'ais' | 'weather' | 'gps' | 'track' | 'routing' | 'settings' | 'about' | null;
 const NAVIGATION_SOURCE_LABELS: Record<NonNullable<MapViewSimpleProps['navigationSource']>, string> = {
   nmea: 'NMEA (backend)',
   browser: 'Browser GPS',
@@ -83,6 +96,14 @@ type GPSStatus = {
 const MapViewSimple: React.FC<MapViewSimpleProps> = ({
   data,
   onWindGridRequest,
+  onRoutingMapPick,
+  routingPickTarget = null,
+  routing,
+  onRoutingPickRequest,
+  routingRoute,
+  onRoutingCompute,
+  gribApi,
+  routingPolar,
   aisTargets = [],
   aisState = null,
   showAIS = false,
@@ -263,6 +284,67 @@ const MapViewSimple: React.FC<MapViewSimpleProps> = ({
       mapInstance.map.off('dragstart', stopFollowing);
     };
   }, [mapInstance]);
+
+  // Routage (issue #15) : transmet les clics carte au panneau de saisie quand un
+  // point (depart ou arrivee) est en cours de selection. Le panneau se rouvre
+  // automatiquement une fois le point choisi.
+  useEffect(() => {
+    if (!mapInstance || !routingPickTarget || !onRoutingMapPick) return;
+    // leaflet-rotate exposes latlng as a plain object {lat, lng}, while stock
+    // Leaflet provides LatLng instances with lat()/lng() methods: support both.
+    const handleRoutingPick = (event: { latlng: { lat: number | (() => number); lng: number | (() => number) } }) => {
+      const toNumber = (value: number | (() => number)): number =>
+        typeof value === 'function' ? value() : value;
+      onRoutingMapPick({ latitude: toNumber(event.latlng.lat), longitude: toNumber(event.latlng.lng) });
+      setActiveMapTool('routing');
+    };
+    mapInstance.map.on('click', handleRoutingPick);
+    const container = mapInstance.map.getContainer() as HTMLElement;
+    container.style.cursor = 'crosshair';
+    return () => {
+      mapInstance.map.off('click', handleRoutingPick);
+      container.style.cursor = '';
+    };
+  }, [mapInstance, routingPickTarget, onRoutingMapPick]);
+
+  // Route calculée (issue #17) : LineString GeoJSON (ou meilleure progression
+  // si found=false) + marqueurs départ/arrivée, sur une couche dédiée.
+  useEffect(() => {
+    if (!mapInstance || !leafletLoaded || leafletError || !window.L) return;
+    const L = window.L;
+    const map = mapInstance.map;
+    if (!mapInstance.routingLayer) mapInstance.routingLayer = L.layerGroup().addTo(map);
+    mapInstance.routingLayer.clearLayers();
+    const result = routingRoute?.route;
+    if (!result) return;
+    // GeoJSON : LineString [lon, lat] ; found=false : coords moteur [lat, lon].
+    const latlngs: Array<[number, number]> = result.found && result.geojson
+      ? result.geojson.features[0]?.geometry.coordinates.map(([lon, lat]) => [lat, lon]) ?? []
+      : result.coords;
+    if (latlngs.length < 2) return;
+    L.polyline(latlngs, {
+      color: '#a78bfa',
+      weight: 3,
+      opacity: 0.95,
+      lineCap: 'round',
+      lineJoin: 'round',
+      dashArray: result.found ? undefined : '5 6'
+    }).addTo(mapInstance.routingLayer);
+    L.circleMarker(latlngs[0], {
+      radius: 5,
+      color: '#a78bfa',
+      weight: 2,
+      fillColor: '#102532',
+      fillOpacity: 1
+    }).bindTooltip('Departure', { className: TOOLTIP_CLASS, direction: 'top' }).addTo(mapInstance.routingLayer);
+    L.circleMarker(latlngs[latlngs.length - 1], {
+      radius: 5,
+      color: '#a78bfa',
+      weight: 2,
+      fillColor: '#a78bfa',
+      fillOpacity: 1
+    }).bindTooltip('Destination', { className: TOOLTIP_CLASS, direction: 'top' }).addTo(mapInstance.routingLayer);
+  }, [mapInstance, leafletLoaded, leafletError, routingRoute?.route]);
 
   useEffect(() => {
     if (!mapInstance || !followVessel || !data.position) return;
@@ -660,6 +742,9 @@ const MapViewSimple: React.FC<MapViewSimpleProps> = ({
                       onUnitChange={onUnitChange}
                       mapBaseStyle={mapBaseStyle}
                       onMapBaseStyleChange={changeMapBaseStyle}
+                      routingPolars={routingPolar?.polars}
+                      routingPolarId={routingPolar?.polarId ?? null}
+                      onRoutingPolarChange={routingPolar?.setPolarId}
                     />
                   </section>
                 )}
@@ -819,6 +904,24 @@ const MapViewSimple: React.FC<MapViewSimpleProps> = ({
                 </section>
               )}
             </div>
+            {routing && (
+              <div className="map-tool-item">
+                <button
+                  className={`map-tool-button ${activeMapTool === 'routing' ? 'layer-visible' : ''}`}
+                  type="button"
+                  aria-label="Routing"
+                  title="Routing"
+                  aria-expanded={activeMapTool === 'routing'}
+                  aria-controls="map-routing-panel"
+                  onClick={() => setActiveMapTool(activeMapTool === 'routing' ? null : 'routing')}
+                >
+                  <svg viewBox="0 0 24 24" aria-hidden="true">
+                    <circle cx="12" cy="12" r="9" />
+                    <path d="M15.5 8.5 13.2 13.2 8.5 15.5 10.8 10.8Z" />
+                  </svg>
+                </button>
+              </div>
+            )}
             {trackRecorder && (
               <div className="map-tool-item">
                 <button
@@ -909,6 +1012,22 @@ const MapViewSimple: React.FC<MapViewSimpleProps> = ({
             )}
           </div>
         </div>
+        {activeMapTool === 'routing' && routing && (
+          <RoutingPanel
+            routing={routing}
+            pickTarget={routingPickTarget}
+            onRequestPick={target => {
+              // Le panneau reste ouvert pendant la sélection : le bouton actif
+              // passe en "Click chart…" et le curseur de la carte en croix.
+              onRoutingPickRequest?.(target);
+            }}
+            onClose={() => setActiveMapTool(null)}
+            routeCalc={routingRoute}
+            onComputeRoute={onRoutingCompute}
+            gribCalc={gribApi}
+            polarName={routingPolar?.polarName}
+          />
+        )}
         {!leafletError && !leafletLoaded && (
           <div style={{
             position: 'absolute',

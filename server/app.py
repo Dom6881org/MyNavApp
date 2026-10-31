@@ -19,6 +19,8 @@ from dotenv import load_dotenv
 
 from server.ais import LocalAISDecoder, parse_internet_message
 from server.nmea import parse_nmea_sentence
+from server.routing import RoutingError, compute_route_payload, list_polars
+from server.grib import GribError, download_grib, sample_points, status as grib_status
 from server.tracks import (
     TrackNotFoundError,
     TrackRecorder,
@@ -549,6 +551,10 @@ class RequestHandler(BaseHTTPRequestHandler):
             self._send_events()
         elif path.startswith("/api/tiles/"):
             self._send_tile(path)
+        elif path == "/api/routing/polars":
+            self._send_json(200, {"polars": list_polars()})
+        elif path == "/api/grib/status":
+            self._send_json(200, grib_status())
         elif path == "/api/tracks":
             self._send_json(200, {
                 "recorder": track_recorder.status(),
@@ -590,7 +596,14 @@ class RequestHandler(BaseHTTPRequestHandler):
                 "stopped": stopped if path == "/api/tracks/stop" else None,
             })
             return
-        if path not in ("/api/navigation/browser", "/api/ais/settings", "/api/ais/replay-position"):
+        if path not in (
+            "/api/routing/compute",
+            "/api/grib/download",
+            "/api/grib/sample",
+            "/api/navigation/browser",
+            "/api/ais/settings",
+            "/api/ais/replay-position",
+        ):
             self._send_json(404, {"error": "API route not found."} if path.startswith("/api/") else {"error": "Not found."})
             return
         try:
@@ -607,6 +620,60 @@ class RequestHandler(BaseHTTPRequestHandler):
             value = json.loads(self.rfile.read(length))
         except (json.JSONDecodeError, UnicodeDecodeError):
             self._send_json(400, {"error": "Malformed JSON request body."})
+            return
+        if path == "/api/routing/compute":
+            try:
+                result = compute_route_payload(value)
+            except RoutingError as error:
+                self._send_json(422, {"error": str(error)})
+                return
+            self._send_json(200, result)
+            return
+        if path == "/api/grib/sample":
+            points = value.get("points") if isinstance(value, dict) else None
+            if (
+                not isinstance(points, list)
+                or not points
+                or len(points) > 400
+                or not all(_is_position(point) for point in points)
+            ):
+                self._send_json(422, {"error": "Points GRIB invalides : liste de positions attendue."})
+                return
+            try:
+                wind = sample_points(points)
+            except GribError as error:
+                self._send_json(503, {"error": str(error)})
+                return
+            if wind is None:
+                self._send_json(200, {"fresh": False, "wind": []})
+                return
+            self._send_json(200, {"fresh": True, "wind": wind})
+            return
+        if path == "/api/grib/download":
+            if not isinstance(value, dict):
+                self._send_json(422, {"error": "Requête GRIB invalide : objet JSON attendu."})
+                return
+            try:
+                bounds = (
+                    float(value["south"]),
+                    float(value["north"]),
+                    float(value["west"]),
+                    float(value["east"]),
+                )
+            except (KeyError, TypeError, ValueError):
+                self._send_json(422, {"error": "Zone GRIB invalide : south, north, west, east attendus."})
+                return
+            try:
+                horizon = float(value.get("horizonH", 72.0))
+            except (TypeError, ValueError):
+                self._send_json(422, {"error": "Horizon GRIB invalide : nombre d'heures attendu."})
+                return
+            try:
+                meta = download_grib(*bounds, horizon_h=horizon)
+            except GribError as error:
+                self._send_json(503, {"error": str(error)})
+                return
+            self._send_json(200, meta)
             return
         if path == "/api/ais/replay-position":
             if not _valid_ais_replay_position_update(value):

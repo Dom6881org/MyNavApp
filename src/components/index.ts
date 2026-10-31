@@ -6,3 +6,4 @@ export { default as InstrumentPanel } from './InstrumentPanel';
 export { default as ControlPanel } from './ControlPanel';
 export { default as MapView } from './MapViewSimple';
 export { default as SettingsPage } from './SettingsPage';
+export { default as RoutingPanel } from './RoutingPanel';
