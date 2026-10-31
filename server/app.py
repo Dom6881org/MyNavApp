@@ -18,7 +18,7 @@ from dotenv import load_dotenv
 from server.ais import LocalAISDecoder, parse_internet_message
 from server.nmea import parse_nmea_sentence
 from server.routing import RoutingError, compute_route_payload, list_polars
-from server.grib import GribError, download_grib, status as grib_status
+from server.grib import GribError, download_grib, sample_points, status as grib_status
 from server.tracks import (
     TrackNotFoundError,
     TrackRecorder,
@@ -566,6 +566,7 @@ class RequestHandler(BaseHTTPRequestHandler):
         if path not in (
             "/api/routing/compute",
             "/api/grib/download",
+            "/api/grib/sample",
             "/api/navigation/browser",
             "/api/ais/settings",
             "/api/ais/replay-position",
@@ -594,6 +595,26 @@ class RequestHandler(BaseHTTPRequestHandler):
                 self._send_json(422, {"error": str(error)})
                 return
             self._send_json(200, result)
+            return
+        if path == "/api/grib/sample":
+            points = value.get("points") if isinstance(value, dict) else None
+            if (
+                not isinstance(points, list)
+                or not points
+                or len(points) > 400
+                or not all(_is_position(point) for point in points)
+            ):
+                self._send_json(422, {"error": "Points GRIB invalides : liste de positions attendue."})
+                return
+            try:
+                wind = sample_points(points)
+            except GribError as error:
+                self._send_json(503, {"error": str(error)})
+                return
+            if wind is None:
+                self._send_json(200, {"fresh": False, "wind": []})
+                return
+            self._send_json(200, {"fresh": True, "wind": wind})
             return
         if path == "/api/grib/download":
             if not isinstance(value, dict):
