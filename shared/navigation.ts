@@ -15,7 +15,8 @@ export interface WindData {
   direction: number;
   speed: number;
   gust: number;
-  source: 'Open-Meteo';
+  /** Origine du vent : Open-Météo (point/forecast) ou GRIB local (option B, #36). */
+  source: 'Open-Meteo' | 'GRIB';
 }
 
 export interface ApparentWindData {

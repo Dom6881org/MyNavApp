@@ -22,6 +22,38 @@ except ImportError:
 
 DEFAULT_POLAR_PATH = os.path.join(os.path.dirname(__file__), os.pardir, "config", "polaire-sugar.pol")
 
+# Bathymétrie GEBCO (issue #13) : profondeur minimale acceptée (m) et toggle.
+# Fichier local prioritaire via MYNAV_ROUTING_BATHY_FILE, sinon
+# MYNAV_ROUTING_BATHY_URL (téléchargé une fois, mis en cache disque).
+BATHY_MIN_DEPTH_M = float(os.environ.get("ROUTING_MIN_DEPTH_M", "10"))
+
+_bathy_cache: dict[str, Any] = {}
+
+
+def load_bathy() -> Any | None:
+    """Charge la bathymétrie GEBCO une seule fois par processus.
+
+    Retourne None (contrainte de profondeur désactivée) si aucune bathymétrie
+    n'est disponible : le routage reste utilisable, la terre restant gérée par
+    le LandMask du moteur. Message d'aide affiché une fois en console.
+    """
+    if not ROUTING_AVAILABLE:
+        return None
+    if "mask" in _bathy_cache:
+        return _bathy_cache["mask"]
+    try:
+        from mynav_routing import DepthMask
+
+        _bathy_cache["mask"] = DepthMask.from_open_data()
+    except Exception as error:  # BathyDataError, fichier illisible, hors ligne...
+        print(
+            "Bathymétrie indisponible (" + str(error) + ") ; "
+            "routage sans contrainte de profondeur. Pour l'activer : extrait régional "
+            "GEBCO (https://download.gebco.net/) + MYNAV_ROUTING_BATHY_FILE dans .env."
+        )
+        _bathy_cache["mask"] = None
+    return _bathy_cache["mask"]
+
 # Rapprochement d'un point à terre vers l'eau la plus proche (masque Natural Earth) :
 # un départ GPS côtier peut être classé "terre" par le masque 10 m alors que le
 # bateau flotte à quelques centaines de mètres du rivage.
@@ -154,6 +186,9 @@ def compute_route(
     entre cellules adjacentes (trace en zigzag) et dégrade l'ETA.
     Si le masque de terre classe le départ ou l'arrivée "à terre", le point est
     ramené à l'eau la plus proche (moins de SNAP_MAX_NM mn) avant le calcul.
+    use_bathy : activer la contrainte de profondeur (GEBCO) si disponible ;
+    min_depth_m : profondeur minimale acceptée (m), défaut ROUTING_MIN_DEPTH_M
+    ou 10 m. Aucune bathymétrie configurée = contrainte désactivée.
     Retourne un dict : found, coords, times_s, sog_kts, headings_deg,
     eta_s, min_dist_nm, geojson, start_adjusted, finish_adjusted
     (ajustements vers l'eau : {latitude, longitude, offset_nm} ou None).
@@ -182,6 +217,10 @@ def compute_route(
         step_deg = float(polar.speeds.max()) * dt / 3600.0 / 60.0
         bin_deg = min(0.05, max(0.01, step_deg / 3.0))
 
+    bathy = load_bathy() if use_bathy else None
+    if bathy is not None and min_depth_m is None:
+        min_depth_m = BATHY_MIN_DEPTH_M
+
     # Masque de terre partagé avec le moteur : si le départ (ou l'arrivée) est
     # classé "terre" — GPS côtier dans la tolérance du masque — on le ramène au
     # point d'eau le plus proche, sinon le front d'isochrones s'effondre dès le
@@ -206,6 +245,7 @@ def compute_route(
                 "min_dist_nm": float(
                     haversine_nm([start_position[0]], [start_position[1]], finish_position[0], finish_position[1])[0]
                 ),
+                "bathy_active": bathy is not None,
                 "geojson": None,
                 "start_adjusted": start_adjusted,
                 "finish_adjusted": finish_adjusted,
@@ -225,6 +265,8 @@ def compute_route(
         "bin_deg": bin_deg,
         "arrival_nm": arrival_nm,
         "tws_max": tws_max,
+        "bathy": bathy,
+        "min_depth_m": min_depth_m,
     }
     if land_mask is not None:
         route_kwargs["land"] = land_mask
@@ -342,7 +384,23 @@ def compute_route_payload(payload: Any) -> dict[str, Any]:
             "offsetNm": adjustment["offset_nm"],
         }
 
-    result = compute_route(start, finish, wind=wind_field, polar_path=polar["path"])
+    # Bathymétrie (issue #13) : useBathy (défaut vrai) et minDepthM (m) optionnels.
+    use_bathy = payload.get("useBathy", True)
+    if not isinstance(use_bathy, bool):
+        raise RoutingError("useBathy invalide : booléen attendu.")
+    min_depth_payload = payload.get("minDepthM")
+    min_depth_m: float | None = None
+    if min_depth_payload is not None:
+        if not isinstance(min_depth_payload, (int, float)):
+            raise RoutingError("minDepthM invalide : nombre attendu (profondeur en mètres).")
+        min_depth_m = float(min_depth_payload)
+        if min_depth_m <= 0:
+            raise RoutingError("minDepthM invalide : valeur strictement positive attendue.")
+
+    result = compute_route(
+        start, finish, wind=wind_field, polar_path=polar["path"],
+        use_bathy=use_bathy, min_depth_m=min_depth_m,
+    )
 
     start_position = _validate_position("de départ", start)
     finish_position = _validate_position("d'arrivée", finish)
