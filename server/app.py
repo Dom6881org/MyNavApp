@@ -20,6 +20,7 @@ from dotenv import load_dotenv
 from server.ais import LocalAISDecoder, parse_internet_message
 from server.nmea import parse_nmea_sentence
 from server.routing import RoutingError, compute_route_payload, list_polars
+from server.grib import GribError, download_grib, status as grib_status
 from server.tracks import (
     TrackNotFoundError,
     TrackRecorder,
@@ -552,6 +553,8 @@ class RequestHandler(BaseHTTPRequestHandler):
             self._send_tile(path)
         elif path == "/api/routing/polars":
             self._send_json(200, {"polars": list_polars()})
+        elif path == "/api/grib/status":
+            self._send_json(200, grib_status())
         elif path == "/api/tracks":
             self._send_json(200, {
                 "recorder": track_recorder.status(),
@@ -595,6 +598,7 @@ class RequestHandler(BaseHTTPRequestHandler):
             return
         if path not in (
             "/api/routing/compute",
+            "/api/grib/download",
             "/api/navigation/browser",
             "/api/ais/settings",
             "/api/ais/replay-position",
@@ -623,6 +627,32 @@ class RequestHandler(BaseHTTPRequestHandler):
                 self._send_json(422, {"error": str(error)})
                 return
             self._send_json(200, result)
+            return
+        if path == "/api/grib/download":
+            if not isinstance(value, dict):
+                self._send_json(422, {"error": "Requête GRIB invalide : objet JSON attendu."})
+                return
+            try:
+                bounds = (
+                    float(value["south"]),
+                    float(value["north"]),
+                    float(value["west"]),
+                    float(value["east"]),
+                )
+            except (KeyError, TypeError, ValueError):
+                self._send_json(422, {"error": "Zone GRIB invalide : south, north, west, east attendus."})
+                return
+            try:
+                horizon = float(value.get("horizonH", 72.0))
+            except (TypeError, ValueError):
+                self._send_json(422, {"error": "Horizon GRIB invalide : nombre d'heures attendu."})
+                return
+            try:
+                meta = download_grib(*bounds, horizon_h=horizon)
+            except GribError as error:
+                self._send_json(503, {"error": str(error)})
+                return
+            self._send_json(200, meta)
             return
         if path == "/api/ais/replay-position":
             if not _valid_ais_replay_position_update(value):

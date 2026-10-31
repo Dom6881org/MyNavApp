@@ -8,7 +8,9 @@ import RoutingPanel, { RoutingPickTarget } from './RoutingPanel';
 import MapPositionReadout from './MapPositionReadout';
 import AppLogo from './AppLogo';
 import { RoutingInput } from '../hooks/useRoutingInput';
+import { RoutingPolarApi } from '../hooks/useRoutingPolar';
 import { RoutingRouteApi } from '../hooks/useRoutingRoute';
+import { GribApi } from '../hooks/useGrib';
 
 // Extend Window interface for Leaflet
 declare global {
@@ -33,6 +35,8 @@ interface MapViewSimpleProps {
   onRoutingPickRequest?: (target: RoutingPickTarget) => void;
   routingRoute?: RoutingRouteApi;
   onRoutingCompute?: () => void;
+  gribApi?: GribApi;
+  routingPolar?: RoutingPolarApi;
   aisTargets?: AISTarget[];
   aisState?: AISBackendState | null;
   showAIS?: boolean;
@@ -98,6 +102,8 @@ const MapViewSimple: React.FC<MapViewSimpleProps> = ({
   onRoutingPickRequest,
   routingRoute,
   onRoutingCompute,
+  gribApi,
+  routingPolar,
   aisTargets = [],
   aisState = null,
   showAIS = false,
@@ -732,6 +738,9 @@ const MapViewSimple: React.FC<MapViewSimpleProps> = ({
                       onUnitChange={onUnitChange}
                       mapBaseStyle={mapBaseStyle}
                       onMapBaseStyleChange={changeMapBaseStyle}
+                      routingPolars={routingPolar?.polars}
+                      routingPolarId={routingPolar?.polarId ?? null}
+                      onRoutingPolarChange={routingPolar?.setPolarId}
                     />
                   </section>
                 )}
@@ -1004,12 +1013,15 @@ const MapViewSimple: React.FC<MapViewSimpleProps> = ({
             routing={routing}
             pickTarget={routingPickTarget}
             onRequestPick={target => {
-              setActiveMapTool(null);
+              // Le panneau reste ouvert pendant la sélection : le bouton actif
+              // passe en "Click chart…" et le curseur de la carte en croix.
               onRoutingPickRequest?.(target);
             }}
             onClose={() => setActiveMapTool(null)}
             routeCalc={routingRoute}
             onComputeRoute={onRoutingCompute}
+            gribCalc={gribApi}
+            polarName={routingPolar?.polarName}
           />
         )}
         {!leafletError && !leafletLoaded && (

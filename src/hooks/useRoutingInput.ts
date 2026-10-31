@@ -1,10 +1,6 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Position, RoutingPlan, RoutingPolarSummary } from '../types';
+import { useCallback, useMemo, useState } from 'react';
 
-const POLARS_FALLBACK: RoutingPolarSummary[] = [
-  { id: 'polaire-sugar', name: 'Sugar (Bavaria 36)' }
-];
-const POLAR_STORAGE_KEY = 'routingPolarId';
+import { Position, RoutingPlan } from '../types';
 
 const parseCoordinate = (value: string): number | null => {
   const normalized = value.trim().replace(',', '.');
@@ -32,73 +28,13 @@ const distanceNm = (start: Position, finish: Position): number => {
 
 /**
  * Saisie du plan de routage (issue #15) : départ (position courante, manuelle
- * ou point choisi sur la carte), arrivée (idem) et polaire du bateau.
+ * ou point choisi sur la carte) et arrivée (idem). La polaire du bateau est un
+ * paramètre global de l'application (voir useRoutingPolar), passé en argument.
  */
-export const useRoutingInput = (currentPosition: Position | null) => {
+export const useRoutingInput = (currentPosition: Position | null, polarId: string | null = null) => {
   const [useCurrentPosition, setUseCurrentPosition] = useState(true);
   const [startText, setStartText] = useState({ latitude: '', longitude: '' });
   const [finishText, setFinishText] = useState({ latitude: '', longitude: '' });
-  const [polarId, setPolarId] = useState<string | null>(null);
-  // Distigue le choix explicite de l'utilisateur (select du panneau) du choix
-  // automatique : la préférence localStorage doit pouvoir s'appliquer quand
-  // les polaires du backend arrivent après le défaut embarqué.
-  const userPickedPolarRef = useRef(false);
-  const [polars, setPolars] = useState<RoutingPolarSummary[]>(POLARS_FALLBACK);
-  const [polarError, setPolarError] = useState<string | null>(null);
-
-  useEffect(() => {
-    let cancelled = false;
-    const loadPolars = async () => {
-      try {
-        const response = await fetch('/api/routing/polars');
-        const value = await response.json() as { polars?: RoutingPolarSummary[] };
-        if (cancelled) return;
-        const available = (value.polars ?? []).map(polar => ({ id: polar.id, name: polar.name }));
-        setPolars(available.length > 0 ? available : POLARS_FALLBACK);
-        setPolarError(null);
-      } catch {
-        if (cancelled) return;
-        setPolars(POLARS_FALLBACK);
-        setPolarError('Backend hors ligne : polaire par défaut');
-      }
-    };
-    void loadPolars();
-    return () => {
-      cancelled = true;
-    };
-  }, []);
-
-  useEffect(() => {
-    if (userPickedPolarRef.current) return;
-    let stored: string | null = null;
-    try {
-      stored = localStorage.getItem(POLAR_STORAGE_KEY);
-    } catch {
-      stored = null;
-    }
-    // La préférence de la session précédente prime sur le défaut, même si le
-    // défaut embarqué a déjà été sélectionné en attendant les polaires du backend.
-    if (stored !== null && polars.some(polar => polar.id === stored)) {
-      if (polarId !== stored) setPolarId(stored);
-      return;
-    }
-    if (polarId === null || !polars.some(polar => polar.id === polarId)) {
-      if (polars[0]) setPolarId(polars[0].id);
-    }
-  }, [polars, polarId]);
-
-  // Persiste uniquement les choix explicites : l'effet de sélection
-  // automatique ne doit pas écraser la préférence de la session précédente.
-  const selectPolar = useCallback((id: string | null) => {
-    userPickedPolarRef.current = true;
-    setPolarId(id);
-    if (id === null) return;
-    try {
-      localStorage.setItem(POLAR_STORAGE_KEY, id);
-    } catch {
-      // Stockage indisponible : le choix ne dure que la session.
-    }
-  }, []);
 
   const setFinishFromPosition = useCallback((position: Position) => {
     setFinishText({
@@ -141,7 +77,7 @@ export const useRoutingInput = (currentPosition: Position | null) => {
     && startPosition.longitude === finishPosition.longitude
     ? 'Le départ et l\'arrivée sont identiques.'
     : null;
-  const polarPlanError = polarId === null ? 'Aucune polaire sélectionnée.' : null;
+  const polarPlanError = polarId === null ? 'Aucune polaire sélectionnée (réglages).' : null;
 
   const plan = useMemo<RoutingPlan | null>(() => (
     startError || finishError || sameError || polarPlanError
@@ -155,10 +91,7 @@ export const useRoutingInput = (currentPosition: Position | null) => {
   ), [useCurrentPosition, startPosition, finishPosition, startError, finishError, sameError, polarPlanError, polarId]);
 
   return {
-    polars,
-    polarError,
     polarId,
-    setPolarId: selectPolar,
     useCurrentPosition,
     setUseCurrentPosition,
     startText,

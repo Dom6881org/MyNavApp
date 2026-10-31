@@ -26,6 +26,7 @@ const ROUTE: RoutingRouteResult = {
       properties: {}
     }]
   },
+  windSource: 'constant',
   wind: { directionFromDeg: 270, speedKts: 12 },
   polarId: 'polaire-sugar',
   start: { latitude: 42.62, longitude: 3.02 },
