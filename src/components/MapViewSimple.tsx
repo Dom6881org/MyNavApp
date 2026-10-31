@@ -428,9 +428,10 @@ const MapViewSimple: React.FC<MapViewSimpleProps> = ({
         // The lattice is anchored to geographic coordinates so cached points stay valid when panning.
         const zoom = Math.min(Math.max(Math.floor(map.getZoom()), 0), 18);
         const visible = buildLattice(map.getBounds().pad(0.1), zoom);
+        // Light prefetch only: the coarser zoom-1 lattice tripled the request volume
+        // for little UX gain, which triggered Open-Meteo rate limits (#36).
         const prefetch = [
-          ...buildLattice(map.getBounds().pad(0.4), zoom),
-          ...(zoom > 0 ? buildLattice(map.getBounds().pad(0.4), zoom - 1) : [])
+          ...buildLattice(map.getBounds().pad(0.2), zoom)
         ];
         onWindGridRequest(visible, prefetch);
       }, 350);
