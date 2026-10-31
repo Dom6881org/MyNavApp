@@ -23,6 +23,10 @@ declare global {
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type LeafletObject = any;
 
+// Issue #39 : pane dédié pour les barbes de vent — au-dessus des tuiles (z 200)
+// mais sous toutes les autres couches : tracks/vecteur/routage (overlayPane z 400),
+// bateau et AIS (markerPane z 600).
+const WIND_BARB_PANE = 'wind-barbs';
 const TOOLTIP_CLASS = 'nav-tooltip';
 const POPUP_OPTIONS = { className: 'nav-popup', closeButton: false, minWidth: 170 };
 
@@ -229,6 +233,9 @@ const MapViewSimple: React.FC<MapViewSimpleProps> = ({
           { collapsed: true, position: 'topright' }
         ).addTo(map);
         L.control.scale({ metric: true, imperial: false, position: 'bottomleft' }).addTo(map);
+        // Issue #39 : les barbes de vent passent derrière tracks, routage, bateau et AIS.
+        const windBarbPane = map.createPane(WIND_BARB_PANE);
+        windBarbPane.style.zIndex = '350';
         const trackLine = L.polyline([], {
           color: '#19d3c5',
           weight: 4,
@@ -541,13 +548,13 @@ const MapViewSimple: React.FC<MapViewSimpleProps> = ({
         const barbIcon = L.divIcon({
           className: 'wind-map-barb-icon',
           html: `<svg class="wind-map-barb" viewBox="0 0 48 48" aria-hidden="true" style="transform:rotate(${point.wind.direction}deg)">${getWindBarbSvg(point.wind.speed)}</svg>`,
-          iconSize: [48, 48],
-          iconAnchor: [24, 24]
+          iconSize: [32, 32],
+          iconAnchor: [16, 16]
         });
         const direction = getWindDirectionText(point.wind.direction);
         L.marker([point.position.latitude, point.position.longitude], {
           icon: barbIcon,
-          zIndexOffset: 500,
+          pane: WIND_BARB_PANE,
           rotateWithView: true,
           title: `Wind from ${direction}, ${point.wind.speed.toFixed(1)} knots`
         })
