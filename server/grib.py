@@ -350,3 +350,72 @@ def load_wind_field():
         return GRIBWindField.from_grib(os.path.join(GRIB_CACHE_DIR, GRIB_FILE))
     except Exception as error:  # GRIB illisible : dérgradé plutôt qu'erreur bloquante
         raise GribError(f"Fichier GRIB en cache illisible : {error}") from error
+
+
+_wind_field_cache: dict[str, Any] = {"path": None, "mtime": None, "field": None, "bounds": None}
+
+
+def sample_points(points: list[dict[str, float]]) -> list[dict[str, float]] | None:
+    """Échantillonne le GRIB frais aux points demandés (option B, issue #36).
+
+    Retourne None si aucun GRIB frais n'est disponible (le front retombe alors
+    sur le lattice Open-Météo) ; sinon une liste {latitude, longitude, speed
+    (nœuds), direction (météo « d'où vient le vent », degrés)} pour les points
+    couverts par la zone du GRIB (marge d'une maille). Le champ est mis en
+    cache en mémoire et rechargé seulement quand le fichier GRIB change.
+    """
+    current = status()
+    if not current.get("fresh"):
+        return None
+    grib_path = os.path.join(GRIB_CACHE_DIR, GRIB_FILE)
+    try:
+        mtime = os.path.getmtime(grib_path)
+    except OSError:
+        return None
+    if (
+        _wind_field_cache["path"] != grib_path
+        or _wind_field_cache["mtime"] != mtime
+        or _wind_field_cache["field"] is None
+    ):
+        try:
+            field = load_wind_field()
+        except GribError:
+            return None
+        if field is None:
+            return None
+        _wind_field_cache.update({"path": grib_path, "mtime": mtime, "field": field, "bounds": current})
+    bounds = _wind_field_cache["bounds"] or current
+    margin = float(bounds.get("resolutionDeg") or DEFAULT_RESOLUTION_DEG)
+    south = float(bounds["south"]) - margin
+    north = float(bounds["north"]) + margin
+    west = float(bounds["west"]) - margin
+    east = float(bounds["east"]) + margin
+    covered = [
+        point for point in points
+        if south <= point["latitude"] <= north and west <= point["longitude"] <= east
+    ]
+    if not covered:
+        return []
+    import datetime as _dt
+
+    import numpy as _np
+
+    field = _wind_field_cache["field"]
+    times = field.ds["time"].values.astype("datetime64[ns]")
+    now = _np.datetime64(_dt.datetime.now(_dt.timezone.utc).replace(tzinfo=None), "ns")
+    horizon_s = float((times[-1] - times[0]) / _np.timedelta64(1, "s"))
+    elapsed_s = min(max(float((now - times[0]) / _np.timedelta64(1, "s")), 0.0), horizon_s)
+    u, v = field.sample([point["latitude"] for point in covered], [point["longitude"] for point in covered], elapsed_s)
+    u = _np.atleast_1d(u)
+    v = _np.atleast_1d(v)
+    wind: list[dict[str, float]] = []
+    for index, point in enumerate(covered):
+        speed = float(_np.hypot(u[index], v[index]))
+        direction = (math.degrees(math.atan2(-float(u[index]), -float(v[index]))) + 360.0) % 360.0
+        wind.append({
+            "latitude": point["latitude"],
+            "longitude": point["longitude"],
+            "speed": round(speed, 2),
+            "direction": round(direction, 1),
+        })
+    return wind
