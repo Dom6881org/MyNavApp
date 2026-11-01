@@ -6,7 +6,10 @@
 # v0.4-corridor (02/11) : elagage du front par corridor depart-arrivee (marge 20 %,
 # configurable via corridor_margin) + cles de cellules int32
 # (mynav-routing #25, issue moteur #17 ; bench : ~2x, noeuds 5,56 M -> 2,05 M).
-mynav-routing @ git+https://github.com/Dom6881org/mynav-routing.git@98832e3c7e0e44052e165ec25dc7d61cf48f54f9
+# v0.4-landperf (02/11) : pre-filtre spatial de crosses_land par cellule
+# (bucketing + echantillonnage par segment ; mynav-routing #27, issue moteur #26 ;
+# bench : >= 3x, egalite stricte legacy ; cible terrain land < 50 s).
+mynav-routing @ git+https://github.com/Dom6881org/mynav-routing.git@a5bfe56338a80ca8f926d0cee7f4bc15ca7844fc
 # GRIB (issues #16, #42) : lecture/ecriture via ecCodes.
 # Depuis ecCodes 2.43, la roue pip embarque la librairie native :
 # - Linux/macOS : via la dependance 'eccodeslib' (wheels binaires)
