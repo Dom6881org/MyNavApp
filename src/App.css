@@ -3817,3 +3817,19 @@ html {
   background: rgba(179, 92, 0, 0.1);
   color: #b35c00;
 }
+
+/* Badge de statut discret et réutilisable sur la carte (#62). */
+.map-status-badge {
+  position: absolute;
+  bottom: 0.6rem;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 800;
+  padding: 0.2rem 0.6rem;
+  border-radius: 999px;
+  font-size: 0.75rem;
+  color: #fff;
+  background: rgba(120, 70, 10, 0.88);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.28);
+  pointer-events: none;
+}

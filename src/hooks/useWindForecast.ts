@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { windPointKey as pointKey } from '../utils/windLattice';
 import { Position, WindData, WindForecastPoint, WindForecastStatus } from '../types';
 
 const emptyStatus: WindForecastStatus = {
@@ -18,6 +19,9 @@ const ERROR_RETRY_MS = 30 * 1000;
 const FORECAST_REFRESH_INTERVAL_MS = 30 * 60 * 1000;
 const RATE_LIMIT_BACKOFF_MS = 5 * 60 * 1000;
 const MAX_RATE_LIMIT_BACKOFF_MS = 60 * 60 * 1000;
+// Plafonds hors zone GRIB (#62) : au-delà, on n'appelle plus Open-Météo pour le prefetch.
+export const MAX_PREFETCH_VISIBLE_POINTS = 100;
+export const MAX_NETWORK_POINTS_PER_REQUEST = 300;
 
 interface CachedWind {
   wind: WindData;
@@ -27,6 +31,7 @@ interface CachedWind {
 interface GridRequest {
   visible: Position[];
   prefetch: Position[];
+  fetched: number;
 }
 
 const GRIB_SAMPLE_URL = '/api/grib/sample';
@@ -39,7 +44,6 @@ interface GribSampleWind {
   direction: number;
 }
 
-const pointKey = (point: Position) => `${point.latitude.toFixed(5)},${point.longitude.toFixed(5)}`;
 const normalizeLongitude = (longitude: number) => ((((longitude + 180) % 360) + 360) % 360) - 180;
 
 const isRecord = (value: unknown): value is Record<string, unknown> =>
@@ -214,14 +218,18 @@ export const useWindForecast = (position: Position | null) => {
         const now = Date.now();
         const missing: Position[] = [];
         const seen = new Set<string>();
-        for (const point of [...request.visible, ...request.prefetch]) {
+        const visibleKeys = new Set(request.visible.map(pointKey));
+        const candidates = visibleKeys.size > MAX_PREFETCH_VISIBLE_POINTS
+          ? request.visible
+          : [...request.visible, ...request.prefetch];
+        for (const point of candidates) {
           const key = pointKey(point);
           if (seen.has(key)) continue;
           seen.add(key);
           const entry = windCacheRef.current.get(key);
           if (!entry || now - entry.fetchedAt > CACHE_TTL_MS) missing.push(point);
         }
-        if (missing.length === 0) break;
+        if (missing.length === 0 || request.fetched >= MAX_NETWORK_POINTS_PER_REQUEST) break;
 
         const wait = Math.max(0, gridRetryAtRef.current - now, rateLimitRetryAtRef.current - now);
         if (wait > 0) {
@@ -233,7 +241,9 @@ export const useWindForecast = (position: Position | null) => {
         }
 
         try {
-          await fetchWindChunk(missing.slice(0, CHUNK_SIZE), controller.signal);
+          const chunk = missing.slice(0, Math.min(CHUNK_SIZE, MAX_NETWORK_POINTS_PER_REQUEST - request.fetched));
+          await fetchWindChunk(chunk, controller.signal);
+          request.fetched += chunk.length;
           if (controller.signal.aborted) break;
           publishGrid();
           setStatus(previous => ({ ...previous, gridError: null }));
@@ -261,13 +271,16 @@ export const useWindForecast = (position: Position | null) => {
   }, [fetchGribSample, fetchWindChunk, publishGrid]);
 
   const requestWindGrid = useCallback((visible: Position[], prefetch: Position[] = []) => {
-    latestGridRequestRef.current = { visible, prefetch };
+    latestGridRequestRef.current = { visible, prefetch, fetched: 0 };
     publishGrid();
     void processGridQueue();
   }, [processGridQueue, publishGrid]);
 
   useEffect(() => {
-    const refreshId = window.setInterval(() => void processGridQueue(), FORECAST_REFRESH_INTERVAL_MS);
+    const refreshId = window.setInterval(() => {
+      if (latestGridRequestRef.current) latestGridRequestRef.current.fetched = 0;
+      void processGridQueue();
+    }, FORECAST_REFRESH_INTERVAL_MS);
     return () => window.clearInterval(refreshId);
   }, [processGridQueue]);
 

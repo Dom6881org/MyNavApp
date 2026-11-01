@@ -11,6 +11,7 @@ import { RoutingInput } from '../hooks/useRoutingInput';
 import { RoutingPolarApi } from '../hooks/useRoutingPolar';
 import { RoutingRouteApi } from '../hooks/useRoutingRoute';
 import { GribApi } from '../hooks/useGrib';
+import { buildWindLattice, barbPositionKey } from '../utils/windLattice';
 import { isMapProfilingEnabled, reportMapPerformance } from '../utils/mapPerformance';
 
 // Extend Window interface for Leaflet
@@ -501,31 +502,16 @@ const MapViewSimple: React.FC<MapViewSimpleProps> = ({
 
     const map = mapInstance.map;
     let debounceId: number | undefined;
-    const buildLattice = (bounds: { getSouth(): number; getNorth(): number; getWest(): number; getEast(): number }, zoom: number): Position[] => {
-      // Constant screen density across zoom levels: this step keeps roughly 85 px
-      // between barbs at the equator (~62 px at Mediterranean latitudes), so
-      // unzoomed views show a readable number of wind readouts (fixes #21).
-      const step = 120 / 2 ** zoom;
-      const south = Math.max(bounds.getSouth(), -85);
-      const north = Math.min(bounds.getNorth(), 85);
-      const points: Position[] = [];
-      for (let lat = Math.ceil(south / step); lat <= Math.floor(north / step); lat++) {
-        for (let lng = Math.ceil(bounds.getWest() / step); lng <= Math.floor(bounds.getEast() / step); lng++) {
-          points.push({ latitude: lat * step, longitude: lng * step });
-        }
-      }
-      return points;
-    };
     const requestVisibleGrid = () => {
       if (debounceId !== undefined) window.clearTimeout(debounceId);
       debounceId = window.setTimeout(() => {
         // The lattice is anchored to geographic coordinates so cached points stay valid when panning.
-        const zoom = Math.min(Math.max(Math.floor(map.getZoom()), 0), 18);
-        const visible = buildLattice(map.getBounds().pad(0.1), zoom);
+        const zoom = map.getZoom();
+        const visible = buildWindLattice(map.getBounds().pad(0.1), zoom);
         // Light prefetch only: the coarser zoom-1 lattice tripled the request volume
         // for little UX gain, which triggered Open-Meteo rate limits (#36).
         const prefetch = [
-          ...buildLattice(map.getBounds().pad(0.2), zoom)
+          ...buildWindLattice(map.getBounds().pad(0.2), zoom)
         ];
         onWindGridRequest(visible, prefetch);
       }, 350);
@@ -573,7 +559,7 @@ const MapViewSimple: React.FC<MapViewSimpleProps> = ({
     if (!flowLayer) return;
 
     const barbMarkers = barbMarkersRef.current;
-    const barbKey = (point: { position: Position }) => `${point.position.latitude.toFixed(5)},${point.position.longitude.toFixed(5)}`;
+    const barbKey = barbPositionKey;
     const makeBarbIcon = (wind: WindData) => L.divIcon({
       className: 'wind-map-barb-icon',
       html: `<svg class="wind-map-barb" viewBox="0 0 48 48" aria-hidden="true" style="transform:rotate(${wind.direction}deg)">${getWindBarbSvg(wind.speed)}</svg>`,
@@ -694,6 +680,11 @@ const MapViewSimple: React.FC<MapViewSimpleProps> = ({
             <MapPositionReadout position={data.position} gpsTime={data.gpsTime} part="time" recording={recordingElapsed} />
             <MapPositionReadout position={data.position} gpsTime={data.gpsTime} part="position" />
           </>
+        )}
+        {showWindLayer && data.windForecastStatus.gridError && (
+          <div className="map-status-badge" role="status" title={data.windForecastStatus.gridError}>
+            Météo limitée
+          </div>
         )}
         <div className="map-tools map-tools--left" onMouseDown={event => event.stopPropagation()}>
           <div className="map-tools-toolbar" role="group" aria-label="Map display">
