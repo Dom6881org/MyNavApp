@@ -770,6 +770,15 @@
   font-variant-numeric: tabular-nums;
 }
 
+/* Paramètres effectifs du job (issue #100) : dt, maille, durée de calcul. */
+.routing-params {
+  margin: 0.15rem 0 0;
+  color: #9fb8c2;
+  font-size: 0.7rem;
+  line-height: 1.3;
+  font-variant-numeric: tabular-nums;
+}
+
 /* Resultat : ETA et distance en grand. */
 .routing-result {
   padding: 0.5rem 0.6rem;
@@ -3716,6 +3725,10 @@ html {
 }
 
 .theme-light .routing-progress {
+  color: #5c7480;
+}
+
+.theme-light .routing-params {
   color: #5c7480;
 }
 
