@@ -178,12 +178,20 @@ class TestComputeRoutePayload(unittest.TestCase):
         self.assertEqual(result["polarId"], "polaire-sugar")
         self.assertEqual(result["start"], {"latitude": 42.62, "longitude": 3.02})
 
-    def test_payload_route_longue_utilise_pas_adaptatif(self):
+    def test_payload_route_longue_utilise_le_pas_adaptatif(self):
         import numpy as np
 
         class NoLand:
             def is_land(self, lats, lons):
                 return np.zeros_like(lats, dtype=bool)
+
+            def crosses_land(self, lat1, lon1, lat2, lon2):
+                # Le routeur appelle is_land ET crosses_land : le stub doit
+                # implementer l'interface complete du LandMask du moteur.
+                lat1, lon1, lat2, lon2 = np.broadcast_arrays(
+                    *(np.asarray(a, dtype=float) for a in (lat1, lon1, lat2, lon2))
+                )
+                return np.zeros(lat1.shape, dtype=bool)
 
         with (
             patch("server.grib.load_wind_field", return_value=None),
