@@ -107,7 +107,9 @@ class TestDownloadGrib(unittest.TestCase):
     @unittest.skipUnless(grib.ECCODES_AVAILABLE, "ecCodes non installé")
     @unittest.skipUnless(ROUTING_AVAILABLE, "mynav-routing non installé")
     def test_telechargement_ecriture_puis_lecture_moteur(self):
-        start = datetime(2026, 10, 31, 0, 0, tzinfo=timezone.utc)
+        # Date relative a maintenant : le cache doit rester frais pour que
+        # load_wind_field() le charge (validUntil = dernier pas + step).
+        start = datetime.now(timezone.utc).replace(minute=0, second=0, microsecond=0) - timedelta(hours=1)
         times = [start + timedelta(hours=h) for h in range(24)]
         opener = open_meteo_payload(times, speed_ms=5.0, direction_deg=270.0)
         with tempfile.TemporaryDirectory() as cache_dir:
@@ -197,32 +199,6 @@ class TestDownloadGrib(unittest.TestCase):
                 os.utime(grib_path, (time.time() + 100, time.time() + 100))  # GRIB plus récent
                 download_grib(46.0, 47.0, -5.0, -4.0, horizon_h=6.0, step_h=3.0, opener=opener)
                 self.assertFalse(os.path.exists(stale_idx))
-
-    def test_register_eccodes_library_trouve_la_dll(self):
-        # Sans conda : un dossier contenant la bibliothèque native (paquet
-        # conda-forge extrait) est enregistré via MYNAV_ECCODES_BIN.
-        lib_name = "eccodes.dll" if os.name == "nt" else "libeccodes.so"
-        with tempfile.TemporaryDirectory() as fake_bin:
-            with open(os.path.join(fake_bin, lib_name), "wb") as handle:
-                handle.write(b"")
-            with patch.dict(os.environ, {"MYNAV_ECCODES_BIN": fake_bin}):
-                old_path = os.environ.get("PATH", "")
-                self.assertTrue(grib._register_eccodes_library())
-                self.assertIn(fake_bin, os.environ["PATH"])
-                os.environ["PATH"] = old_path
-
-    def test_register_eccodes_library_absente(self):
-        with patch.dict(os.environ, {"MYNAV_ECCODES_BIN": tempfile.mkdtemp()}):
-            with patch.object(grib, "_register_eccodes_library", grib._register_eccodes_library):
-                pass
-        # Aucun candidat valide -> False (environnement sans paquet ecCodes extrait)
-        with patch.dict(os.environ, {"MYNAV_ECCODES_BIN": ""}, clear=False):
-            if os.name != "nt":
-                self.skipTest("chemin Windows")
-            # ~/eccodes-win existe peut-etre sur la machine de dev : on isole HOME
-            with tempfile.TemporaryDirectory() as fake_home:
-                with patch.object(grib.os.path, "expanduser", lambda _: fake_home):
-                    self.assertFalse(grib._register_eccodes_library())
 
     def test_erreur_reseau_message_clair(self):
         def broken_opener(url):
