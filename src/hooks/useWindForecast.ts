@@ -32,6 +32,8 @@ interface GridRequest {
   visible: Position[];
   prefetch: Position[];
   fetched: number;
+  gribServed?: boolean;
+  gribChecked?: boolean;
 }
 
 const GRIB_SAMPLE_URL = '/api/grib/sample';
@@ -204,22 +206,36 @@ export const useWindForecast = (position: Position | null) => {
 
         // Option B (#36) : servir le maillage visible depuis le GRIB local frais
         // (zéro appel Open-Météo) ; sinon repli sur le lattice point par point.
-        const grib = await fetchGribSample(request.visible, controller.signal);
-        if (controller.signal.aborted) break;
-        if (grib && grib.fresh && grib.wind.length > 0) {
-          setWindGrid(grib.wind.map(entry => ({
-            position: { latitude: entry.latitude, longitude: entry.longitude },
-            wind: { speed: entry.speed, direction: entry.direction, gust: entry.speed, source: 'GRIB' }
-          })));
-          setStatus(previous => ({ ...previous, gridError: null }));
-          break;
+        // Le GRIB SEME le cache (TTL 60 min) pour les points qu'il couvre ; les
+        // points hors zone sont ensuite complétés via Open-Météo (#82).
+        if (!request.gribChecked) {
+          const grib = await fetchGribSample(request.visible, controller.signal);
+          if (controller.signal.aborted) break;
+          request.gribChecked = true;
+          if (grib && grib.fresh && grib.wind.length > 0) {
+            const fetchedAt = Date.now();
+            for (const entry of grib.wind) {
+              windCacheRef.current.set(
+                pointKey({ latitude: entry.latitude, longitude: entry.longitude }),
+                { wind: { speed: entry.speed, direction: entry.direction, gust: entry.speed, source: 'GRIB' }, fetchedAt }
+              );
+            }
+            while (windCacheRef.current.size > MAX_CACHE_ENTRIES) {
+              const oldest = windCacheRef.current.keys().next().value;
+              if (oldest === undefined) break;
+              windCacheRef.current.delete(oldest);
+            }
+            request.gribServed = true;
+            publishGrid();
+            setStatus(previous => ({ ...previous, gridError: null }));
+          }
         }
 
         const now = Date.now();
         const missing: Position[] = [];
         const seen = new Set<string>();
         const visibleKeys = new Set(request.visible.map(pointKey));
-        const candidates = visibleKeys.size > MAX_PREFETCH_VISIBLE_POINTS
+        const candidates = request.gribServed || visibleKeys.size > MAX_PREFETCH_VISIBLE_POINTS
           ? request.visible
           : [...request.visible, ...request.prefetch];
         for (const point of candidates) {
@@ -278,7 +294,10 @@ export const useWindForecast = (position: Position | null) => {
 
   useEffect(() => {
     const refreshId = window.setInterval(() => {
-      if (latestGridRequestRef.current) latestGridRequestRef.current.fetched = 0;
+      if (latestGridRequestRef.current) {
+        latestGridRequestRef.current.fetched = 0;
+        latestGridRequestRef.current.gribChecked = false;
+      }
       void processGridQueue();
     }, FORECAST_REFRESH_INTERVAL_MS);
     return () => window.clearInterval(refreshId);
