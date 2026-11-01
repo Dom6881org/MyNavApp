@@ -1,7 +1,9 @@
 # Moteur de routage meteo (issue #14, milestone Routing v1).
 # Depôt public : installation directe, sans authentification (utilisé par la CI).
 # En local :  pip install -r requirements.txt -r requirements-routing.txt
-mynav-routing @ git+https://github.com/Dom6881org/mynav-routing.git@v0.3.3
+# v0.4-perf (02/11) : pre-extraction numpy du GRIB, sample() vectorise O(1)/point
+# (mynav-routing #24, issue moteur #16 ; bench #19 : 1,9 s bout en bout, sample 0,8 %).
+mynav-routing @ git+https://github.com/Dom6881org/mynav-routing.git@e34b33a59dcffd1b774fd387c6ab561d526fd1e3
 # GRIB (issues #16, #42) : lecture/ecriture via ecCodes.
 # Depuis ecCodes 2.43, la roue pip embarque la librairie native :
 # - Linux/macOS : via la dependance 'eccodeslib' (wheels binaires)
