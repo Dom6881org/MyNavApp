@@ -91,6 +91,7 @@ class _RoutingJob:
     cancel_requested: bool = False
     ended_monotonic: float | None = None
     monitor: threading.Thread | None = field(default=None, repr=False)
+    finished_event: threading.Event = field(default_factory=threading.Event, repr=False)
 
     def snapshot(self) -> dict[str, Any]:
         value: dict[str, Any] = {"jobId": self.job_id, "status": self.status, "createdAt": self.created_at}
@@ -166,12 +167,21 @@ class RoutingJobRegistry:
                 return job.snapshot()
             job.cancel_requested = True
 
+        # Le reaping (join/waitpid) du subprocess appartient au seul thread
+        # monitor : un join concurrent entre cancel() et le monitor crée une
+        # course waitpid (ECHILD) qui peut laisser process.exitcode à None
+        # (échec CI sur PR #97). cancel() se contente de signaler (SIGTERM
+        # puis SIGKILL si nécessaire) puis attend la fin du job via
+        # l'événement posé par _finish().
         if process.is_alive():
             process.terminate()
-        process.join(timeout=PROCESS_JOIN_TIMEOUT_S)
-        if process.is_alive():
+        if not job.finished_event.wait(timeout=PROCESS_JOIN_TIMEOUT_S) and process.is_alive():
             process.kill()
-            process.join()
+            if not job.finished_event.wait(timeout=PROCESS_JOIN_TIMEOUT_S):
+                # Filet de sécurité si le monitor est muet (jamais observé) :
+                # dans ce cas il n'y a plus de concurrent pour le reaping.
+                if job.monitor is None or not job.monitor.is_alive():
+                    process.join(timeout=PROCESS_JOIN_TIMEOUT_S)
         with self._lock:
             self._finish(job, "cancelled")
             return job.snapshot()
@@ -223,6 +233,7 @@ class RoutingJobRegistry:
         job.error = error
         job.ended_at = _utc_now()
         job.ended_monotonic = time.monotonic()
+        job.finished_event.set()
 
     def _purge_expired(self) -> None:
         now = time.monotonic()
