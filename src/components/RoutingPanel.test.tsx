@@ -122,7 +122,7 @@ describe('RoutingPanel', () => {
     expect(screen.getByText('ROUTING')).toBeVisible();
     expect(screen.getByText('From')).toBeInTheDocument();
     expect(screen.getByText('To')).toBeInTheDocument();
-    expect(screen.getByText('GPS · 47.50000, -4.50000')).toBeInTheDocument();
+    expect(screen.getByText('47.50000, -4.50000')).toBeInTheDocument();
     expect(screen.getByText('Not set')).toBeInTheDocument();
   });
 
