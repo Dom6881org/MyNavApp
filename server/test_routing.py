@@ -170,12 +170,33 @@ class TestComputeRoutePayload(unittest.TestCase):
             result = compute_route_payload(self.payload())
         self.assertTrue(result["found"])
         self.assertGreater(result["etaS"], 0.0)
+        self.assertEqual(result["dtS"], 1800.0)
         self.assertEqual(result["geojson"]["type"], "FeatureCollection")
         self.assertEqual(result["geojson"]["features"][0]["geometry"]["type"], "LineString")
         self.assertEqual(result["wind"], {"directionFromDeg": 270.0, "speedKts": 12.0})
         self.assertEqual(result["windSource"], "constant")
         self.assertEqual(result["polarId"], "polaire-sugar")
         self.assertEqual(result["start"], {"latitude": 42.62, "longitude": 3.02})
+
+    def test_payload_route_longue_utilise_pas_adaptatif(self):
+        import numpy as np
+
+        class NoLand:
+            def is_land(self, lats, lons):
+                return np.zeros_like(lats, dtype=bool)
+
+        with (
+            patch("server.grib.load_wind_field", return_value=None),
+            patch("server.routing._load_land_mask", return_value=NoLand()),
+        ):
+            result = compute_route_payload(self.payload(
+                start={"latitude": 42.62, "longitude": 3.1},
+                finish={"latitude": 42.62, "longitude": 6.7},
+                useBathy=False,
+            ))
+
+        self.assertTrue(result["found"])
+        self.assertEqual(result["dtS"], 3600.0)
 
     def test_payload_avec_grib_frais(self):
         # Issue #16 : un GRIB frais remplace le vent constant.

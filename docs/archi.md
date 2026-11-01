@@ -177,7 +177,7 @@ Contrat unique entre backend (dictionnaires Python) et frontend (interfaces TS, 
 | `AISBackendState` | `source` (effective), `requestedSource`, `localNmeaPort`, `targets`, compteurs, état internet |
 | `GribStatus` | `available`, `fresh`, `reason`, `createdAt`, `validUntil`, emprise, résolution, pas horaire |
 | `RoutingPlan` / `RoutingWindInput` | départ/arrivée/polaire ; vent constant `directionFromDeg` + `speedKts` |
-| `RoutingRouteResult` | `found`, `coords [lon, lat]`, `etaS`, `minDistNm`, `geojson`, `windSource: 'grib'\|'constant'`, ajustements terre→eau (`offsetNm`) |
+| `RoutingRouteResult` | `found`, `coords [lon, lat]`, `etaS`, `dtS`, `minDistNm`, `geojson`, `windSource: 'grib'\|'constant'`, ajustements terre→eau (`offsetNm`) |
 | `TrackRecorderStatus` / `TrackSummary` / `TracksResponse` | état de l'enregistreur, métadonnées des traces |
 | `DashboardLayout` / `InstrumentConfig` | disposition des instruments, thème (`light`/`dark`/`night`), unités |
 

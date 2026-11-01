@@ -16,6 +16,7 @@ const ROUTE: RoutingRouteResult = {
   found: true,
   coords: [[42.62, 3.02], [42.62, 3.5]],
   etaS: 12600,
+  dtS: 1800,
   minDistNm: 0.5,
   message: null,
   geojson: {

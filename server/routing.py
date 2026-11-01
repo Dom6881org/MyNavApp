@@ -60,6 +60,7 @@ def load_bathy() -> Any | None:
 SNAP_MAX_NM = 2.0
 SNAP_STEP_NM = 0.1
 SNAP_BEARING_STEP_DEG = 5.0
+LONG_ROUTE_THRESHOLD_NM = 150.0
 
 
 class RoutingError(Exception):
@@ -168,7 +169,7 @@ def compute_route(
     wind: Any = None,
     polar_path: str | None = None,
     horizon_h: float = 72.0,
-    dt: float = 1800.0,
+    dt: float | None = None,
     heading_step: float = 5.0,
     bin_deg: float | None = None,
     arrival_nm: float = 2.0,
@@ -208,6 +209,19 @@ def compute_route(
     finish_position = _validate_position("d'arrivée", finish)
     if start_position == finish_position:
         raise RoutingError("Le point de départ et le point d'arrivée sont identiques.")
+
+    if dt is None:
+        from mynav_routing.engine.isochrones import haversine_nm
+
+        distance_nm = float(
+            haversine_nm(
+                [start_position[0]],
+                [start_position[1]],
+                finish_position[0],
+                finish_position[1],
+            )[0]
+        )
+        dt = 3600.0 if distance_nm > LONG_ROUTE_THRESHOLD_NM else 1800.0
 
     polar = load_polar(polar_path)
 
@@ -249,6 +263,7 @@ def compute_route(
                 "geojson": None,
                 "start_adjusted": start_adjusted,
                 "finish_adjusted": finish_adjusted,
+                "dt_s": dt,
                 "message": (
                     f"Aucune route trouvée : le point {name} est à terre "
                     f"(aucun point d'eau à moins de {SNAP_MAX_NM:.0f} mn selon le masque de côtes). "
@@ -290,6 +305,7 @@ def compute_route(
             "geojson": None,
             "start_adjusted": start_adjusted,
             "finish_adjusted": finish_adjusted,
+            "dt_s": dt,
             "message": (
                 "Aucune route trouvée : horizon dépassé "
                 f"(meilleure progression à {result.min_dist_nm:.1f} mn de l'arrivée). "
@@ -310,6 +326,7 @@ def compute_route(
         "message": None,
         "start_adjusted": start_adjusted,
         "finish_adjusted": finish_adjusted,
+        "dt_s": dt,
     }
 
 
@@ -319,7 +336,7 @@ def compute_route_payload(payload: Any) -> dict[str, Any]:
     Attend : start/finish = {latitude, longitude}, polarId = id de polaire
     (voir list_polars), wind = {directionFromDeg, speedKts} (optionnel :
     vent constant de test 270°/12 nds par défaut).
-    Retourne un dict JSON-ready : found, coords, etaS, minDistNm, message,
+    Retourne un dict JSON-ready : found, coords, etaS, dtS, minDistNm, message,
     geojson, wind, polarId, startAdjusted, finishAdjusted (rapprochement à
     l'eau si le point demandé était classé "à terre" : {latitude, longitude,
     offsetNm} ou null).
@@ -408,6 +425,7 @@ def compute_route_payload(payload: Any) -> dict[str, Any]:
         "found": result["found"],
         "coords": result["coords"],
         "etaS": result["eta_s"],
+        "dtS": result["dt_s"],
         "minDistNm": result["min_dist_nm"],
         "bathyActive": result["bathy_active"],
         "message": result["message"],
