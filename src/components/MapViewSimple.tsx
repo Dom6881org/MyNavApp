@@ -1375,8 +1375,13 @@ const getWindBarbSvg = (speedKnots: number, includeOutline = true): string => {
   const path = paths.join(' ');
   if (!includeOutline) return path;
 
-  // Issue #50 : un simple trait noir — plus de contour ni de code couleur par vitesse.
-  return `<path d="${path}" fill="none" stroke="#000" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>`;
+  // #86 : code couleur par force de vent restauré (rouge > 30 kt, orange > 20 kt,
+  // blanc sinon). Le motif de suppression d'origine (clignotement à chaque
+  // reconstruction d'icône) n'existe plus : le rendu incrémental (#50) ne recrée
+  // une icône que si vitesse ou direction change, et le zoom par paliers (#62)
+  // a supprimé le churn de reconstruction.
+  const color = speedKnots > 30 ? '#ff4d4f' : speedKnots > 20 ? '#ff9f43' : '#fff';
+  return `<path d="${path}" fill="none" stroke="#10202a" stroke-width="5" stroke-linejoin="round" stroke-linecap="round"/><path d="${path}" fill="none" stroke="${color}" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round"/>`;
 };
 
 export default MapViewSimple;
