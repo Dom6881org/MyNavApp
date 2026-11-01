@@ -6,7 +6,7 @@ import RoutingPanel, { RoutingPickTarget } from './RoutingPanel';
 import { useRoutingInput } from '../hooks/useRoutingInput';
 import { RoutingRouteApi } from '../hooks/useRoutingRoute';
 import { GribApi } from '../hooks/useGrib';
-import { Position, GribStatus, RoutingRouteResult } from '../types';
+import { Position, GribStatus, RoutingJobResult, RoutingRouteResult } from '../types';
 
 const POSITION: Position = { latitude: 47.5, longitude: -4.5 };
 const POLAR_ID = 'polaire-sugar';
@@ -35,7 +35,7 @@ const ROUTE_FOUND: RoutingRouteResult = {
 };
 
 const stubRouteCalc = (
-  route: RoutingRouteResult | null = null,
+  route: RoutingJobResult | null = null,
   error: string | null = null,
   overrides: Partial<RoutingRouteApi> = {}
 ): RoutingRouteApi => ({
@@ -306,5 +306,19 @@ describe('RoutingPanel', () => {
 
     expect(screen.getByText(/Routing cancelled/i)).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Cancel routing computation' })).not.toBeInTheDocument();
+  });
+
+  it('paramètres effectifs du job affichés (dt, maille, durée de calcul)', () => {
+    const routeWithParams = { ...ROUTE_FOUND, params: { dt_s: 3600, bin_deg: 0.039 }, timings: { total_s: 54.4 } };
+    renderPanel({ routeCalc: stubRouteCalc(routeWithParams), onComputeRoute: vi.fn() });
+
+    expect(screen.getByText(/dt 1 h · grid 0\.039° · computed in 54\.4 s/)).toBeInTheDocument();
+  });
+
+  it('route sans paramètres remontés : aucune ligne de paramètres', () => {
+    renderPanel({ routeCalc: stubRouteCalc(ROUTE_FOUND), onComputeRoute: vi.fn() });
+
+    expect(screen.queryByText(/grid /i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/computed in/i)).not.toBeInTheDocument();
   });
 });
