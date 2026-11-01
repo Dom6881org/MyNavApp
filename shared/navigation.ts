@@ -230,6 +230,7 @@ export interface RoutingRouteResult {
   found: boolean;
   coords: [number, number][];
   etaS: number;
+  dtS: number;
   minDistNm: number;
   message: string | null;
   geojson: RoutingRouteGeoJson | null;
