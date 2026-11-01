@@ -43,6 +43,10 @@ jobs:
         branch:
           - feature/eccodes-pip
           - feature/eccodes-pip-v2
+          - feature/wind-display-dim
+          - fix/wind-barbs-stability
+          - fix/routing-gps-chip
+          - chore/cleanup-squash
           - feature/grib-offline-first
           - feature/release-v1-1-0
           - copilot/fix-failing-github-actions-job
@@ -62,6 +66,35 @@ jobs:
             git push origin --delete "$BR" || echo "deja supprimee"
           else
             echo "$BR : aucune PR mergee avec ce tip — conservee."
+          fi
+        env:
+          GH_TOKEN: ${{ github.token }}
+
+  # Branches obsolètes, suppression explicite autorisée par Dom (02/11/2026) :
+  # - feature/eccodes-pip : PR #45 fermée sans merge, remplacée par la PR #46
+  # - feature/grib-offline-first : intégrée dans main via la pile de routage (#44)
+  # - dependabot eslint : PR fermée sans merge, ESLint migré à la main
+  # - chore/cleanup-purge : cette branche (squash-mergée), auto-nettoyage
+  cleanup-stale:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        branch:
+          - feature/eccodes-pip
+          - feature/grib-offline-first
+          - dependabot/npm_and_yarn/eslint-plugin-react-refresh-0.5.7
+          - chore/cleanup-purge
+      fail-fast: false
+    steps:
+      - uses: actions/checkout@v7
+      - name: Delete stale branch
+        run: |
+          BR="${{ matrix.branch }}"
+          if git ls-remote --exit-code --heads origin "$BR" >/dev/null 2>&1; then
+            echo "$BR : suppression (branche obsolète, autorisée par Dom)."
+            git push origin --delete "$BR" || echo "deja supprimee"
+          else
+            echo "$BR absente — ok."
           fi
         env:
           GH_TOKEN: ${{ github.token }}
