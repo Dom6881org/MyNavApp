@@ -3,7 +3,10 @@
 # En local :  pip install -r requirements.txt -r requirements-routing.txt
 # v0.4-perf (02/11) : pre-extraction numpy du GRIB, sample() vectorise O(1)/point
 # (mynav-routing #24, issue moteur #16 ; bench #19 : 1,9 s bout en bout, sample 0,8 %).
-mynav-routing @ git+https://github.com/Dom6881org/mynav-routing.git@e34b33a59dcffd1b774fd387c6ab561d526fd1e3
+# v0.4-corridor (02/11) : elagage du front par corridor depart-arrivee (marge 20 %,
+# configurable via corridor_margin) + cles de cellules int32
+# (mynav-routing #25, issue moteur #17 ; bench : ~2x, noeuds 5,56 M -> 2,05 M).
+mynav-routing @ git+https://github.com/Dom6881org/mynav-routing.git@98832e3c7e0e44052e165ec25dc7d61cf48f54f9
 # GRIB (issues #16, #42) : lecture/ecriture via ecCodes.
 # Depuis ecCodes 2.43, la roue pip embarque la librairie native :
 # - Linux/macOS : via la dependance 'eccodeslib' (wheels binaires)
