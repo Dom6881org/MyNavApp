@@ -11,6 +11,7 @@ import { RoutingInput } from '../hooks/useRoutingInput';
 import { RoutingPolarApi } from '../hooks/useRoutingPolar';
 import { RoutingRouteApi } from '../hooks/useRoutingRoute';
 import { GribApi } from '../hooks/useGrib';
+import { isMapProfilingEnabled, reportMapPerformance } from '../utils/mapPerformance';
 
 // Extend Window interface for Leaflet
 declare global {
@@ -565,7 +566,9 @@ const MapViewSimple: React.FC<MapViewSimpleProps> = ({
   useEffect(() => {
     if (!showWindLayer || !mapInstance || !leafletLoaded || leafletError || !window.L || data.windGrid.length === 0) return;
 
+    const syncStartedAt = isMapProfilingEnabled() ? performance.now() : 0;
     const L = window.L;
+    const map = mapInstance.map;
     const flowLayer = flowLayerRef.current;
     if (!flowLayer) return;
 
@@ -579,6 +582,9 @@ const MapViewSimple: React.FC<MapViewSimpleProps> = ({
     });
 
     const seen = new Set<string>();
+    let added = 0;
+    let updated = 0;
+    let removed = 0;
     for (const point of data.windGrid) {
       const key = barbKey(point);
       seen.add(key);
@@ -589,6 +595,7 @@ const MapViewSimple: React.FC<MapViewSimpleProps> = ({
           existing.marker.setTooltipContent(getWindTooltip(point.wind));
           existing.speed = point.wind.speed;
           existing.direction = point.wind.direction;
+          updated += 1;
         }
         continue;
       }
@@ -602,13 +609,28 @@ const MapViewSimple: React.FC<MapViewSimpleProps> = ({
         .bindTooltip(getWindTooltip(point.wind), { direction: 'top', sticky: true, opacity: 1, className: TOOLTIP_CLASS })
         .addTo(flowLayer);
       barbMarkers.set(key, { marker, speed: point.wind.speed, direction: point.wind.direction });
+      added += 1;
     }
 
     for (const [key, entry] of barbMarkers) {
       if (!seen.has(key)) {
         flowLayer.removeLayer(entry.marker);
         barbMarkers.delete(key);
+        removed += 1;
       }
+    }
+
+    if (isMapProfilingEnabled()) {
+      const count = barbMarkers.size;
+      const pane = map.getPane(WIND_BARB_PANE) as HTMLElement | undefined;
+      if (pane) pane.dataset.windBarbsCount = String(count);
+      reportMapPerformance('wind-barb-sync', performance.now() - syncStartedAt, {
+        count,
+        added,
+        updated,
+        removed,
+        zoom: map.getZoom()
+      });
     }
   }, [mapInstance, leafletLoaded, leafletError, data.windGrid, showWindLayer]);
 

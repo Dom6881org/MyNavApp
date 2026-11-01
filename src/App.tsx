@@ -3,7 +3,25 @@ import { useAISSettings, useNavigationData, useDashboardLayout, useTrackRecorder
 import { InstrumentPanel } from './components';
 import { Position } from './types';
 import MapView from './components/MapView';
+import { isMapProfilingEnabled, reportMapPerformance } from './utils/mapPerformance';
 import './App.css';
+
+const handleMapRender: React.ProfilerOnRenderCallback = (
+  id,
+  phase,
+  actualDuration,
+  baseDuration,
+  startTime,
+  commitTime
+) => {
+  reportMapPerformance('react-map-commit', actualDuration, {
+    id,
+    phase,
+    baseDuration,
+    startTime,
+    commitTime
+  });
+};
 
 const App: React.FC = () => {
   const {
@@ -113,6 +131,41 @@ const App: React.FC = () => {
       </div>
     ));
 
+  const mapView = (
+    <MapView
+      data={navigationData}
+      onWindGridRequest={requestWindGrid}
+      aisTargets={aisState?.targets ?? []}
+      aisState={aisState}
+      showAIS={aisSettings.isVisible}
+      aisSource={aisSettings.source}
+      onAISSourceChange={aisSettings.setSource}
+      onAISVisibilityChange={aisSettings.setIsVisible}
+      layout={layout}
+      onThemeChange={setTheme}
+      onUnitChange={setUnit}
+      onToggleGPSConnection={toggleGPSConnection}
+      gpsStatus={gpsStatus}
+      navigationSource={navigationSource}
+      hasGPS={hasGPS}
+      isGPSEnabled={isGPSEnabled}
+      backendStatus={backendStatus}
+      trackRecorder={trackRecorder}
+      size={{ width: '100%', height: '100%' }}
+      onRoutingMapPick={handleRoutingMapPick}
+      routingPickTarget={routingPickTarget}
+      routing={routing}
+      onRoutingPickRequest={handleRoutingPickRequest}
+      routingRoute={routingRoute}
+      onRoutingCompute={handleComputeRoute}
+      gribApi={grib}
+      routingPolar={routingPolar}
+    />
+  );
+  const profiledMapView = isMapProfilingEnabled()
+    ? <React.Profiler id="MapView" onRender={handleMapRender}>{mapView}</React.Profiler>
+    : mapView;
+
   return (
     <div className="app">
       {/* Main content - primary instruments, chart, then secondary instruments */}
@@ -125,35 +178,7 @@ const App: React.FC = () => {
           </aside>
           
           <div className="map-container">
-            <MapView
-              data={navigationData}
-              onWindGridRequest={requestWindGrid}
-              aisTargets={aisState?.targets ?? []}
-              aisState={aisState}
-              showAIS={aisSettings.isVisible}
-              aisSource={aisSettings.source}
-              onAISSourceChange={aisSettings.setSource}
-              onAISVisibilityChange={aisSettings.setIsVisible}
-              layout={layout}
-              onThemeChange={setTheme}
-              onUnitChange={setUnit}
-              onToggleGPSConnection={toggleGPSConnection}
-              gpsStatus={gpsStatus}
-              navigationSource={navigationSource}
-              hasGPS={hasGPS}
-              isGPSEnabled={isGPSEnabled}
-              backendStatus={backendStatus}
-              trackRecorder={trackRecorder}
-              size={{ width: '100%', height: '100%' }}
-              onRoutingMapPick={handleRoutingMapPick}
-              routingPickTarget={routingPickTarget}
-              routing={routing}
-              onRoutingPickRequest={handleRoutingPickRequest}
-              routingRoute={routingRoute}
-              onRoutingCompute={handleComputeRoute}
-              gribApi={grib}
-              routingPolar={routingPolar}
-            />
+            {profiledMapView}
           </div>
 
           {layout.instruments.some(instrument =>

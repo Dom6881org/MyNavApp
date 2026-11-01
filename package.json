@@ -8,6 +8,7 @@
   },
   "scripts": {
     "dev": "concurrently -k -n backend,frontend \"python -m server.app\" \"vite\"",
+    "dev:profile": "cross-env VITE_MAP_PERF=1 npm run dev",
     "dev:lan": "cross-env VITE_HOST=0.0.0.0 npm run dev",
     "start:lan": "cross-env HOST=0.0.0.0 npm start",
     "build": "tsc && vite build",
