@@ -1,5 +1,5 @@
 # Moteur de routage meteo (issue #14, milestone Routing v1).
-# Depôt privé : pip a besoin d'un acces authentifie a GitHub.
+# Depôt public : installation directe, sans authentification (utilisé par la CI).
 # En local :  pip install -r requirements.txt -r requirements-routing.txt
 mynav-routing @ git+https://github.com/Dom6881org/mynav-routing.git@v0.3.3
 # GRIB (issues #16, #42) : lecture/ecriture via ecCodes.
