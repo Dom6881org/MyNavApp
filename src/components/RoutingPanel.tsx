@@ -144,8 +144,10 @@ const RoutingPanel: React.FC<RoutingPanelProps> = ({
       </div>
   );
 
+  // Issue #52 : sans le préfixe « GPS · », le chip reste étroit quand la
+  // position courante est utilisée — la case à cocher l'indique déjà.
   const startChip = routing.useCurrentPosition
-    ? (routing.startPosition ? `GPS · ${formatPosition(routing.startPosition)}` : 'Waiting for GPS…')
+    ? (routing.startPosition ? formatPosition(routing.startPosition) : 'Waiting for GPS…')
     : formatPosition(routing.startPosition);
   const finishChip = formatPosition(routing.finishPosition);
 
