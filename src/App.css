@@ -704,6 +704,8 @@
 .routing-actions {
   display: flex;
   justify-content: flex-end;
+  align-items: center;
+  gap: 0.4rem;
 }
 
 .routing-compute-button {
@@ -733,6 +735,39 @@
 .routing-compute-button:focus-visible {
   outline: 2px solid #74e3e5;
   outline-offset: 2px;
+}
+
+/* Annulation du job de routage en cours (issue #96) : action secondaire. */
+.routing-cancel-button {
+  padding: 0.32rem 0.7rem;
+  border: 1px solid rgba(175, 210, 221, 0.35);
+  border-radius: 5px;
+  background: transparent;
+  color: #9fb8c2;
+  cursor: pointer;
+  font: inherit;
+  font-size: 0.78rem;
+  font-weight: 600;
+}
+
+.routing-cancel-button:hover {
+  border-color: #ffb56b;
+  color: #ffb56b;
+}
+
+.routing-cancel-button:focus-visible {
+  outline: 2px solid #74e3e5;
+  outline-offset: 2px;
+}
+
+/* Progression brute du job (elapsed, explored_nodes) — pas de pourcentage. */
+.routing-progress {
+  margin: 0.2rem 0 0;
+  color: #9fb8c2;
+  font-size: 0.72rem;
+  line-height: 1.25;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
 }
 
 /* Resultat : ETA et distance en grand. */
@@ -3611,6 +3646,7 @@ html {
 .theme-light .routing-input:focus-visible,
 .theme-light .routing-mini-button:focus-visible,
 .theme-light .routing-compute-button:focus-visible,
+.theme-light .routing-cancel-button:focus-visible,
 .theme-light .routing-clear-button:focus-visible {
   outline-color: #0b78a8;
 }
@@ -3666,6 +3702,21 @@ html {
   border-color: rgba(16, 32, 42, 0.14);
   background: #f4f7f9;
   color: #8aa0ab;
+}
+
+.theme-light .routing-cancel-button {
+  border-color: rgba(16, 32, 42, 0.28);
+  background: #eef4f7;
+  color: #5c7480;
+}
+
+.theme-light .routing-cancel-button:hover {
+  border-color: #b35c00;
+  color: #b35c00;
+}
+
+.theme-light .routing-progress {
+  color: #5c7480;
 }
 
 .theme-light .routing-result {
