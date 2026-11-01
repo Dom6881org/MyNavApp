@@ -29,6 +29,17 @@ const formatEta = (etaS: number): string => {
 const formatClock = (epochS: number): string =>
   new Date(epochS * 1000).toLocaleString(undefined, { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
 
+/** Progression brute du job (issue #96) : durée écoulée, sans pourcentage. */
+const formatElapsed = (elapsedS: number): string => {
+  const total = Math.max(0, Math.floor(elapsedS));
+  const hours = Math.floor(total / 3600);
+  const minutes = Math.floor((total % 3600) / 60);
+  const seconds = total % 60;
+  if (hours > 0) return `${hours} h ${String(minutes).padStart(2, '0')} min`;
+  if (minutes > 0) return `${minutes} min ${String(seconds).padStart(2, '0')} s`;
+  return `${seconds} s`;
+};
+
 const formatPosition = (position: Position | null): string =>
   position ? `${position.latitude.toFixed(5)}, ${position.longitude.toFixed(5)}` : 'Not set';
 
@@ -66,7 +77,10 @@ const pickButtonLabel = (target: RoutingPickTarget, active: boolean): string => 
  * la carte et bouton "Edit" pour la saisie manuelle (champs dépliés à la
  * demande). Le vent (GRIB) est téléchargé automatiquement par l'application ;
  * le panneau n'affiche que son statut, en avertissement s'il est indisponible.
- * Bouton de calcul discret, résultat (ETA, distance) mis en avant.
+ * Bouton de calcul discret, résultat (ETA, distance) mis en avant. Tant que le
+ * job de routage tourne (issue #96) : progression brute (durée écoulée, nœuds
+ * explorés — pas de pourcentage) et bouton « Annuler » ; relancer un calcul
+ * annule d'abord le job précédent côté hook.
  * La polaire est un réglage global de l'application (voir useRoutingPolar).
  */
 const RoutingPanel: React.FC<RoutingPanelProps> = ({
@@ -214,12 +228,31 @@ const RoutingPanel: React.FC<RoutingPanelProps> = ({
           <button
             type="button"
             className="routing-compute-button"
-            disabled={!routing.plan || routeCalc.isLoading}
+            disabled={!routing.plan}
             onClick={onComputeRoute}
           >
             {routeCalc.isLoading ? 'Computing…' : 'Compute route'}
           </button>
+          {routeCalc.isLoading && (
+            <button
+              type="button"
+              className="routing-cancel-button"
+              aria-label="Cancel routing computation"
+              title="Cancel routing computation"
+              onClick={() => void routeCalc.cancel()}
+            >
+              Cancel
+            </button>
+          )}
         </div>
+      )}
+
+      {routeCalc?.isLoading && (
+        <p className="routing-progress" aria-live="polite">
+          {routeCalc.progress
+            ? `${formatElapsed(routeCalc.progress.elapsed)} · ${routeCalc.progress.explored_nodes.toLocaleString('en-US')} nodes explored`
+            : 'Queued…'}
+        </p>
       )}
 
       {routeCalc?.error && <p className="routing-error routing-calc-error">{routeCalc.error}</p>}

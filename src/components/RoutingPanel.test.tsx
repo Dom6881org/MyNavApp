@@ -34,12 +34,19 @@ const ROUTE_FOUND: RoutingRouteResult = {
   finish: { latitude: 47.6, longitude: -4.6 }
 };
 
-const stubRouteCalc = (route: RoutingRouteResult | null = null, error: string | null = null): RoutingRouteApi => ({
+const stubRouteCalc = (
+  route: RoutingRouteResult | null = null,
+  error: string | null = null,
+  overrides: Partial<RoutingRouteApi> = {}
+): RoutingRouteApi => ({
   route,
   isLoading: false,
   error,
+  progress: null,
   compute: vi.fn(),
-  clear: vi.fn()
+  cancel: vi.fn(),
+  clear: vi.fn(),
+  ...overrides
 });
 
 const GRIB_FRESH: GribStatus = {
@@ -255,5 +262,49 @@ describe('RoutingPanel', () => {
     renderPanel({ gribCalc: stubGrib(null, true) });
 
     expect(screen.getByText(/Downloading GRIB/i)).toBeInTheDocument();
+  });
+
+  it('calcul en cours : progression brute (durée, nœuds explorés) et bouton Annuler fonctionnel', async () => {
+    const routeCalc = stubRouteCalc(null, null, {
+      isLoading: true,
+      progress: { elapsed: 65, explored_nodes: 1234, phases: { pruning_s: 12 } }
+    });
+    renderPanel({ routeCalc, onComputeRoute: vi.fn() });
+    const user = userEvent.setup();
+
+    expect(screen.getByRole('button', { name: 'Computing…' })).toBeInTheDocument();
+    expect(screen.getByText(/1 min 05 s/)).toBeInTheDocument();
+    expect(screen.getByText(/1,234 nodes explored/)).toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: 'Cancel routing computation' }));
+    expect(routeCalc.cancel).toHaveBeenCalledTimes(1);
+  });
+
+  it('calcul en cours sans progression (file d\'attente) : "Queued…" affiché, pas de pourcentage', () => {
+    const routeCalc = stubRouteCalc(null, null, { isLoading: true, progress: null });
+    renderPanel({ routeCalc, onComputeRoute: vi.fn() });
+
+    expect(screen.getByText('Queued…')).toBeInTheDocument();
+    expect(screen.queryByText(/%/)).not.toBeInTheDocument();
+  });
+
+  it('calcul en cours : relancer reste possible et annule le job précédent côté hook', async () => {
+    const onComputeRoute = vi.fn();
+    const routeCalc = stubRouteCalc(null, null, { isLoading: true });
+    renderPanel({ routeCalc, onComputeRoute });
+    const user = userEvent.setup();
+
+    await enterDestination(user);
+    const computeButton = screen.getByRole('button', { name: 'Computing…' });
+    expect(computeButton).toBeEnabled();
+    await user.click(computeButton);
+    expect(onComputeRoute).toHaveBeenCalledTimes(1);
+  });
+
+  it('statut cancelled : message clair affiché', () => {
+    renderPanel({ routeCalc: stubRouteCalc(null, 'Routing cancelled.'), onComputeRoute: vi.fn() });
+
+    expect(screen.getByText(/Routing cancelled/i)).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Cancel routing computation' })).not.toBeInTheDocument();
   });
 });

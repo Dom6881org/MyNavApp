@@ -242,3 +242,43 @@ export interface RoutingRouteResult {
   startAdjusted?: RoutingRouteAdjustment | null;
   finishAdjusted?: RoutingRouteAdjustment | null;
 }
+
+/** Statut d'un job de routage asynchrone (issue #96). */
+export type RoutingJobStatus = 'queued' | 'running' | 'done' | 'failed' | 'cancelled';
+
+/**
+ * Progression brute remontée par le serveur (~1 Hz pendant le calcul) :
+ * elapsed en secondes, explored_nodes et timings des phases — aucun
+ * pourcentage n'est calculé côté front.
+ */
+export interface RoutingJobProgress {
+  elapsed: number;
+  explored_nodes: number;
+  phases: Record<string, number>;
+}
+
+/**
+ * Résultat d'un job terminé : payload complet de l'ancien
+ * POST /api/routing/compute, plus timings et params effectifs (règle D3).
+ */
+export interface RoutingJobResult extends RoutingRouteResult {
+  timings?: Record<string, number>;
+  params?: { dt_s: number; bin_deg: number };
+}
+
+/** Snapshot d'un job : GET /api/routing/jobs/{jobId} et DELETE (issue #96). */
+export interface RoutingJob {
+  jobId: string;
+  status: RoutingJobStatus;
+  createdAt: string;
+  startedAt?: string;
+  endedAt?: string;
+  progress?: RoutingJobProgress;
+  result?: RoutingJobResult;
+  error?: string;
+}
+
+/** Réponse 202 de POST /api/routing/jobs (issue #96). */
+export interface RoutingJobAccepted {
+  jobId: string;
+}
