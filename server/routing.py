@@ -176,6 +176,7 @@ def compute_route(
     tws_max: float | None = None,
     use_bathy: bool = True,
     min_depth_m: float | None = None,
+    phase_timings: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     """Calcule la route la plus rapide de start vers finish.
 
@@ -264,6 +265,8 @@ def compute_route(
                 "start_adjusted": start_adjusted,
                 "finish_adjusted": finish_adjusted,
                 "dt_s": dt,
+                "bin_deg": bin_deg,
+                "phase_timings": dict(phase_timings or {}),
                 "message": (
                     f"Aucune route trouvée : le point {name} est à terre "
                     f"(aucun point d'eau à moins de {SNAP_MAX_NM:.0f} mn selon le masque de côtes). "
@@ -282,6 +285,7 @@ def compute_route(
         "tws_max": tws_max,
         "bathy": bathy,
         "min_depth_m": min_depth_m,
+        "phase_timings": phase_timings,
     }
     if land_mask is not None:
         route_kwargs["land"] = land_mask
@@ -306,6 +310,8 @@ def compute_route(
             "start_adjusted": start_adjusted,
             "finish_adjusted": finish_adjusted,
             "dt_s": dt,
+            "bin_deg": bin_deg,
+            "phase_timings": dict(phase_timings or {}),
             "message": (
                 "Aucune route trouvée : horizon dépassé "
                 f"(meilleure progression à {result.min_dist_nm:.1f} mn de l'arrivée). "
@@ -327,10 +333,16 @@ def compute_route(
         "start_adjusted": start_adjusted,
         "finish_adjusted": finish_adjusted,
         "dt_s": dt,
+        "bin_deg": bin_deg,
+        "phase_timings": dict(phase_timings or {}),
     }
 
 
-def compute_route_payload(payload: Any) -> dict[str, Any]:
+def compute_route_payload(
+    payload: Any,
+    phase_timings: dict[str, Any] | None = None,
+    include_diagnostics: bool = False,
+) -> dict[str, Any]:
     """Exécute un calcul de routage depuis le payload POST de l'API (issue #17).
 
     Attend : start/finish = {latitude, longitude}, polarId = id de polaire
@@ -416,12 +428,12 @@ def compute_route_payload(payload: Any) -> dict[str, Any]:
 
     result = compute_route(
         start, finish, wind=wind_field, polar_path=polar["path"],
-        use_bathy=use_bathy, min_depth_m=min_depth_m,
+        use_bathy=use_bathy, min_depth_m=min_depth_m, phase_timings=phase_timings,
     )
 
     start_position = _validate_position("de départ", start)
     finish_position = _validate_position("d'arrivée", finish)
-    return {
+    payload_result = {
         "found": result["found"],
         "coords": result["coords"],
         "etaS": result["eta_s"],
@@ -438,6 +450,13 @@ def compute_route_payload(payload: Any) -> dict[str, Any]:
         "startAdjusted": adjustment_json(result["start_adjusted"]),
         "finishAdjusted": adjustment_json(result["finish_adjusted"]),
     }
+    if include_diagnostics:
+        payload_result.update({
+            "timings": result["phase_timings"],
+            "params": {"dt_s": result["dt_s"], "bin_deg": result["bin_deg"]},
+            "binDeg": result["bin_deg"],
+        })
+    return payload_result
 
 
 ROUTING_POLARS_DIR = os.path.join(os.path.dirname(__file__), os.pardir, "config")

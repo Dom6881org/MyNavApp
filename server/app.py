@@ -20,6 +20,7 @@ from dotenv import load_dotenv
 from server.ais import LocalAISDecoder, parse_internet_message
 from server.nmea import parse_nmea_sentence
 from server.routing import RoutingError, compute_route_payload, list_polars
+from server.routing_jobs import routing_jobs
 from server.grib import GribError, download_grib, sample_points, status as grib_status
 from server.tracks import (
     TrackNotFoundError,
@@ -553,6 +554,16 @@ class RequestHandler(BaseHTTPRequestHandler):
             self._send_tile(path)
         elif path == "/api/routing/polars":
             self._send_json(200, {"polars": list_polars()})
+        elif path.startswith("/api/routing/jobs/"):
+            job_id = path[len("/api/routing/jobs/"):]
+            if not job_id or "/" in job_id:
+                self._send_json(404, {"error": "Routing job not found."})
+                return
+            job = routing_jobs.get(job_id)
+            if job is None:
+                self._send_json(404, {"error": "Routing job not found."})
+                return
+            self._send_json(200, job)
         elif path == "/api/grib/status":
             self._send_json(200, grib_status())
         elif path == "/api/tracks":
@@ -598,6 +609,7 @@ class RequestHandler(BaseHTTPRequestHandler):
             return
         if path not in (
             "/api/routing/compute",
+            "/api/routing/jobs",
             "/api/grib/download",
             "/api/grib/sample",
             "/api/navigation/browser",
@@ -620,6 +632,9 @@ class RequestHandler(BaseHTTPRequestHandler):
             value = json.loads(self.rfile.read(length))
         except (json.JSONDecodeError, UnicodeDecodeError):
             self._send_json(400, {"error": "Malformed JSON request body."})
+            return
+        if path == "/api/routing/jobs":
+            self._send_json(202, {"jobId": routing_jobs.submit(value)})
             return
         if path == "/api/routing/compute":
             try:
@@ -719,6 +734,18 @@ class RequestHandler(BaseHTTPRequestHandler):
 
     def do_DELETE(self) -> None:
         path = urlsplit(self.path).path
+        routing_job_prefix = "/api/routing/jobs/"
+        if path.startswith(routing_job_prefix):
+            job_id = path[len(routing_job_prefix):]
+            if not job_id or "/" in job_id:
+                self._send_json(404, {"error": "Routing job not found."})
+                return
+            job = routing_jobs.cancel(job_id)
+            if job is None:
+                self._send_json(404, {"error": "Routing job not found."})
+                return
+            self._send_json(200, job)
+            return
         prefix = "/api/tracks/"
         if not path.startswith(prefix):
             self._send_json(404, {"error": "API route not found."} if path.startswith("/api/") else {"error": "Not found."})

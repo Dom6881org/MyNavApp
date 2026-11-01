@@ -134,6 +134,7 @@ Toutes les réponses sont JSON (`{ "error": "…" }` en cas d'erreur), `Cache-Co
 | `/api/navigation/events` | **SSE** : un événement `data:` par changement d'état, keep-alive toutes les 15 s |
 | `/api/tiles/{osm\|seamark}/{z}/{x}/{y}.png` | PNG — cache disque (`TILES_DIR`), sinon récupération amont (OSM `a/b/c.tile.openstreetmap.org` ou `tiles.openseamap.org/seamark`), 1 Mo max, cache 24 h |
 | `/api/routing/polars` | `{ polars: [{ id, name }] }` |
+| `/api/routing/jobs/{jobId}` | État du job asynchrone (`queued`, `running`, `done`, `failed`, `cancelled`), progression brute, résultat ou erreur |
 | `/api/grib/status` | `GribStatus` (§6) |
 | `/api/tracks` | `{ recorder, tracks }` |
 | `/api/tracks/{id}/export?format=geojson\|gpx\|csv` | Pièce jointe GeoJSON / GPX / CSV |
@@ -146,6 +147,7 @@ Toutes les réponses sont JSON (`{ "error": "…" }` en cas d'erreur), `Cache-Co
 | `/api/ais/settings` | `{ source: local\|internet, visible: bool }` | `202` + snapshot |
 | `/api/ais/replay-position` | `{ position }` ou `{ position: null }` — force la zone AISstream en tests (valide 5 s) | `202 { ok }` |
 | `/api/routing/compute` | plan + vent éventuel | `RoutingRouteResult` ; `422` si plan invalide |
+| `/api/routing/jobs` | même payload que `/api/routing/compute` | `202 { jobId }` ; calcul isolé en subprocess |
 | `/api/grib/download` | `{ south, north, west, east, horizonH = 72 }` | `GribStatus` ; `503` si échec |
 | `/api/grib/sample` | `{ points }` — **≤ 400 positions** | `{ fresh: bool, wind: [] }` ; `fresh: false` si le GRIB n'est pas frais, `503` en erreur |
 | `/api/tracks/start`, `/api/tracks/stop` | — | `202 { recorder, tracks, stopped }` ; `409` si conflit |
@@ -154,7 +156,10 @@ Toutes les réponses sont JSON (`{ "error": "…" }` en cas d'erreur), `Cache-Co
 
 | Endpoint | Réponse |
 |---|---|
+| `/api/routing/jobs/{jobId}` | Annule le subprocess ; état du job (`cancelled`), idempotent ; `404` si inconnu |
 | `/api/tracks/{id}` | `202 { recorder, tracks }` ; `404` si inconnue, `409` si en cours |
+
+Le calcul synchrone `/api/routing/compute` reste disponible sans changement. Les jobs asynchrones sont exécutés dans un subprocess (mode `spawn`) pour isoler le calcul du serveur ; `GET /api/routing/jobs/{jobId}` expose les temps de phase cumulés et le nombre de nœuds explorés, sans pourcentage estimé. Les jobs terminés sont purgés après 30 minutes.
 
 En production (`NODE_ENV=production`), le backend sert aussi le build statique `dist/` (SPA : les chemins sans extension retombent sur `index.html`). En dev, Vite route `/api` vers `127.0.0.1:3001` (proxy `vite.config.ts`).
 
