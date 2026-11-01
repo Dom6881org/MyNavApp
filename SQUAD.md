@@ -64,3 +64,27 @@ Cette squad de développement IA travaille sur **MyNavApp** (app principale) et 
 - Pas de merge direct sur `main` (branche protégée).
 - Les agents ne fusionnent jamais seuls ; Dom a le dernier mot.
 - mynav-routing : toute évolution du moteur passe par une PR sur ce dépôt, puis intégration côté MyNavApp (mise à jour de la dépendance).
+
+## Économie de crédits Copilot — mode API-first (02/11/2026, décision de Dom)
+
+Chaque session du coding agent Copilot coûte ~110-120 crédits (plan Copilot Pro : 1 500/mois, remis à zéro le 1er du mois). Le budget est rare et arbitré par Dom. Les agents Dev s'exécutent donc par l'une des deux voies suivantes.
+
+### Voie API (par défaut — 0 crédit)
+L'orchestrateur (Vibe) écrit le code **au nom de l'agent Dev responsable** via l'API GitHub (branche dédiée + commits), et la **CI valide chaque push**. Retour disponible : job en échec (`mergeable_state`, `get_check_runs`) — pas les logs. **Escalade vers Copilot après 2 itérations rouges sans diagnostic possible.**
+
+### Voie Copilot (réservée — ~120 crédits/session)
+Assignation du coding agent, uniquement si **au moins un** critère :
+- diff logique multi-fichiers avec tests à itérer en boucle (ex. : multiprocessing/spawn Windows, SSE, cache, perf) ;
+- nouvelle fonctionnalité algorithmique ou refactoring structurel ;
+- 2 itérations API restées rouges sans diagnostic.
+
+### Jamais par Copilot (voie API systématique)
+- PRs de pin / Intégrateur, docs (`archi.md`, ADR, `SQUAD.md`), versions et releases.
+- Fixes single-file, stubs de tests, renommages, ajustements d'assertions.
+- Revue Validation, mise à jour de branches, re-trigger CI.
+- Corrections post-PR identifiées par la revue (l'orchestrateur pousse le fix sur la branche de la PR).
+
+### Règles de session Copilot
+- **Une session = un chantier complet** : l'issue doit être auto-suffisante (critères d'acceptation, contraintes, commandes de test) — chaque commentaire de pilotage en cours de session consomme des crédits, donc tout le cadrage va dans l'assignation initiale.
+- Pas de re-assignation d'une issue déjà amorcée : les retouches passent par l'API.
+- L'orchestrateur **annonce la voie choisie** (API ou Copilot) à chaque lancement de chantier, et signale le solde de crédits restant.
