@@ -128,6 +128,10 @@ const MapViewSimple: React.FC<MapViewSimpleProps> = ({
 }) => {
   const mapRef = useRef<HTMLDivElement>(null);
   const mapInstanceRef = useRef<LeafletObject>(null);
+  // Issue #50: layer de vent persistant + marqueurs réutilisés entre les ticks
+  // de navigation, pour qu'aucune mise à jour de position ne la reconstruise.
+  const flowLayerRef = useRef<LeafletObject>(null);
+  const barbMarkersRef = useRef<Map<string, { marker: LeafletObject; speed: number; direction: number }>>(new Map());
   const [mapInstance, setMapInstance] = useState<LeafletObject>(null);
   const [leafletLoaded, setLeafletLoaded] = useState<boolean>(false);
   const [rotationAvailable, setRotationAvailable] = useState<boolean>(false);
@@ -535,39 +539,77 @@ const MapViewSimple: React.FC<MapViewSimpleProps> = ({
     };
   }, [mapInstance, leafletLoaded, leafletError, onWindGridRequest]);
 
+  // Issue #50 : le cycle de vie du layer est découplé des mises à jour de
+  // windGrid — le layer et ses marqueurs survivent aux ticks de navigation,
+  // donc plus aucun clignotement quand la position du bateau change.
   useEffect(() => {
-    if (!showWindLayer || !mapInstance || !leafletLoaded || leafletError || !window.L || data.windGrid.length === 0) return;
+    if (!showWindLayer || !mapInstance || !leafletLoaded || leafletError || !window.L) return;
 
     const L = window.L;
     const map = mapInstance.map;
     const flowLayer = L.layerGroup().addTo(map);
-
-    const drawWindBarbs = () => {
-      flowLayer.clearLayers();
-      for (const point of data.windGrid) {
-        const barbIcon = L.divIcon({
-          className: 'wind-map-barb-icon',
-          html: `<svg class="wind-map-barb" viewBox="0 0 48 48" aria-hidden="true" style="transform:rotate(${point.wind.direction}deg)">${getWindBarbSvg(point.wind.speed)}</svg>`,
-          iconSize: [32, 32],
-          iconAnchor: [16, 16]
-        });
-        const direction = getWindDirectionText(point.wind.direction);
-        L.marker([point.position.latitude, point.position.longitude], {
-          icon: barbIcon,
-          pane: WIND_BARB_PANE,
-          rotateWithView: true,
-          title: `Wind from ${direction}, ${point.wind.speed.toFixed(1)} knots`
-        })
-          .bindTooltip(getWindTooltip(point.wind), { direction: 'top', sticky: true, opacity: 1, className: TOOLTIP_CLASS })
-          .addTo(flowLayer);
-      }
-    };
-
-    drawWindBarbs();
+    flowLayerRef.current = flowLayer;
+    barbMarkersRef.current = new Map();
 
     return () => {
+      flowLayerRef.current = null;
+      barbMarkersRef.current = new Map();
       map.removeLayer(flowLayer);
     };
+  }, [mapInstance, leafletLoaded, leafletError, showWindLayer]);
+
+  // Issue #50 : rendu incrémental — marqueurs indexés par position géographique
+  // et réutilisés ; seules les prévisions réellement changées mettent à jour
+  // l'icône et le tooltip, les nouveaux points sont ajoutés, les obsolètes
+  // retirés. Un nouvel array windGrid à contenu identique ne redessine rien.
+  useEffect(() => {
+    if (!showWindLayer || !mapInstance || !leafletLoaded || leafletError || !window.L || data.windGrid.length === 0) return;
+
+    const L = window.L;
+    const flowLayer = flowLayerRef.current;
+    if (!flowLayer) return;
+
+    const barbMarkers = barbMarkersRef.current;
+    const barbKey = (point: { position: Position }) => `${point.position.latitude.toFixed(5)},${point.position.longitude.toFixed(5)}`;
+    const makeBarbIcon = (wind: WindData) => L.divIcon({
+      className: 'wind-map-barb-icon',
+      html: `<svg class="wind-map-barb" viewBox="0 0 48 48" aria-hidden="true" style="transform:rotate(${wind.direction}deg)">${getWindBarbSvg(wind.speed)}</svg>`,
+      iconSize: [32, 32],
+      iconAnchor: [16, 16]
+    });
+
+    const seen = new Set<string>();
+    for (const point of data.windGrid) {
+      const key = barbKey(point);
+      seen.add(key);
+      const existing = barbMarkers.get(key);
+      if (existing) {
+        if (existing.speed !== point.wind.speed || existing.direction !== point.wind.direction) {
+          existing.marker.setIcon(makeBarbIcon(point.wind));
+          existing.marker.setTooltipContent(getWindTooltip(point.wind));
+          existing.speed = point.wind.speed;
+          existing.direction = point.wind.direction;
+        }
+        continue;
+      }
+      const direction = getWindDirectionText(point.wind.direction);
+      const marker = L.marker([point.position.latitude, point.position.longitude], {
+        icon: makeBarbIcon(point.wind),
+        pane: WIND_BARB_PANE,
+        rotateWithView: true,
+        title: `Wind from ${direction}, ${point.wind.speed.toFixed(1)} knots`
+      })
+        .bindTooltip(getWindTooltip(point.wind), { direction: 'top', sticky: true, opacity: 1, className: TOOLTIP_CLASS })
+        .addTo(flowLayer);
+      barbMarkers.set(key, { marker, speed: point.wind.speed, direction: point.wind.direction });
+    }
+
+    for (const [key, entry] of barbMarkers) {
+      if (!seen.has(key)) {
+        flowLayer.removeLayer(entry.marker);
+        barbMarkers.delete(key);
+      }
+    }
   }, [mapInstance, leafletLoaded, leafletError, data.windGrid, showWindLayer]);
 
   const recordingElapsed = trackRecorder?.status?.recording
@@ -1095,8 +1137,7 @@ const MapViewSimple: React.FC<MapViewSimpleProps> = ({
           </div>
           <div className="map-global-legend-item">
             <svg width="14" height="18" viewBox="0 0 48 48" aria-hidden="true">
-              <path d={getWindBarbSvg(15, false)} fill="none" stroke="#10202a" strokeWidth="8" strokeLinejoin="round" strokeLinecap="round" />
-              <path d={getWindBarbSvg(15, false)} fill="none" stroke="#fff" strokeWidth="4" strokeLinejoin="round" strokeLinecap="round" />
+              <path d={getWindBarbSvg(15, false)} fill="none" stroke="currentColor" strokeWidth="4" strokeLinejoin="round" strokeLinecap="round" />
             </svg>
             <span>Wind barbs · hover for forecast</span>
           </div>
@@ -1321,8 +1362,8 @@ const getWindBarbSvg = (speedKnots: number, includeOutline = true): string => {
   const path = paths.join(' ');
   if (!includeOutline) return path;
 
-  const color = speedKnots > 30 ? '#ff4d4f' : speedKnots > 20 ? '#ff9f43' : '#fff';
-  return `<path d="${path}" fill="${color}" stroke="#10202a" stroke-width="5" stroke-linejoin="round" stroke-linecap="round"/><path d="${path}" fill="none" stroke="${color}" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round"/>`;
+  // Issue #50 : un simple trait noir — plus de contour ni de code couleur par vitesse.
+  return `<path d="${path}" fill="none" stroke="#000" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>`;
 };
 
 export default MapViewSimple;
