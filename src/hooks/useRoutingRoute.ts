@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 
-import { RoutingJob, RoutingJobAccepted, RoutingJobProgress, RoutingJobResult, RoutingPlan, RoutingWindInput } from '../types';
+import { RoutingJob, RoutingJobAccepted, RoutingJobProgress, RoutingJobResult, RoutingPlan } from '../types';
 
 const JOBS_URL = '/api/routing/jobs';
 
@@ -18,7 +18,7 @@ export interface RoutingRouteApi {
   error: string | null;
   /** Progression brute du job en cours (elapsed, explored_nodes) — issue #96. */
   progress: RoutingJobProgress | null;
-  compute: (plan: RoutingPlan, wind: RoutingWindInput | null) => Promise<void>;
+  compute: (plan: RoutingPlan) => Promise<void>;
   /** Annule le job en cours (DELETE) : tracé retiré, message affiché, polling stoppé. */
   cancel: () => Promise<void>;
   clear: () => void;
@@ -109,7 +109,7 @@ export const useRoutingRoute = (): RoutingRouteApi => {
     }
   }, []);
 
-  const compute = useCallback(async (plan: RoutingPlan, wind: RoutingWindInput | null) => {
+  const compute = useCallback(async (plan: RoutingPlan) => {
     // Nouveau calcul : annule d'abord le job précédent (jamais deux concurrents).
     const previousJobId = jobIdRef.current;
     stopJob();
@@ -124,11 +124,11 @@ export const useRoutingRoute = (): RoutingRouteApi => {
       response = await fetch(JOBS_URL, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
+        // C2/#103 : plan seul — le serveur est l'autorité du vent.
         body: JSON.stringify({
           start: plan.startPosition,
           finish: plan.finishPosition,
-          polarId: plan.polarId,
-          wind
+          polarId: plan.polarId
         })
       });
       value = await response.json() as RoutingJobAccepted & { error?: string };

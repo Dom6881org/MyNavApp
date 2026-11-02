@@ -175,7 +175,10 @@ export interface RoutingPlan {
   polarId: string | null;
 }
 
-/** Vent constant transmis au moteur de routage (issue #17). */
+/**
+ * Echo du repli constant dérivé par le serveur (autorité vent, C2/#102/#103).
+ * null quand le GRIB sert au calcul — le client n'envoie plus de vent.
+ */
 export interface RoutingWindInput {
   directionFromDeg: number;
   speedKts: number;
@@ -235,7 +238,7 @@ export interface RoutingRouteResult {
   message: string | null;
   geojson: RoutingRouteGeoJson | null;
   windSource: 'grib' | 'constant';
-  wind: RoutingWindInput;
+  wind: RoutingWindInput | null;
   polarId: string;
   start: Position;
   finish: Position;
