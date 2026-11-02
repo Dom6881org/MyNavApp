@@ -110,7 +110,7 @@ describe('useRoutingRoute', () => {
       })
     });
     // C2/#103 : le front n'envoie plus de vent (autorité vent serveur).
-    const postedBody = JSON.parse(fetchMock.mock.calls.find(c => c[1]?.method === 'POST')[1].body);
+    const postedBody = JSON.parse(String(fetchMock.mock.calls.find(c => c[1]?.method === 'POST')?.[1]?.body));
     expect(postedBody).not.toHaveProperty('wind');
     expect(result.current.isLoading).toBe(true);
     expect(result.current.route).toBeNull();
