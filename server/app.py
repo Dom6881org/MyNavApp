@@ -20,7 +20,7 @@ from dotenv import load_dotenv
 from server.ais import LocalAISDecoder, parse_internet_message
 from server.nmea import parse_nmea_sentence
 from server.routing import RoutingError, compute_route_payload, list_polars
-from server.routing_jobs import routing_jobs
+from server.routing_jobs import RoutingJobLimitError, routing_jobs
 from server.grib import GribError, download_grib, sample_points, status as grib_status
 from server.tracks import (
     TrackNotFoundError,
@@ -674,9 +674,14 @@ class RequestHandler(BaseHTTPRequestHandler):
             self._send_json(400, {"error": "Malformed JSON request body."})
             return
         if path == "/api/routing/jobs":
-            self._send_json(202, {"jobId": routing_jobs.submit(apply_server_wind_authority(value))})
-            return
-        if path == "/api/routing/compute":
+            try:
+                job_id = routing_jobs.submit(apply_server_wind_authority(value))
+            except RoutingJobLimitError as error:
+                # R2 (#114) : trop de jobs actifs — 429, message clair.
+                self._send_json(429, {"error": str(error)})
+                return
+            self._send_json(202, {"jobId": job_id})
+            return        if path == "/api/routing/compute":
             try:
                 result = compute_route_payload(apply_server_wind_authority(value))
             except RoutingError as error:

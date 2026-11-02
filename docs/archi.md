@@ -147,7 +147,7 @@ Toutes les réponses sont JSON (`{ "error": "…" }` en cas d'erreur), `Cache-Co
 | `/api/ais/settings` | `{ source: local\|internet, visible: bool }` | `202` + snapshot |
 | `/api/ais/replay-position` | `{ position }` ou `{ position: null }` — force la zone AISstream en tests (valide 5 s) | `202 { ok }` |
 | `/api/routing/compute` | plan (le champ `wind` du client est ignoré — autorité vent serveur, C2/#102) | `RoutingRouteResult` ; `422` si plan invalide |
-| `/api/routing/jobs` | même payload que `/api/routing/compute` | `202 { jobId }` ; calcul isolé en subprocess |
+| `/api/routing/jobs` | même payload que `/api/routing/compute` | `202 { jobId }` ; calcul isolé en subprocess ; `429` si trop de jobs actifs (R2) |
 | `/api/grib/download` | `{ south, north, west, east, horizonH = 72 }` | `GribStatus` ; `503` si échec |
 | `/api/grib/sample` | `{ points }` — **≤ 400 positions** | `{ fresh: bool, wind: [] }` ; `fresh: false` si le GRIB n'est pas frais, `503` en erreur |
 | `/api/tracks/start`, `/api/tracks/stop` | — | `202 { recorder, tracks, stopped }` ; `409` si conflit |
@@ -159,7 +159,7 @@ Toutes les réponses sont JSON (`{ "error": "…" }` en cas d'erreur), `Cache-Co
 | `/api/routing/jobs/{jobId}` | Annule le subprocess ; état du job (`cancelled`), idempotent ; `404` si inconnu |
 | `/api/tracks/{id}` | `202 { recorder, tracks }` ; `404` si inconnue, `409` si en cours |
 
-Le calcul synchrone `/api/routing/compute` reste disponible sans changement. Les jobs asynchrones sont exécutés dans un subprocess (mode `spawn`) pour isoler le calcul du serveur ; `GET /api/routing/jobs/{jobId}` expose les temps de phase cumulés et le nombre de nœuds explorés, sans pourcentage estimé. Les jobs terminés sont purgés après 30 minutes. Justifications et garanties internes (reaping à propriétaire unique, terminate→kill, spawn-safe) : **ADR-0003** (`docs/adr/`).
+Le calcul synchrone `/api/routing/compute` reste disponible sans changement. Les jobs asynchrones sont exécutés dans un subprocess (mode `spawn`) pour isoler le calcul du serveur ; `GET /api/routing/jobs/{jobId}` expose les temps de phase cumulés et le nombre de nœuds explorés, sans pourcentage estimé. Les jobs terminés sont purgés après 30 minutes. Le nombre de jobs actifs (`queued` + `running`) est plafonné (`ROUTING_MAX_ACTIVE_JOBS`, défaut 2) : au-delà, `POST /api/routing/jobs` répond `429` avec un message clair (R2). Justifications et garanties internes (reaping à propriétaire unique, terminate→kill, spawn-safe) : **ADR-0003** (`docs/adr/`).
 
 En production (`NODE_ENV=production`), le backend sert aussi le build statique `dist/` (SPA : les chemins sans extension retombent sur `index.html`). En dev, Vite route `/api` vers `127.0.0.1:3001` (proxy `vite.config.ts`).
 
@@ -225,6 +225,7 @@ Le backend proxifie les tuiles **OSM** et **OpenSeaMap** (seamarks) avec cache d
 | `NMEA_UDP_HOST` / `NMEA_UDP_PORT` | `0.0.0.0` / `10111` | Écoute NMEA UDP (port `0` = désactivé) |
 | `TILES_DIR` / `TRACKS_DIR` | `./tiles` / `./tracks` | Cache tuiles / traces JSONL |
 | `AISSTREAM_API_KEY` | vide | Active l'AIS internet |
+| `ROUTING_MAX_ACTIVE_JOBS` | `2` | Nombre max de jobs de routage actifs (R2) ; au-delà : `429` |
 | `NODE_ENV=production` | — | Le backend sert `dist/` (SPA) |
 | `VITE_HTTPS_CERT` / `VITE_HTTPS_KEY` | vide | HTTPS du serveur Vite en LAN (mkcert) — requis pour la géolocalisation sur appareils mobiles |
 
