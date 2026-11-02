@@ -681,7 +681,8 @@ class RequestHandler(BaseHTTPRequestHandler):
                 self._send_json(429, {"error": str(error)})
                 return
             self._send_json(202, {"jobId": job_id})
-            return        if path == "/api/routing/compute":
+            return
+        if path == "/api/routing/compute":
             try:
                 result = compute_route_payload(apply_server_wind_authority(value))
             except RoutingError as error:
@@ -995,3 +996,4 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
+

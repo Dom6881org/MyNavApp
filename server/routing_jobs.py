@@ -156,7 +156,8 @@ class RoutingJobRegistry:
                     f"{active}/{self._max_active_jobs}) : "
                     "annulez le calcul en cours ou attendez sa fin."
                 )
-            self._jobs[job_id] = job        try:
+            self._jobs[job_id] = job
+        try:
             process.start()
         except Exception as error:
             receive_connection.close()
@@ -274,3 +275,4 @@ class RoutingJobRegistry:
 
 
 routing_jobs = RoutingJobRegistry()
+
