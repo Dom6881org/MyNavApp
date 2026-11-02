@@ -146,7 +146,7 @@ Toutes les réponses sont JSON (`{ "error": "…" }` en cas d'erreur), `Cache-Co
 | `/api/navigation/browser` | `BrowserNavigationUpdate` (validé par `_valid_browser_update`) | `202` + snapshot |
 | `/api/ais/settings` | `{ source: local\|internet, visible: bool }` | `202` + snapshot |
 | `/api/ais/replay-position` | `{ position }` ou `{ position: null }` — force la zone AISstream en tests (valide 5 s) | `202 { ok }` |
-| `/api/routing/compute` | plan + vent éventuel | `RoutingRouteResult` ; `422` si plan invalide |
+| `/api/routing/compute` | plan (le champ `wind` du client est ignoré — autorité vent serveur, C2/#102) | `RoutingRouteResult` ; `422` si plan invalide |
 | `/api/routing/jobs` | même payload que `/api/routing/compute` | `202 { jobId }` ; calcul isolé en subprocess |
 | `/api/grib/download` | `{ south, north, west, east, horizonH = 72 }` | `GribStatus` ; `503` si échec |
 | `/api/grib/sample` | `{ points }` — **≤ 400 positions** | `{ fresh: bool, wind: [] }` ; `fresh: false` si le GRIB n'est pas frais, `503` en erreur |
@@ -181,7 +181,7 @@ Contrat unique entre backend (dictionnaires Python) et frontend (interfaces TS, 
 | `AISTarget` | `mmsi`, `name`, position, `sog`, `cog`, `heading`, `navigationalStatus`, `updatedAt` |
 | `AISBackendState` | `source` (effective), `requestedSource`, `localNmeaPort`, `targets`, compteurs, état internet |
 | `GribStatus` | `available`, `fresh`, `reason`, `createdAt`, `validUntil`, emprise, résolution, pas horaire |
-| `RoutingPlan` / `RoutingWindInput` | départ/arrivée/polaire ; vent constant `directionFromDeg` + `speedKts` |
+| `RoutingPlan` / `RoutingWindInput` | départ/arrivée/polaire ; `RoutingWindInput` = echo du repli constant **dérivé par le serveur** (C2/#102), `null` si le GRIB sert au calcul |
 | `RoutingRouteResult` | `found`, `coords [lon, lat]`, `etaS`, `dtS`, `minDistNm`, `geojson`, `windSource: 'grib'\|'constant'`, ajustements terre→eau (`offsetNm`) |
 | `TrackRecorderStatus` / `TrackSummary` / `TracksResponse` | état de l'enregistreur, métadonnées des traces |
 | `DashboardLayout` / `InstrumentConfig` | disposition des instruments, thème (`light`/`dark`/`night`), unités |
@@ -206,7 +206,7 @@ Téléchargement (Open-Météo) via `POST /api/grib/download`, piloté automatiq
 
 ## 10. Routage
 
-Le panneau de routage construit un `RoutingPlan` (départ = position courante ou choisie sur carte, arrivée, polaire — `config/polaire-sugar.pol` par défaut). `POST /api/routing/compute` transmet au moteur **mynav-routing** (import Python, épinglé `v0.3.3`) : vent GRIB si frais, sinon vent constant issu des instruments. Le résultat (trace `coords`, `etaS`, GeoJSON) est affiché par la carte ; les points à terre sont rapprochés de l'eau la plus proche (`startAdjusted`/`finishAdjusted`, `offsetNm`). Politique d'épinglage : tags uniquement, bump par l'Agent Intégrateur après chaque release du moteur (cf. #56).
+Le panneau de routage construit un `RoutingPlan` (départ = position courante ou choisie sur carte, arrivée, polaire — `config/polaire-sugar.pol` par défaut). `POST /api/routing/compute` transmet au moteur **mynav-routing** (import Python, épinglé `v0.3.3`) : vent GRIB si frais, sinon vent constant dérivé du NMEA du serveur (MWV vent vrai + cap — autorité vent serveur, C2/#102 : le client n'envoie plus de vent). Le résultat (trace `coords`, `etaS`, GeoJSON) est affiché par la carte ; les points à terre sont rapprochés de l'eau la plus proche (`startAdjusted`/`finishAdjusted`, `offsetNm`). Politique d'épinglage : tags uniquement, bump par l'Agent Intégrateur après chaque release du moteur (cf. #56).
 
 ## 11. Tracks
 

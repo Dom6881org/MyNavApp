@@ -213,10 +213,26 @@ class TestComputeRoutePayload(unittest.TestCase):
         self.assertEqual(result["windSource"], "grib")
         self.assertTrue(result["found"])
 
-    def test_payload_sans_vent_defaut_test(self):
-        result = compute_route_payload(self.payload(wind=None))
+    def test_payload_sans_vent_ni_grib_refuse(self):
+        # C2/#102 : plus de vent de test par défaut — sans GRIB frais ni vent
+        # fourni (par le serveur via apply_server_wind_authority), refus clair.
+        with patch("server.grib.load_wind_field", return_value=None):
+            with self.assertRaises(RoutingError) as context:
+                compute_route_payload(self.payload(wind=None))
+        self.assertIn("Aucun vent disponible", str(context.exception))
+
+    def test_payload_vent_serveur_repli_constant(self):
+        # C2/#102 : le wind du payload est désormais fourni par le serveur
+        # (dérivé de son NMEA) — echo intégral dans la réponse.
+        with patch("server.grib.load_wind_field", return_value=None):
+            result = compute_route_payload(self.payload(
+                wind={"directionFromDeg": 315.0, "speedKts": 18.0}
+            ))
         self.assertTrue(result["found"])
-        self.assertEqual(result["wind"], {"directionFromDeg": 270.0, "speedKts": 12.0})
+        self.assertEqual(
+            result["wind"], {"directionFromDeg": 315.0, "speedKts": 18.0}
+        )
+        self.assertEqual(result["windSource"], "constant")
 
     def test_payload_depart_a_terre_rapproche(self):
         result = compute_route_payload(self.payload(

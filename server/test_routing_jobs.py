@@ -175,5 +175,61 @@ class RoutingJobTests(unittest.TestCase):
             thread.join()
 
 
+class ServerWindAuthorityTests(unittest.TestCase):
+    """Autorité vent serveur (C2/#102) : le client n'influence plus le vent."""
+
+    def test_derive_direction_du_cap_et_du_vent_vrai(self):
+        import time as time_module
+
+        from server import app as app_module
+
+        saved = (
+            app_module.last_nmea_message_at,
+            app_module.nmea_navigation["trueWind"],
+            app_module.nmea_navigation["compass"],
+        )
+        try:
+            with app_module.state_lock:
+                app_module.last_nmea_message_at = int(time_module.time() * 1000)
+                app_module.nmea_navigation["trueWind"] = {
+                    "angleDegrees": 40.0, "speedKnots": 17.5,
+                }
+                app_module.nmea_navigation["compass"] = {
+                    "heading": 300.0, "cog": None,
+                    "magneticHeading": None, "deviation": 0,
+                }
+            wind = app_module.server_wind_fallback()
+        finally:
+            with app_module.state_lock:
+                app_module.last_nmea_message_at = saved[0]
+                app_module.nmea_navigation["trueWind"] = saved[1]
+                app_module.nmea_navigation["compass"] = saved[2]
+        self.assertEqual(wind, {"directionFromDeg": 340.0, "speedKts": 17.5})
+
+    def test_nmea_pas_frais_retourne_none(self):
+        from server import app as app_module
+
+        saved = app_module.last_nmea_message_at
+        try:
+            with app_module.state_lock:
+                app_module.last_nmea_message_at = None
+            self.assertIsNone(app_module.server_wind_fallback())
+        finally:
+            with app_module.state_lock:
+                app_module.last_nmea_message_at = saved
+
+    def test_client_wind_retire_du_payload(self):
+        from server.app import apply_server_wind_authority
+
+        payload = {
+            "polarId": "polaire-sugar",
+            "wind": {"directionFromDeg": 90.0, "speedKts": 5.0},
+        }
+        result = apply_server_wind_authority(payload)
+        # Aucun NMEA frais dans l'environnement de test : pas de repli injecté,
+        # et le vent du client est bien retiré.
+        self.assertNotIn("wind", result)
+        self.assertEqual(result["polarId"], "polaire-sugar")
+
 if __name__ == "__main__":
     unittest.main()
