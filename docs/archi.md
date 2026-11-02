@@ -159,7 +159,7 @@ Toutes les réponses sont JSON (`{ "error": "…" }` en cas d'erreur), `Cache-Co
 | `/api/routing/jobs/{jobId}` | Annule le subprocess ; état du job (`cancelled`), idempotent ; `404` si inconnu |
 | `/api/tracks/{id}` | `202 { recorder, tracks }` ; `404` si inconnue, `409` si en cours |
 
-Le calcul synchrone `/api/routing/compute` reste disponible sans changement. Les jobs asynchrones sont exécutés dans un subprocess (mode `spawn`) pour isoler le calcul du serveur ; `GET /api/routing/jobs/{jobId}` expose les temps de phase cumulés et le nombre de nœuds explorés, sans pourcentage estimé. Les jobs terminés sont purgés après 30 minutes.
+Le calcul synchrone `/api/routing/compute` reste disponible sans changement. Les jobs asynchrones sont exécutés dans un subprocess (mode `spawn`) pour isoler le calcul du serveur ; `GET /api/routing/jobs/{jobId}` expose les temps de phase cumulés et le nombre de nœuds explorés, sans pourcentage estimé. Les jobs terminés sont purgés après 30 minutes. Justifications et garanties internes (reaping à propriétaire unique, terminate→kill, spawn-safe) : **ADR-0003** (`docs/adr/`).
 
 En production (`NODE_ENV=production`), le backend sert aussi le build statique `dist/` (SPA : les chemins sans extension retombent sur `index.html`). En dev, Vite route `/api` vers `127.0.0.1:3001` (proxy `vite.config.ts`).
 
@@ -192,6 +192,7 @@ Contrat unique entre backend (dictionnaires Python) et frontend (interfaces TS, 
 - **Grille de barbes** : `useWindForecast.requestWindGrid()` est appelé par la carte avec un maillage géographique (~85 px à l'écran). Priorité **GRIB** via `POST /api/grib/sample` (emprise du dernier routage + 0,5°) ; repli **Open-Météo** par lots de 50 points espacés de 300 ms.
 - Cache front de 2 000 entrées, clé de position à 5 décimales (~1 m) ; backoff exponentiel 5→60 min en cas de HTTP 429 ; erreurs de grille exposées par `WindForecastStatus.gridError`.
 - Limites connues à fort zoom : voir #55 et les issues de suivi #60-#63.
+- **Routage — autorité vent serveur (ADR-0004)** : le calcul du routage n'utilise jamais un vent envoyé par le client. GRIB frais prioritaire, sinon repli constant dérivé du NMEA du serveur (MWV vent vrai + cap), sinon refus clair (C2, #102/#103). Le vent affiché (point/barbes) et le vent du routage peuvent donc différer **par construction** — la vérité du calcul est `RoutingRouteResult.windSource`.
 
 ## 8. GRIB
 
@@ -206,7 +207,7 @@ Téléchargement (Open-Météo) via `POST /api/grib/download`, piloté automatiq
 
 ## 10. Routage
 
-Le panneau de routage construit un `RoutingPlan` (départ = position courante ou choisie sur carte, arrivée, polaire — `config/polaire-sugar.pol` par défaut). `POST /api/routing/compute` transmet au moteur **mynav-routing** (import Python, épinglé `v0.3.3`) : vent GRIB si frais, sinon vent constant dérivé du NMEA du serveur (MWV vent vrai + cap — autorité vent serveur, C2/#102 : le client n'envoie plus de vent). Le résultat (trace `coords`, `etaS`, GeoJSON) est affiché par la carte ; les points à terre sont rapprochés de l'eau la plus proche (`startAdjusted`/`finishAdjusted`, `offsetNm`). Politique d'épinglage : tags uniquement, bump par l'Agent Intégrateur après chaque release du moteur (cf. #56).
+Le panneau de routage construit un `RoutingPlan` (départ = position courante ou choisie sur carte, arrivée, polaire — `config/polaire-sugar.pol` par défaut). `POST /api/routing/compute` transmet au moteur **mynav-routing** (import Python, épinglé `v0.3.3`) : vent GRIB si frais, sinon vent constant dérivé du NMEA du serveur (MWV vent vrai + cap — autorité vent serveur, C2/#102 : le client n'envoie plus de vent). Le résultat (trace `coords`, `etaS`, GeoJSON) est affiché par la carte ; les points à terre sont rapprochés de l'eau la plus proche (`startAdjusted`/`finishAdjusted`, `offsetNm`). Politique d'épinglage : tags uniquement, bump par l'Agent Intégrateur après chaque release du moteur (cf. #56). Le calcul passe par les jobs asynchrones (**ADR-0003**) ; l'autorité du vent est documentée dans **ADR-0004**.
 
 ## 11. Tracks
 
