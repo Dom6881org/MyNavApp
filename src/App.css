@@ -825,6 +825,36 @@
   margin-top: 0.15rem;
 }
 
+/* Heure d'arrivée locale (issue #18) : sous la ligne de statut vent. */
+.routing-result-arrival {
+  margin: 0.15rem 0 0;
+  font-size: 0.75rem;
+}
+
+/* Sparkline SOG par tronçon (issue #18) : compacte, pleine largeur. */
+.routing-sog {
+  margin-top: 0.3rem;
+}
+
+.routing-sog-chart {
+  display: block;
+  width: 100%;
+  height: 34px;
+}
+
+.routing-sog-line {
+  stroke: #74e3e5;
+  stroke-width: 1.2;
+}
+
+.routing-sog-stats {
+  margin: 0.1rem 0 0;
+  color: #9fb8c2;
+  font-size: 0.7rem;
+  line-height: 1.3;
+  font-variant-numeric: tabular-nums;
+}
+
 /* Retrait du trace : action secondaire, plus discrete que le calcul. */
 .routing-clear-button {
   width: 100%;
@@ -3751,6 +3781,14 @@ html {
 
 .theme-light .routing-result-dist {
   color: #1a2733;
+}
+
+.theme-light .routing-sog-line {
+  stroke: #0b78a8;
+}
+
+.theme-light .routing-sog-stats {
+  color: #5c7480;
 }
 
 .theme-light .routing-clear-button {

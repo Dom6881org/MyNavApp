@@ -182,7 +182,7 @@ Contrat unique entre backend (dictionnaires Python) et frontend (interfaces TS, 
 | `AISBackendState` | `source` (effective), `requestedSource`, `localNmeaPort`, `targets`, compteurs, état internet |
 | `GribStatus` | `available`, `fresh`, `reason`, `createdAt`, `validUntil`, emprise, résolution, pas horaire |
 | `RoutingPlan` / `RoutingWindInput` | départ/arrivée/polaire ; `RoutingWindInput` = echo du repli constant **dérivé par le serveur** (C2/#102), `null` si le GRIB sert au calcul |
-| `RoutingRouteResult` | `found`, `coords [lon, lat]`, `etaS`, `dtS`, `minDistNm`, `geojson`, `windSource: 'grib'\|'constant'`, ajustements terre→eau (`offsetNm`) |
+| `RoutingRouteResult` | `found`, `coords [lon, lat]`, `etaS`, `timesS`/`sogKts` par tronçon (#18), `dtS`, `minDistNm`, `geojson`, `windSource: 'grib'\|'constant'`, ajustements terre→eau (`offsetNm`) |
 | `TrackRecorderStatus` / `TrackSummary` / `TracksResponse` | état de l'enregistreur, métadonnées des traces |
 | `DashboardLayout` / `InstrumentConfig` | disposition des instruments, thème (`light`/`dark`/`night`), unités |
 
@@ -207,7 +207,7 @@ Téléchargement (Open-Météo) via `POST /api/grib/download`, piloté automatiq
 
 ## 10. Routage
 
-Le panneau de routage construit un `RoutingPlan` (départ = position courante ou choisie sur carte, arrivée, polaire — `config/polaire-sugar.pol` par défaut). `POST /api/routing/compute` transmet au moteur **mynav-routing** (import Python, pin `a5bfe563` = v0.4-landperf) : vent GRIB si frais, sinon vent constant dérivé du NMEA du serveur (MWV vent vrai + cap — autorité vent serveur, C2/#102 : le client n'envoie plus de vent). Le résultat (trace `coords`, `etaS`, GeoJSON) est affiché par la carte ; les points à terre sont rapprochés de l'eau la plus proche (`startAdjusted`/`finishAdjusted`, `offsetNm`). Politique d'épinglage : tags en principe (#56) ; pin provisoire sur SHA de merge (`a5bfe563`, v0.4-landperf) tant que le tag `v0.4.0` n'existe pas ; bump par l'Agent Intégrateur après chaque release du moteur. Le calcul passe par les jobs asynchrones (**ADR-0003**) ; l'autorité du vent est documentée dans **ADR-0004**.
+Le panneau de routage construit un `RoutingPlan` (départ = position courante ou choisie sur carte, arrivée, polaire — `config/polaire-sugar.pol` par défaut). `POST /api/routing/compute` transmet au moteur **mynav-routing** (import Python, pin `a5bfe563` = v0.4-landperf) : vent GRIB si frais, sinon vent constant dérivé du NMEA du serveur (MWV vent vrai + cap — autorité vent serveur, C2/#102 : le client n'envoie plus de vent). Le résultat (trace `coords`, `etaS`, `timesS`/`sogKts`, GeoJSON) est affiché par la carte et le panneau — heure d'arrivée locale et sparkline SOG (#18) ; les points à terre sont rapprochés de l'eau la plus proche (`startAdjusted`/`finishAdjusted`, `offsetNm`). Politique d'épinglage : tags en principe (#56) ; pin provisoire sur SHA de merge (`a5bfe563`, v0.4-landperf) tant que le tag `v0.4.0` n'existe pas ; bump par l'Agent Intégrateur après chaque release du moteur. Le calcul passe par les jobs asynchrones (**ADR-0003**) ; l'autorité du vent est documentée dans **ADR-0004**.
 
 ## 11. Tracks
 
@@ -235,6 +235,5 @@ Scripts : `npm run dev` (backend + Vite via concurrently), `dev:lan`/`start:lan`
 ## 14. Limites connues (pistes ouvertes)
 
 - Perf d'affichage carte et fiabilité des barbes à fort zoom : #55, suivi #60 (investigation), #61 (transitions/mémoïsation), #62 (clé de cache + rate-limit), #63 (couche canvas).
-- Affichage ETA / SOG : #18.
 - Performance du moteur de routage : mynav-routing #14 et #16-#20.
 - Pas d'authentification backend (usage monoposte/LAN de confiance).

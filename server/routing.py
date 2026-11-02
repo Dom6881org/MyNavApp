@@ -349,8 +349,9 @@ def compute_route_payload(
     (voir list_polars), wind = {directionFromDeg, speedKts} (optionnel —
     autorité vent serveur C2/#102 : fourni par server/app.py à partir du NMEA
     du serveur, jamais par le client ; sans GRIB ni wind, la requête échoue).
-    Retourne un dict JSON-ready : found, coords, etaS, dtS, minDistNm, message,
-    geojson, wind, polarId, startAdjusted, finishAdjusted (rapprochement à
+    Retourne un dict JSON-ready : found, coords, etaS, timesS, sogKts, dtS,
+    minDistNm, message, geojson, wind, polarId, startAdjusted, finishAdjusted
+    (rapprochement à
     l'eau si le point demandé était classé "à terre" : {latitude, longitude,
     offsetNm} ou null).
     Lève RoutingError (message utilisateur) si les entrées sont invalides.
@@ -443,6 +444,9 @@ def compute_route_payload(
         "found": result["found"],
         "coords": result["coords"],
         "etaS": result["eta_s"],
+        # Issue #18 : SOG (noeuds) et temps cumules par troncon, pour l'affichage ETA/SOG.
+        "timesS": result["times_s"],
+        "sogKts": result["sog_kts"],
         "dtS": result["dt_s"],
         "minDistNm": result["min_dist_nm"],
         "bathyActive": result["bathy_active"],

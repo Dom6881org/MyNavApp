@@ -321,4 +321,23 @@ describe('RoutingPanel', () => {
     expect(screen.queryByText(/grid /i)).not.toBeInTheDocument();
     expect(screen.queryByText(/computed in/i)).not.toBeInTheDocument();
   });
+
+  it('SOG par tronçon : sparkline et stats affichées (issue #18)', () => {
+    const routeWithSog: RoutingJobResult = {
+      ...ROUTE_FOUND,
+      timesS: [0, 1800, 3600],
+      sogKts: [6.1, 5.4, 6.8]
+    };
+    renderPanel({ routeCalc: stubRouteCalc(routeWithSog), onComputeRoute: vi.fn() });
+
+    expect(screen.getByRole('img', { name: /SOG along legs/i })).toBeInTheDocument();
+    expect(screen.getByText(/SOG 5\.4–6\.8 kt · avg 6\.1 kt/)).toBeInTheDocument();
+  });
+
+  it('heure d’arrivée locale affichée, pas de sparkline sans SOG (issue #18)', () => {
+    renderPanel({ routeCalc: stubRouteCalc(ROUTE_FOUND), onComputeRoute: vi.fn() });
+
+    expect(screen.getByText(/^arr\. /)).toBeInTheDocument();
+    expect(screen.queryByRole('img', { name: /SOG along legs/i })).not.toBeInTheDocument();
+  });
 });
