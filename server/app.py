@@ -191,6 +191,46 @@ def combine_fields() -> dict[str, Any]:
         }
 
 
+def server_wind_fallback() -> dict[str, Any] | None:
+    """Vent constant de repli dérivé du NMEA du serveur (autorité vent, C2/#102).
+
+    MWV-T exprime l'angle par rapport à la proue : la direction « de la » en
+    degrés compas exige le cap (HDT/HDG). Retourne None si le flux NMEA n'est
+    pas frais ou si le vent vrai ou le cap manque — le routage échouera avec
+    un message clair plutôt que d'utiliser un vent que le serveur n'a pas.
+    """
+    now = int(time.time() * 1000)
+    with state_lock:
+        nmea_fresh = (
+            last_nmea_message_at is not None and now - last_nmea_message_at <= NMEA_FRESHNESS_MS
+        )
+        if not nmea_fresh:
+            return None
+        true_wind = nmea_navigation["trueWind"]
+        heading = (nmea_navigation["compass"] or {}).get("heading")
+        if true_wind is None or heading is None:
+            return None
+        return {
+            "directionFromDeg": (float(heading) + float(true_wind["angleDegrees"])) % 360.0,
+            "speedKts": float(true_wind["speedKnots"]),
+        }
+
+
+def apply_server_wind_authority(payload: Any) -> Any:
+    """C2/#102 : le serveur est l'autorité du vent du routage.
+
+    Le champ `wind` envoyé par le client est supprimé ; seul le vent dérivé
+    du NMEA du serveur peut alimenter le repli constant (le GRIB reste géré
+    dans compute_route_payload).
+    """
+    if isinstance(payload, dict):
+        payload = dict(payload)
+        payload.pop("wind", None)
+        wind = server_wind_fallback()
+        if wind is not None:
+            payload["wind"] = wind
+    return payload
+
 def _upsert_ais_target(update: dict[str, Any]) -> None:
     source = update["source"]
     with state_lock:
@@ -634,11 +674,11 @@ class RequestHandler(BaseHTTPRequestHandler):
             self._send_json(400, {"error": "Malformed JSON request body."})
             return
         if path == "/api/routing/jobs":
-            self._send_json(202, {"jobId": routing_jobs.submit(value)})
+            self._send_json(202, {"jobId": routing_jobs.submit(apply_server_wind_authority(value))})
             return
         if path == "/api/routing/compute":
             try:
-                result = compute_route_payload(value)
+                result = compute_route_payload(apply_server_wind_authority(value))
             except RoutingError as error:
                 self._send_json(422, {"error": str(error)})
                 return

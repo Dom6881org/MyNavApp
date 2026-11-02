@@ -346,8 +346,9 @@ def compute_route_payload(
     """Exécute un calcul de routage depuis le payload POST de l'API (issue #17).
 
     Attend : start/finish = {latitude, longitude}, polarId = id de polaire
-    (voir list_polars), wind = {directionFromDeg, speedKts} (optionnel :
-    vent constant de test 270°/12 nds par défaut).
+    (voir list_polars), wind = {directionFromDeg, speedKts} (optionnel —
+    autorité vent serveur C2/#102 : fourni par server/app.py à partir du NMEA
+    du serveur, jamais par le client ; sans GRIB ni wind, la requête échoue).
     Retourne un dict JSON-ready : found, coords, etaS, dtS, minDistNm, message,
     geojson, wind, polarId, startAdjusted, finishAdjusted (rapprochement à
     l'eau si le point demandé était classé "à terre" : {latitude, longitude,
@@ -366,7 +367,7 @@ def compute_route_payload(
 
     wind_payload = payload.get("wind")
     if wind_payload is None:
-        wind_values = (270.0, 12.0)
+        wind_values = None
     elif (
         isinstance(wind_payload, dict)
         and isinstance(wind_payload.get("directionFromDeg"), (int, float))
@@ -389,6 +390,11 @@ def compute_route_payload(
     except Exception:
         wind_field = None
     if wind_field is None:
+        if wind_values is None:
+            raise RoutingError(
+                "Aucun vent disponible pour le routage : téléchargez un GRIB "
+                "ou connectez les instruments (MWV vent vrai + cap) au serveur."
+            )
         from mynav_routing import ConstantWind
 
         wind_field = ConstantWind(direction_from_deg=wind_values[0], speed_kts=wind_values[1])
@@ -443,7 +449,11 @@ def compute_route_payload(
         "message": result["message"],
         "geojson": result["geojson"],
         "windSource": wind_source,
-        "wind": {"directionFromDeg": wind_values[0], "speedKts": wind_values[1]},
+        "wind": (
+            {"directionFromDeg": wind_values[0], "speedKts": wind_values[1]}
+            if wind_values is not None
+            else None
+        ),
         "polarId": polar_id,
         "start": {"latitude": start_position[0], "longitude": start_position[1]},
         "finish": {"latitude": finish_position[0], "longitude": finish_position[1]},
