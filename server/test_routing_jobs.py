@@ -11,7 +11,7 @@ from unittest.mock import patch
 
 from server import routing
 from server.app import RequestHandler
-from server.routing_jobs import RoutingJobRegistry
+from server.routing_jobs import RoutingJobLimitError, RoutingJobRegistry
 
 
 def fake_success(payload, phase_timings=None, include_diagnostics=False):
@@ -40,10 +40,11 @@ class RoutingJobTests(unittest.TestCase):
     def setUp(self):
         self.registry = RoutingJobRegistry()
 
-    def wait_for_status(self, job_id, status):
+    def wait_for_status(self, job_id, status, registry=None):
+        registry = registry or self.registry
         deadline = time.monotonic() + 8
         while time.monotonic() < deadline:
-            job = self.registry.get(job_id)
+            job = registry.get(job_id)
             if job and job["status"] == status:
                 return job
             time.sleep(0.05)
@@ -177,6 +178,60 @@ class RoutingJobTests(unittest.TestCase):
             server.shutdown()
             server.server_close()
             thread.join()
+
+
+    def test_submit_refuse_au_dela_des_jobs_actifs(self):
+        registry = RoutingJobRegistry(max_active_jobs=2)
+        try:
+            with patch("server.routing_jobs.compute_route_payload", fake_slow_route):
+                first = registry.submit({})
+                second = registry.submit({})
+                self.wait_for_status(first, "running", registry)
+                with self.assertRaises(RoutingJobLimitError) as context:
+                    registry.submit({})
+            self.assertIn("Trop de calculs", str(context.exception))
+            # Slot libéré par une annulation : la soumission repasse.
+            registry.cancel(first)
+            with patch("server.routing_jobs.compute_route_payload", fake_slow_route):
+                third = registry.submit({})
+        finally:
+            for job_id in list(registry._jobs):
+                registry.cancel(job_id)
+
+    def test_slot_libere_apres_terminaison(self):
+        registry = RoutingJobRegistry(max_active_jobs=1)
+        with patch("server.routing_jobs.compute_route_payload", fake_success):
+            first = registry.submit({"delay": 0.2})
+        self.wait_for_status(first, "done", registry)
+        # Le job terminé ne compte plus comme actif : pas de refus.
+        with patch("server.routing_jobs.compute_route_payload", fake_success):
+            second = registry.submit({"delay": 0.2})
+        self.wait_for_status(second, "done", registry)
+
+    def test_http_429_quand_limite_atteinte(self):
+        server = ThreadingHTTPServer(("127.0.0.1", 0), RequestHandler)
+        thread = Thread(target=server.serve_forever, daemon=True)
+        thread.start()
+        base_url = f"http://127.0.0.1:{server.server_port}/api/routing/jobs"
+        registry = RoutingJobRegistry(max_active_jobs=1)
+        try:
+            with (
+                patch("server.app.routing_jobs", registry),
+                patch("server.routing_jobs.compute_route_payload", fake_slow_route),
+            ):
+                request = Request(base_url, data=b"{}", headers={"Content-Type": "application/json"}, method="POST")
+                with urlopen(request) as response:
+                    self.assertEqual(response.status, 202)
+                with self.assertRaises(HTTPError) as error:
+                    urlopen(Request(base_url, data=b"{}", headers={"Content-Type": "application/json"}, method="POST"))
+                self.assertEqual(error.exception.code, 429)
+                self.assertIn("Trop de calculs", json.loads(error.exception.read())["error"])
+        finally:
+            server.shutdown()
+            server.server_close()
+            thread.join()
+            for job_id in list(registry._jobs):
+                registry.cancel(job_id)
 
 
 class ServerWindAuthorityTests(unittest.TestCase):

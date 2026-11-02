@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import multiprocessing
+import os
 import threading
 import time
 import uuid
@@ -16,10 +17,18 @@ from server.routing import compute_route_payload
 JOB_TTL_S = 30 * 60
 PROGRESS_INTERVAL_S = 1.0
 PROCESS_JOIN_TIMEOUT_S = 2.0
+# R2 (#114) : garde-fou sur le nombre de jobs actifs — un routage
+# est un subprocess CPU-lourd ; au-delà de la limite, POST /api/routing/jobs
+# répond 429 (voir docs/archi.md §5/§13).
+MAX_ACTIVE_JOBS = int(os.environ.get("ROUTING_MAX_ACTIVE_JOBS", "2"))
 
 
 def _utc_now() -> str:
     return datetime.now(timezone.utc).isoformat(timespec="milliseconds").replace("+00:00", "Z")
+
+
+class RoutingJobLimitError(RuntimeError):
+    """R2 (#114) : limite de jobs de routage actifs dépassée (réponse HTTP 429)."""
 
 
 def _routing_job_worker(
@@ -111,11 +120,12 @@ class _RoutingJob:
 class RoutingJobRegistry:
     """Registry mémoire des jobs de routage, purgés après leur terminaison."""
 
-    def __init__(self, ttl_s: float = JOB_TTL_S) -> None:
+    def __init__(self, ttl_s: float = JOB_TTL_S, max_active_jobs: int = MAX_ACTIVE_JOBS) -> None:
         self._jobs: dict[str, _RoutingJob] = {}
         self._lock = threading.RLock()
         self._context = multiprocessing.get_context("spawn")
         self._ttl_s = ttl_s
+        self._max_active_jobs = max_active_jobs
 
     def submit(self, payload: Any) -> str:
         job_id = str(uuid.uuid4())
@@ -130,6 +140,22 @@ class RoutingJobRegistry:
         job.process = process
         with self._lock:
             self._purge_expired()
+            # R2 (#114) : garde-fou N jobs actifs. Le comptage et
+            # l'enregistrement sont atomiques sous le verrou : deux POST
+            # simultanés ne peuvent pas passer tous les deux la limite.
+            active = sum(
+                1
+                for other in self._jobs.values()
+                if other.status in ("queued", "running")
+            )
+            if active >= self._max_active_jobs:
+                receive_connection.close()
+                send_connection.close()
+                raise RoutingJobLimitError(
+                    "Trop de calculs de routage actifs ("
+                    f"{active}/{self._max_active_jobs}) : "
+                    "annulez le calcul en cours ou attendez sa fin."
+                )
             self._jobs[job_id] = job
         try:
             process.start()
@@ -249,3 +275,4 @@ class RoutingJobRegistry:
 
 
 routing_jobs = RoutingJobRegistry()
+
