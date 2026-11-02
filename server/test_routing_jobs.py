@@ -68,6 +68,10 @@ class RoutingJobTests(unittest.TestCase):
         route_result = {
             "found": True,
             "coords": [],
+            # Contrat compute_route complet (issue #18) : le payload lit
+            # times_s/sog_kts, le mock doit les fournir comme le moteur.
+            "times_s": [],
+            "sog_kts": [],
             "eta_s": 120.0,
             "dt_s": 1800.0,
             "bin_deg": 0.03,
