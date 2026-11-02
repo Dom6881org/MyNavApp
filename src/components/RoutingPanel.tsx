@@ -40,6 +40,13 @@ const formatElapsed = (elapsedS: number): string => {
   return `${seconds} s`;
 };
 
+/** Pas de temps effectif du job (issue #100, règle D3) : lisible tel quel. */
+const formatDt = (dtS: number): string => {
+  if (dtS >= 3600 && dtS % 3600 === 0) return `${dtS / 3600} h`;
+  if (dtS >= 60 && dtS % 60 === 0) return `${dtS / 60} min`;
+  return `${dtS} s`;
+};
+
 const formatPosition = (position: Position | null): string =>
   position ? `${position.latitude.toFixed(5)}, ${position.longitude.toFixed(5)}` : 'Not set';
 
@@ -274,6 +281,14 @@ const RoutingPanel: React.FC<RoutingPanelProps> = ({
             </>
           ) : (
             route.message && <p className="routing-error">{route.message}</p>
+          )}
+          {route.params && (
+            <p className="routing-params">
+              dt {formatDt(route.params.dt_s)} · grid {route.params.bin_deg.toFixed(3)}°
+              {route.timings && typeof route.timings.total_s === 'number'
+                ? ` · computed in ${route.timings.total_s.toFixed(1)} s`
+                : ''}
+            </p>
           )}
           <button
             type="button"

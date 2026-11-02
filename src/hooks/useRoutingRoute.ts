@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 
-import { RoutingJob, RoutingJobAccepted, RoutingJobProgress, RoutingPlan, RoutingRouteResult, RoutingWindInput } from '../types';
+import { RoutingJob, RoutingJobAccepted, RoutingJobProgress, RoutingJobResult, RoutingPlan, RoutingWindInput } from '../types';
 
 const JOBS_URL = '/api/routing/jobs';
 
@@ -12,7 +12,8 @@ const sleep = (ms: number) => new Promise<void>(resolve => {
 });
 
 export interface RoutingRouteApi {
-  route: RoutingRouteResult | null;
+  /** Résultat du dernier job terminé (peut porter params/timings — règle D3, issue #100). */
+  route: RoutingJobResult | null;
   isLoading: boolean;
   error: string | null;
   /** Progression brute du job en cours (elapsed, explored_nodes) — issue #96. */
@@ -31,7 +32,7 @@ export interface RoutingRouteApi {
  * proprement au démontage du hook.
  */
 export const useRoutingRoute = (): RoutingRouteApi => {
-  const [route, setRoute] = useState<RoutingRouteResult | null>(null);
+  const [route, setRoute] = useState<RoutingJobResult | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [progress, setProgress] = useState<RoutingJobProgress | null>(null);
