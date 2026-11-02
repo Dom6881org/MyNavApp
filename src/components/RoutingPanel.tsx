@@ -78,6 +78,43 @@ const pickButtonLabel = (target: RoutingPickTarget, active: boolean): string => 
   return target === 'start' ? 'Pick departure on chart' : 'Pick destination on chart';
 };
 
+/** Heure d'arrivée locale estimée (issue #18) : maintenant + durée de route. */
+const arrivalClock = (etaS: number): string =>
+  formatClock(Date.now() / 1000 + etaS);
+
+/** SOG par tronçon (issue #18) : sparkline temps → vitesse, stats min/moy/max. */
+const SogChart: React.FC<{ timesS: number[]; sogKts: number[] }> = ({ timesS, sogKts }) => {
+  const lastTime = timesS[timesS.length - 1] ?? 0;
+  const durationS = timesS.length > 1 ? Math.max(lastTime, 1) : 1;
+  const minSog = Math.min(...sogKts);
+  const maxSog = Math.max(...sogKts);
+  const span = Math.max(maxSog - minSog, 0.1);
+  const points = sogKts
+    .map((sog, index) => {
+      const x = ((timesS[index] ?? 0) / durationS) * 100;
+      const y = 29 - ((sog - minSog) / span) * 26;
+      return `${x.toFixed(2)},${y.toFixed(2)}`;
+    })
+    .join(' ');
+  const avgSog = sogKts.reduce((total, sog) => total + sog, 0) / sogKts.length;
+  return (
+    <div className="routing-sog">
+      <svg
+        className="routing-sog-chart"
+        viewBox="0 0 100 30"
+        preserveAspectRatio="none"
+        role="img"
+        aria-label={`SOG along legs: ${minSog.toFixed(1)} to ${maxSog.toFixed(1)} knots`}
+      >
+        <polyline className="routing-sog-line" points={points} fill="none" />
+      </svg>
+      <p className="routing-sog-stats">
+        SOG {minSog.toFixed(1)}–{maxSog.toFixed(1)} kt · avg {avgSog.toFixed(1)} kt
+      </p>
+    </div>
+  );
+};
+
 /**
  * Panneau de routage (issue #15) : une ligne par extrémité (From / To) avec
  * pastille de coordonnées lisible, bouton "Chart" pour choisir en un clic sur
@@ -280,6 +317,10 @@ const RoutingPanel: React.FC<RoutingPanelProps> = ({
                     ? `constant ${route.wind.speedKts.toFixed(0)} kt from ${route.wind.directionFromDeg.toFixed(0)}°`
                     : 'constant wind'}
               </p>
+              <p className="routing-ok routing-result-arrival">arr. {arrivalClock(route.etaS)}</p>
+              {route.timesS && route.sogKts && route.sogKts.length > 1 && (
+                <SogChart timesS={route.timesS} sogKts={route.sogKts} />
+              )}
             </>
           ) : (
             route.message && <p className="routing-error">{route.message}</p>

@@ -173,6 +173,10 @@ class TestComputeRoutePayload(unittest.TestCase):
         self.assertEqual(result["dtS"], 1800.0)
         self.assertEqual(result["geojson"]["type"], "FeatureCollection")
         self.assertEqual(result["geojson"]["features"][0]["geometry"]["type"], "LineString")
+        # Issue #18 : SOG et temps cumulés par tronçon remontés au front.
+        self.assertEqual(len(result["timesS"]), len(result["coords"]))
+        self.assertEqual(len(result["sogKts"]), len(result["coords"]))
+        self.assertTrue(all(sog > 0 for sog in result["sogKts"]))
         self.assertEqual(result["wind"], {"directionFromDeg": 270.0, "speedKts": 12.0})
         self.assertEqual(result["windSource"], "constant")
         self.assertEqual(result["polarId"], "polaire-sugar")

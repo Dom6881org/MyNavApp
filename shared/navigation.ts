@@ -242,6 +242,9 @@ export interface RoutingRouteResult {
   polarId: string;
   start: Position;
   finish: Position;
+  /** SOG (noeuds) et temps cumules (s) par troncon (issue #18). */
+  timesS?: number[];
+  sogKts?: number[];
   startAdjusted?: RoutingRouteAdjustment | null;
   finishAdjusted?: RoutingRouteAdjustment | null;
 }
