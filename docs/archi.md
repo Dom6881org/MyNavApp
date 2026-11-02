@@ -10,7 +10,7 @@ MyNavApp est une application de navigation de plaisance divisée en deux process
 - un **frontend** React 19 + TypeScript (Vite, Leaflet) tournant dans le navigateur ;
 - un **backend** Python (stdlib uniquement pour le serveur HTTP, `server/`) qui collecte les données des instruments, les agrège et les pousse au frontend.
 
-Le moteur de routage (`mynav-routing`) est un paquet pip séparé, épinglé sur tag (`v0.3.3`) via `requirements-routing.txt`.
+Le moteur de routage (`mynav-routing`) est un paquet pip séparé, épinglé via `requirements-routing.txt` sur le SHA `a5bfe563` de sa branche `main` (v0.4-landperf : corridor + crosses_land ; retour à un tag dès que `v0.4.0` existera).
 
 ```mermaid
 flowchart LR
@@ -30,7 +30,7 @@ flowchart LR
     OSM["Tuiles OSM + OpenSeaMap"]
     OM["API Open-Météo\n(point + prévisions + GRIB)"]
     AISR["AISstream.io"]
-    MOTOR["mynav-routing v0.3.3\n(import Python)"]
+    MOTOR["mynav-routing v0.4-landperf\n(import Python)"]
   end
   INSTR -->|"phrases NMEA UDP"| NMEAL --> STATE
   GPS -->|"POST /api/navigation/browser"| HTTP --> STATE
@@ -63,7 +63,7 @@ flowchart LR
 | Backend | `server/grib.py` | Téléchargement, statut et échantillonnage GRIB (ecCodes/xarray/cfgrib) |
 | Backend | `server/routing.py` | Adaptateur du moteur `mynav-routing` (calcul de route, polaires) |
 | Backend | `server/tracks.py` | Enregistreur de traces (JSONL) + export GeoJSON/GPX/CSV |
-| Moteur | `mynav-routing` (pip, tag `v0.3.3`) | Routage à voile isochrone, échantillonnage GRIB, GeoJSON |
+| Moteur | `mynav-routing` (pip, pin `a5bfe563` = v0.4-landperf) | Routage à voile isochrone, échantillonnage GRIB, GeoJSON |
 
 Le backend n'utilise **aucun framework web** : `http.server` de la stdlib, threads dédiés pour NMEA et AISstream, état global protégé par un `threading.RLock` (`state_lock`).
 
@@ -159,7 +159,7 @@ Toutes les réponses sont JSON (`{ "error": "…" }` en cas d'erreur), `Cache-Co
 | `/api/routing/jobs/{jobId}` | Annule le subprocess ; état du job (`cancelled`), idempotent ; `404` si inconnu |
 | `/api/tracks/{id}` | `202 { recorder, tracks }` ; `404` si inconnue, `409` si en cours |
 
-Le calcul synchrone `/api/routing/compute` reste disponible sans changement. Les jobs asynchrones sont exécutés dans un subprocess (mode `spawn`) pour isoler le calcul du serveur ; `GET /api/routing/jobs/{jobId}` expose les temps de phase cumulés et le nombre de nœuds explorés, sans pourcentage estimé. Les jobs terminés sont purgés après 30 minutes.
+Le calcul synchrone `/api/routing/compute` reste disponible sans changement. Les jobs asynchrones sont exécutés dans un subprocess (mode `spawn`) pour isoler le calcul du serveur ; `GET /api/routing/jobs/{jobId}` expose les temps de phase cumulés et le nombre de nœuds explorés, sans pourcentage estimé. Les jobs terminés sont purgés après 30 minutes. Choix de conception (reaping mono-propriétaire du monitor, terminate→kill, TTL, spawn-safe Windows) documentés dans `docs/adr/ADR-0003-routage-asynchrone-subprocess.md`.
 
 En production (`NODE_ENV=production`), le backend sert aussi le build statique `dist/` (SPA : les chemins sans extension retombent sur `index.html`). En dev, Vite route `/api` vers `127.0.0.1:3001` (proxy `vite.config.ts`).
 
@@ -188,6 +188,7 @@ Contrat unique entre backend (dictionnaires Python) et frontend (interfaces TS, 
 
 ## 7. Vent
 
+- **Vent du routage** : autorité serveur (C2/#102, `docs/adr/ADR-0004-autorite-vent-serveur.md`) — le front n'envoie pas de vent de routage ; le serveur préfère son GRIB frais, sinon repli constant dérivé de son NMEA (MWV vent vrai + cap), sinon refus clair.
 - **Vent du point** (instrument WIND) : Open-Météo prévisions, ou GRIB local (option B, #36) — `WindData.source` distingue les deux.
 - **Grille de barbes** : `useWindForecast.requestWindGrid()` est appelé par la carte avec un maillage géographique (~85 px à l'écran). Priorité **GRIB** via `POST /api/grib/sample` (emprise du dernier routage + 0,5°) ; repli **Open-Météo** par lots de 50 points espacés de 300 ms.
 - Cache front de 2 000 entrées, clé de position à 5 décimales (~1 m) ; backoff exponentiel 5→60 min en cas de HTTP 429 ; erreurs de grille exposées par `WindForecastStatus.gridError`.
@@ -195,7 +196,7 @@ Contrat unique entre backend (dictionnaires Python) et frontend (interfaces TS, 
 
 ## 8. GRIB
 
-Téléchargement (Open-Météo) via `POST /api/grib/download`, piloté automatiquement par l'app dès qu'un plan de routage est prêt (marge 1°, horizon 72 h). Stockage/lecture via **ecCodes** (wheel pip, ≥ 2.43) + xarray/cfgrib. `GribStatus.fresh`/`validUntil` gouvernent l'usage ; à bord sans réseau, l'app prévient et retombe sur un vent constant pour le routage.
+Téléchargement (Open-Météo) via `POST /api/grib/download`, piloté automatiquement par l'app dès qu'un plan de routage est prêt (marge 1°, horizon 72 h). Stockage/lecture via **ecCodes** (wheel pip, ≥ 2.43) + xarray/cfgrib. `GribStatus.fresh`/`validUntil` gouvernent l'usage ; à bord sans réseau, l'app prévient ; le routage retombe alors sur le vent constant du serveur (MWV vent vrai + cap, cf. ADR-0004), ou échoue avec un message clair si les instruments ne fournissent pas de vent vrai.
 
 ## 9. AIS
 
@@ -206,7 +207,7 @@ Téléchargement (Open-Météo) via `POST /api/grib/download`, piloté automatiq
 
 ## 10. Routage
 
-Le panneau de routage construit un `RoutingPlan` (départ = position courante ou choisie sur carte, arrivée, polaire — `config/polaire-sugar.pol` par défaut). `POST /api/routing/compute` transmet au moteur **mynav-routing** (import Python, épinglé `v0.3.3`) : vent GRIB si frais, sinon vent constant dérivé du NMEA du serveur (MWV vent vrai + cap — autorité vent serveur, C2/#102 : le client n'envoie plus de vent). Le résultat (trace `coords`, `etaS`, GeoJSON) est affiché par la carte ; les points à terre sont rapprochés de l'eau la plus proche (`startAdjusted`/`finishAdjusted`, `offsetNm`). Politique d'épinglage : tags uniquement, bump par l'Agent Intégrateur après chaque release du moteur (cf. #56).
+Le panneau de routage construit un `RoutingPlan` (départ = position courante ou choisie sur carte, arrivée, polaire — `config/polaire-sugar.pol` par défaut). `POST /api/routing/compute` transmet au moteur **mynav-routing** (import Python, pin `a5bfe563` = v0.4-landperf) : vent GRIB si frais, sinon vent constant dérivé du NMEA du serveur (MWV vent vrai + cap — autorité vent serveur, C2/#102 : le client n'envoie plus de vent — choix documentés dans `docs/adr/ADR-0004-autorite-vent-serveur.md`). Le résultat (trace `coords`, `etaS`, GeoJSON) est affiché par la carte ; les points à terre sont rapprochés de l'eau la plus proche (`startAdjusted`/`finishAdjusted`, `offsetNm`). Politique d'épinglage : tags en principe (#56) ; pin provisoire sur SHA de merge (`a5bfe563`, v0.4-landperf) tant que le tag `v0.4.0` n'existe pas ; bump par l'Agent Intégrateur après chaque release du moteur.
 
 ## 11. Tracks
 
