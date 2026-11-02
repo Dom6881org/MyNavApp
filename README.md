@@ -56,18 +56,36 @@ AIS positions may be delayed or unavailable and are for situational awareness on
 
 ## Installation
 
+Prerequisites: [Git](https://git-scm.com), [Node.js](https://nodejs.org) 20.6+ (22 LTS recommended) and [Python](https://www.python.org/downloads/) 3.10+ (3.12 recommended; on Windows, include the `py` launcher when installing Python).
+
 ```bash
 # Clone the repository
 git clone https://github.com/Dom6881org/MyNavApp.git
 cd MyNavApp
 
-# Install dependencies
-npm install
-python -m pip install -r requirements.txt
+# Create and activate a Python virtual environment
+py -3.12 -m venv .venv            # Windows ("python3.12 -m venv .venv" on Linux/macOS)
+.venv\Scripts\activate            # Windows (".venv/bin/activate" on Linux/macOS)
 
-# Start the development server
+# Backend dependencies: server + routing engine (pinned mynav-routing commit) + GRIB
+# (ecCodes ships its native library inside the wheel since 2.43: pip is enough, no conda)
+python -m pip install --upgrade pip
+python -m pip install -r requirements.txt -r requirements-routing.txt
+
+# Frontend dependencies
+npm install
+
+# Start the app (Python backend + Vite dev server), then open http://localhost:5173
 npm run dev
 ```
+
+Notes:
+
+- `npm run dev` starts the backend with the `python` of the current terminal: **activate the venv in every new terminal** before running the app, otherwise the backend misses its dependencies. If PowerShell refuses to run `Activate.ps1`, run `Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser` once.
+- After a routing-engine pin bump, update it with `python -m pip install --force-reinstall -r requirements-routing.txt` and restart the app (a running server never picks up the new package).
+- Optional local configuration: copy `.env.example` to `.env` (AISstream key, NMEA/HTTP ports, HTTPS certificates for LAN geolocation); the file is git-ignored.
+- Offline charts: `python tools/download_tiles.py --bbox 47.0,-5.0,48.2,-2.5 --zooms 8-16` pre-downloads a cruising area into `tiles/`.
+- Verify the install: `npm run test:front` and `npm run test:server` (routing tests are skipped automatically when the engine is missing).
 
 ## Usage
 
