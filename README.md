@@ -22,6 +22,35 @@ The React app runs as a Vite frontend and talks to a separate Python service. Th
 
 The LAN mode is an early development feature: the API and Vite server do not yet provide authentication, and the production backend does not provide HTTPS. Use loopback by default, and expose it only on a trusted, firewalled boat network. Browser geolocation on other devices requires a secure context: for `npm run dev:lan`, the Vite dev server can serve HTTPS — set `VITE_HTTPS_CERT` and `VITE_HTTPS_KEY` in `.env` to the paths of a certificate trusted by the client devices (e.g. generated with mkcert for `localhost <PC-IP>`, see `.env.example`) and open `https://<PC-IP>:5173`. NMEA-fed positions are available without client geolocation.
 
+### HTTPS for LAN devices (mkcert)
+
+Browser geolocation on phones/tablets requires a secure context, so the LAN URL must be served over HTTPS. The Vite dev server reads `VITE_HTTPS_CERT`/`VITE_HTTPS_KEY` from `.env`; generate a locally-trusted certificate with [mkcert](https://github.com/FiloSottile/mkcert):
+
+```bash
+# 1. Install mkcert once: winget install FiloSottile.mkcert
+#    (or: choco install mkcert / scoop install mkcert)
+# 2. Install the local CA (once per PC, admin rights)
+mkcert -install
+
+# 3. Find your PC LAN IP (ipconfig), then generate the certificate
+#    at the repository root
+mkcert localhost 127.0.0.1 192.168.1.42        # use YOUR PC LAN IP
+
+# 4. Point .env at the generated files (suffix = number of names)
+#    VITE_HTTPS_CERT=./localhost+3.pem
+#    VITE_HTTPS_KEY=./localhost+3-key.pem
+
+# 5. Start the LAN dev server, then open https://<PC-IP>:5173 on the device
+npm run dev:lan
+```
+
+Notes:
+
+- Allow the Vite port (5173) in the Windows firewall when prompted.
+- Client devices must also trust the mkcert root CA: `mkcert -CAROOT` prints the folder containing `rootCA.pem`. Send that file to the phone/tablet and install it (iOS: install the profile, then enable full trust in Settings → General → About → Certificate Trust Settings; Android: Settings → Security → Install a certificate → CA certificate).
+- The certificate covers the PC's current LAN IP: regenerate it if the IP changes.
+- The generated `.pem` files are git-ignored (`*.pem` in `.gitignore`) — local only, never commit them.
+
 ### Offline charts
 
 The chart loads Leaflet and its rotation plugin from the app bundle (no CDN), and requests tiles from the backend at `/api/tiles/{osm|seamark}/{z}/{x}/{y}.png`. Tiles found in the local `tiles/` directory (configurable with `TILES_DIR`, ignored by Git) are served from disk; when a tile is missing the backend fetches it from the online provider, keeping browser tile requests same-origin. Pre-download your cruising area to use the chart without Internet:
@@ -84,6 +113,7 @@ Notes:
 - `npm run dev` starts the backend with the `python` of the current terminal: **activate the venv in every new terminal** before running the app, otherwise the backend misses its dependencies. If PowerShell refuses to run `Activate.ps1`, run `Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser` once.
 - After a routing-engine pin bump, update it with `python -m pip install --force-reinstall -r requirements-routing.txt` and restart the app (a running server never picks up the new package).
 - Optional local configuration: copy `.env.example` to `.env` (AISstream key, NMEA/HTTP ports, HTTPS certificates for LAN geolocation); the file is git-ignored.
+- HTTPS for LAN devices (geolocation on phones/tablets): follow [HTTPS for LAN devices (mkcert)](#https-for-lan-devices-mkcert) below.
 - Offline charts: `python tools/download_tiles.py --bbox 47.0,-5.0,48.2,-2.5 --zooms 8-16` pre-downloads a cruising area into `tiles/`.
 - Verify the install: `npm run test:front` and `npm run test:server` (routing tests are skipped automatically when the engine is missing).
 
