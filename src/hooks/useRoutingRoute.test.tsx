@@ -4,7 +4,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { useRoutingRoute } from './useRoutingRoute';
 
-import { RoutingJob, RoutingPlan, RoutingRouteResult, RoutingWindInput } from '../types';
+import { RoutingJob, RoutingPlan, RoutingRouteResult } from '../types';
 
 const PLAN: RoutingPlan = {
   useCurrentPosition: false,
@@ -12,8 +12,6 @@ const PLAN: RoutingPlan = {
   finishPosition: { latitude: 42.62, longitude: 3.5 },
   polarId: 'polaire-sugar'
 };
-
-const WIND: RoutingWindInput = { directionFromDeg: 270, speedKts: 12 };
 
 const ROUTE: RoutingRouteResult = {
   found: true,
@@ -99,7 +97,7 @@ describe('useRoutingRoute', () => {
     const { result } = renderHook(() => useRoutingRoute());
 
     await act(async () => {
-      await result.current.compute(PLAN, WIND);
+      await result.current.compute(PLAN);
     });
 
     expect(fetchMock).toHaveBeenCalledWith('/api/routing/jobs', {
@@ -108,10 +106,12 @@ describe('useRoutingRoute', () => {
       body: JSON.stringify({
         start: PLAN.startPosition,
         finish: PLAN.finishPosition,
-        polarId: PLAN.polarId,
-        wind: WIND
+        polarId: PLAN.polarId
       })
     });
+    // C2/#103 : le front n'envoie plus de vent (autorité vent serveur).
+    const postedBody = JSON.parse(fetchMock.mock.calls.find(c => c[1]?.method === 'POST')[1].body);
+    expect(postedBody).not.toHaveProperty('wind');
     expect(result.current.isLoading).toBe(true);
     expect(result.current.route).toBeNull();
 
@@ -150,7 +150,7 @@ describe('useRoutingRoute', () => {
     const { result } = renderHook(() => useRoutingRoute());
 
     await act(async () => {
-      await result.current.compute(PLAN, WIND);
+      await result.current.compute(PLAN);
     });
     await advancePoll();
 
@@ -184,7 +184,7 @@ describe('useRoutingRoute', () => {
     const { result } = renderHook(() => useRoutingRoute());
 
     await act(async () => {
-      await result.current.compute(PLAN, WIND);
+      await result.current.compute(PLAN);
     });
     await advancePoll();
     expect(result.current.isLoading).toBe(true);
@@ -228,13 +228,13 @@ describe('useRoutingRoute', () => {
     const { result } = renderHook(() => useRoutingRoute());
 
     await act(async () => {
-      await result.current.compute(PLAN, WIND);
+      await result.current.compute(PLAN);
     });
     await advancePoll();
     expect(result.current.isLoading).toBe(true);
 
     await act(async () => {
-      await result.current.compute(PLAN, WIND);
+      await result.current.compute(PLAN);
     });
 
     const deleteCall = fetchMock.mock.calls.findIndex(c => c[0] === '/api/routing/jobs/job-1' && c[1]?.method === 'DELETE');
@@ -269,7 +269,7 @@ describe('useRoutingRoute', () => {
     const { result, unmount } = renderHook(() => useRoutingRoute());
 
     await act(async () => {
-      await result.current.compute(PLAN, WIND);
+      await result.current.compute(PLAN);
     });
     await advancePoll();
     expect(result.current.isLoading).toBe(true);
@@ -289,7 +289,7 @@ describe('useRoutingRoute', () => {
     const { result } = renderHook(() => useRoutingRoute());
 
     await act(async () => {
-      await result.current.compute(PLAN, WIND);
+      await result.current.compute(PLAN);
     });
 
     expect(result.current.error).toContain('Polaire inconnue');
@@ -302,7 +302,7 @@ describe('useRoutingRoute', () => {
     const { result } = renderHook(() => useRoutingRoute());
 
     await act(async () => {
-      await result.current.compute(PLAN, null);
+      await result.current.compute(PLAN);
     });
 
     expect(result.current.error).toContain('Backend unreachable');
@@ -320,7 +320,7 @@ describe('useRoutingRoute', () => {
     const { result } = renderHook(() => useRoutingRoute());
 
     await act(async () => {
-      await result.current.compute(PLAN, WIND);
+      await result.current.compute(PLAN);
     });
     await advancePoll();
 
@@ -343,7 +343,7 @@ describe('useRoutingRoute', () => {
     const { result } = renderHook(() => useRoutingRoute());
 
     await act(async () => {
-      await result.current.compute(PLAN, WIND);
+      await result.current.compute(PLAN);
     });
     await advancePoll();
 
@@ -368,7 +368,7 @@ describe('useRoutingRoute', () => {
     const { result } = renderHook(() => useRoutingRoute());
 
     await act(async () => {
-      await result.current.compute(PLAN, WIND);
+      await result.current.compute(PLAN);
     });
     await advancePoll();
     act(() => result.current.clear());
@@ -390,7 +390,7 @@ describe('useRoutingRoute', () => {
     const { result } = renderHook(() => useRoutingRoute());
 
     await act(async () => {
-      await result.current.compute(PLAN, WIND);
+      await result.current.compute(PLAN);
     });
     await advancePoll();
     expect(result.current.route).toMatchObject(ROUTE);

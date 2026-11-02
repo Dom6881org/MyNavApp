@@ -276,7 +276,9 @@ const RoutingPanel: React.FC<RoutingPanelProps> = ({
               <p className="routing-ok routing-result-sub">
                 {route.windSource === 'grib'
                   ? 'GRIB wind'
-                  : `constant ${route.wind.speedKts.toFixed(0)} kt from ${route.wind.directionFromDeg.toFixed(0)}°`}
+                  : route.wind
+                    ? `constant ${route.wind.speedKts.toFixed(0)} kt from ${route.wind.directionFromDeg.toFixed(0)}°`
+                    : 'constant wind'}
               </p>
             </>
           ) : (

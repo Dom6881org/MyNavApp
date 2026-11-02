@@ -64,16 +64,14 @@ const App: React.FC = () => {
     setRoutingPickTarget(null);
   }, [routingPickTarget, setStartFromPosition, setFinishFromPosition]);
 
-  // Calcul de la route (issue #17) : plan courant + vent instruments -> moteur.
+  // Calcul de la route (issues #17, #103) : le plan seul est envoyé — le serveur
+  // est l'autorité du vent (GRIB, sinon repli constant dérivé de son NMEA).
   const routingRoute = useRoutingRoute();
   const { compute: computeRoute } = routingRoute;
   const handleComputeRoute = React.useCallback(() => {
     if (!routing.plan) return;
-    const wind = navigationData.wind
-      ? { directionFromDeg: navigationData.wind.direction, speedKts: navigationData.wind.speed }
-      : null;
-    void computeRoute(routing.plan, wind);
-  }, [routing.plan, navigationData.wind, computeRoute]);
+    void computeRoute(routing.plan);
+  }, [routing.plan, computeRoute]);
 
   // GRIB (issue #16) : téléchargé automatiquement par l'app dès qu'un plan est
   // prêt et que le cache n'est pas frais (zone départ/arrivée + 72 h). À bord,
