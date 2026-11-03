@@ -23,7 +23,7 @@ const clockAt = (epochS: number): string =>
   new Date(epochS * 1000).toLocaleString(undefined, { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
 
 describe('RouteDetails', () => {
-  it('résumé replié par défaut : jambes et changements de cap, pas de table', () => {
+  it('résumé replié par défaut : jambes et changements de cap, pas de table ni de bloc', () => {
     render(
       <RouteDetails
         coords={COORDS}
@@ -40,9 +40,10 @@ describe('RouteDetails', () => {
     expect(screen.getByRole('button', { name: 'Route details · 2 legs · 1 course change' }))
       .toHaveAttribute('aria-expanded', 'false');
     expect(screen.queryByRole('table')).not.toBeInTheDocument();
+    expect(screen.queryByText('ROUTE DETAILS')).not.toBeInTheDocument();
   });
 
-  it('dépliage au clic : une ligne par jambe (heure, cap, SOG moyen, distance) + arrivée', async () => {
+  it('dépliage au clic : bloc à côté avec titre, une ligne par jambe + arrivée', async () => {
     render(
       <RouteDetails
         coords={COORDS}
@@ -58,6 +59,9 @@ describe('RouteDetails', () => {
 
     expect(screen.getByRole('button', { name: /Hide route details/i }))
       .toHaveAttribute('aria-expanded', 'true');
+    // Bloc flottant #124 : titre et bouton × propres au bloc.
+    expect(screen.getByText('ROUTE DETAILS')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Close route details' })).toBeInTheDocument();
     // Entête + 2 jambes.
     expect(screen.getAllByRole('row')).toHaveLength(3);
     expect(screen.getByRole('columnheader', { name: 'Time' })).toBeInTheDocument();
@@ -79,6 +83,48 @@ describe('RouteDetails', () => {
     // Ligne d’arrivée : heure locale + distance totale.
     expect(screen.getByText(/^Arr\. /)).toHaveTextContent(clockAt(START_EPOCH_S + ETA_S));
     expect(screen.getByText(/^Arr\. /)).toHaveTextContent(/NM/);
+  });
+
+  it('bloc à côté : fermeture par ×, re-clip du bouton, repli au recalcul (#124)', async () => {
+    const { rerender } = render(
+      <RouteDetails
+        coords={COORDS}
+        etaS={ETA_S}
+        timesS={TIMES_S}
+        sogKts={SOG_KTS}
+        startEpochS={START_EPOCH_S}
+      />
+    );
+    const user = userEvent.setup();
+
+    await user.click(screen.getByRole('button', { name: /Route details/i }));
+    expect(screen.getByRole('table')).toBeInTheDocument();
+
+    // × ferme le bloc, le toggle repasse replié.
+    await user.click(screen.getByRole('button', { name: 'Close route details' }));
+    expect(screen.getByRole('button', { name: 'Route details · 2 legs · 1 course change' }))
+      .toHaveAttribute('aria-expanded', 'false');
+    expect(screen.queryByRole('table')).not.toBeInTheDocument();
+    expect(screen.queryByText('ROUTE DETAILS')).not.toBeInTheDocument();
+
+    // Re-clip du bouton : déplie à nouveau.
+    await user.click(screen.getByRole('button', { name: /Route details/i }));
+    expect(screen.getByRole('table')).toBeInTheDocument();
+
+    // Recalcul (nouveau tracé) : la fiche se replie, jamais de fiche périmée.
+    rerender(
+      <RouteDetails
+        coords={[[47.6, -4.5], [47.7, -4.5]]}
+        etaS={5400}
+        timesS={[0, 5400]}
+        sogKts={[4.5, 4.5]}
+        startEpochS={START_EPOCH_S}
+      />
+    );
+    expect(
+      screen.getByRole('button', { name: 'Route details · 1 leg · 0 course changes' })
+    ).toHaveAttribute('aria-expanded', 'false');
+    expect(screen.queryByRole('table')).not.toBeInTheDocument();
   });
 
   it('sans timesS/sogKts : jambes affichées avec caps et distances, cellules « — »', async () => {
