@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   ANCHOR_GAP_PX,
+  MOTOR_PANEL_WIDTH_PX,
   PANEL_WIDTH_PX,
   POPOVER_MIN_HEIGHT_PX,
   SIDE_LIFT_PX,
@@ -51,6 +52,38 @@ describe('computePopoverPosition (#127/#129)', () => {
     } finally {
       if (descriptor) Object.defineProperty(window, 'innerWidth', descriptor);
     }
+  });
+
+  // --- #137 : largeur paramétrable (bloc élargi quand jambes moteur). ---
+
+  it('#137 : la largeur moteur est bien 20rem (320px) — badge MOTOR inline', () => {
+    expect(MOTOR_PANEL_WIDTH_PX).toBe(320);
+    expect(MOTOR_PANEL_WIDTH_PX).toBeGreaterThan(PANEL_WIDTH_PX);
+  });
+
+  it('#137 : mode « à gauche » compte la largeur effective passée en paramètre', () => {
+    expect(computePopoverPosition(anchor(800), MOTOR_PANEL_WIDTH_PX)).toEqual({
+      left: 800 - MOTOR_PANEL_WIDTH_PX - ANCHOR_GAP_PX,
+      top: 100 - SIDE_LIFT_PX
+    });
+  });
+
+  it('#137 : repli dessous borné au bord droit avec la largeur moteur', () => {
+    const descriptor = Object.getOwnPropertyDescriptor(window, 'innerWidth');
+    Object.defineProperty(window, 'innerWidth', { value: 400, configurable: true });
+    try {
+      // sideLeft = 200 - 328 < 8 → repli dessous, borné à droite : min(200, 400-328) = 72.
+      expect(computePopoverPosition(anchor(200), MOTOR_PANEL_WIDTH_PX)).toEqual({
+        left: 400 - MOTOR_PANEL_WIDTH_PX - ANCHOR_GAP_PX,
+        top: 138
+      });
+    } finally {
+      if (descriptor) Object.defineProperty(window, 'innerWidth', descriptor);
+    }
+  });
+
+  it('#137 : la largeur par défaut reste 17rem quand le paramètre est absent', () => {
+    expect(computePopoverPosition(anchor(800))).toEqual(computePopoverPosition(anchor(800), PANEL_WIDTH_PX));
   });
 });
 

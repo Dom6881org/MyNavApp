@@ -3998,6 +3998,9 @@ html {
   flex-direction: column;
   overflow: hidden;
   box-sizing: border-box; /* max-height inline inclut padding+bordure (#129) */
+  /* #127/#129 : 17rem par défaut. #137 : RouteDetails applique une largeur
+     inline (272px, ou 320px si la route contient des jambes moteur) — cette
+     règle reste le repli si l'inline est absent. */
   width: 17rem;
   padding: 0.65rem;
   border: 1px solid rgba(175, 210, 221, 0.32);
@@ -4050,7 +4053,8 @@ html {
 
 /* B1 (#133) : badge des jambes contenant des tronçons moteur. */
 .route-leg-motor {
-  margin-left: 0.35rem;
+  display: inline-block;
+  margin-left: 0.25rem; /* #137 : un espace est aussi rendu avant le badge */
   padding: 0.05rem 0.3rem;
   border: 1px solid rgba(245, 166, 35, 0.55);
   border-radius: 4px;
@@ -4059,6 +4063,14 @@ html {
   font-size: 0.58rem;
   font-weight: 700;
   letter-spacing: 0.05em;
+}
+
+/* #137 : seule la cellule cap accepte le repli — cap et badge « MOTOR » sont
+   deux mots insécables séparés par un espace rendu : si la police rend plus
+   large que prévu, le badge passe SOUS le cap (ligne plus haute) au lieu de
+   faire déborder la table du bloc. Les autres colonnes restent nowrap. */
+.route-details-table td:nth-child(2) {
+  white-space: normal;
 }
 
 .route-details-table td:nth-child(2),

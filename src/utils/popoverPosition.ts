@@ -14,6 +14,12 @@
 /** Largeur du bloc (doit rester synchrone avec .route-details-panel en CSS). */
 export const PANEL_WIDTH_PX = 17 * 16;
 
+/** #137 : largeur quand la route contient des jambes moteur. Le badge MOTOR
+ * (en ligne dans la cellule cap, ~49 px) ne tient pas dans 17rem sans élargir
+ * la colonne Hdg et décaler/comprimer les colonnes nowrap de la table — le
+ * bloc s'élargit de 3rem pour l'accueillir sur la ligne du cap. */
+export const MOTOR_PANEL_WIDTH_PX = 20 * 16;
+
 /** Écart entre le bloc et son bouton d'ancrage (px). */
 export const ANCHOR_GAP_PX = 8;
 
@@ -35,8 +41,14 @@ export interface PopoverPosition {
   top: number;
 }
 
-export const computePopoverPosition = (anchor: PopoverAnchor): PopoverPosition => {
-  const sideLeft = anchor.left - PANEL_WIDTH_PX - ANCHOR_GAP_PX;
+/** #137 : la largeur du bloc est paramétrable (272 px par défaut, 320 px quand
+ * la fiche contient des jambes moteur) — les deux modes « à gauche » et
+ * « en dessous » comptent la largeur effective du bloc rendu. */
+export const computePopoverPosition = (
+  anchor: PopoverAnchor,
+  panelWidthPx: number = PANEL_WIDTH_PX
+): PopoverPosition => {
+  const sideLeft = anchor.left - panelWidthPx - ANCHOR_GAP_PX;
   if (sideLeft >= ANCHOR_GAP_PX) {
     // #129 : un peu plus haut que le bouton — plus de place pour les jambes,
     // sans jamais passer au-dessus du bord supérieur de la fenêtre.
@@ -45,7 +57,7 @@ export const computePopoverPosition = (anchor: PopoverAnchor): PopoverPosition =
   // Pas de place à gauche : en dessous du bouton, borné aux bords de la fenêtre.
   const belowLeft = Math.max(
     ANCHOR_GAP_PX,
-    Math.min(anchor.left, window.innerWidth - PANEL_WIDTH_PX - ANCHOR_GAP_PX)
+    Math.min(anchor.left, window.innerWidth - panelWidthPx - ANCHOR_GAP_PX)
   );
   return { left: belowLeft, top: anchor.bottom + ANCHOR_GAP_PX };
 };
