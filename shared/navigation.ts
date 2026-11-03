@@ -266,6 +266,13 @@ export interface RoutingRouteResult {
    */
   motorFlags?: boolean[] | null;
   engineBelowKts?: number | null;
+  /**
+   * #141 : true = depart couvert par le champ GRIB ; false = depart hors
+   * zone — le moteur nearest-clippe silencieusement (vent du bord de
+   * grille) et le panneau affiche un avertissement ; null/absent = vent
+   * sans emprise connue (ex. constant) ou information indisponible.
+   */
+  startInGrib?: boolean | null;
   startAdjusted?: RoutingRouteAdjustment | null;
   finishAdjusted?: RoutingRouteAdjustment | null;
 }

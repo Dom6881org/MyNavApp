@@ -394,6 +394,63 @@ class TestComputeRoutePayload(unittest.TestCase):
         self.assertGreaterEqual(avg["speedKts"], 9.8)
         self.assertLessEqual(avg["speedKts"], 10.0)
 
+    # --- #141 : départ hors zone du champ GRIB signalé. ---
+
+    def test_payload_depart_hors_zone_grib_signale(self):
+        # Le champ factice déclare (contrat v0.6.0) un départ hors emprise :
+        # le moteur nearest-clippe sans erreur et expose start_in_grib=False,
+        # que le payload remonte au front pour l'avertissement (#141).
+        import math
+
+        class FakeGribWindHorsZone:
+            """Champ GRIB au contrat v0.6.0 : sample() + covers()."""
+
+            def sample(self, lat, lon, t):
+                lons = lon if hasattr(lon, "__len__") else [lon]
+                radians = math.radians(280.0)
+                u, v = -10.0 * math.sin(radians), -10.0 * math.cos(radians)
+                return ([u] * len(lons), [v] * len(lons))
+
+            def covers(self, lat, lon):
+                return False
+
+        with patch("server.grib.load_wind_field", return_value=FakeGribWindHorsZone()):
+            result = compute_route_payload(self.payload(
+                wind={"directionFromDeg": 270, "speedKts": 12},
+            ))
+        self.assertEqual(result["windSource"], "grib")
+        self.assertTrue(result["found"])
+        self.assertIs(result["startInGrib"], False)
+
+    def test_payload_depart_couvert_grib(self):
+        import math
+
+        class FakeGribWindCouvert:
+            def sample(self, lat, lon, t):
+                lons = lon if hasattr(lon, "__len__") else [lon]
+                radians = math.radians(280.0)
+                u, v = -10.0 * math.sin(radians), -10.0 * math.cos(radians)
+                return ([u] * len(lons), [v] * len(lons))
+
+            def covers(self, lat, lon):
+                return True
+
+        with patch("server.grib.load_wind_field", return_value=FakeGribWindCouvert()):
+            result = compute_route_payload(self.payload(
+                wind={"directionFromDeg": 270, "speedKts": 12},
+            ))
+        self.assertEqual(result["windSource"], "grib")
+        self.assertTrue(result["found"])
+        self.assertIs(result["startInGrib"], True)
+
+    def test_payload_vent_constant_start_in_grib_none(self):
+        # Repli constant : ConstantWind n'a pas d'emprise connue — le moteur
+        # renvoie None (duck-typing), pas de fausse alerte au front.
+        with patch("server.grib.load_wind_field", return_value=None):
+            result = compute_route_payload(self.payload())
+        self.assertEqual(result["windSource"], "constant")
+        self.assertIsNone(result["startInGrib"])
+
 
 def _synthetic_bathy():
     """Grille GEBCO synthétique : haut-fond (-2 m) en travers de la route directe
