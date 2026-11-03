@@ -49,7 +49,7 @@ NMEA_HOST = os.environ.get("NMEA_UDP_HOST", "0.0.0.0")
 TILES_DIR = os.environ.get("TILES_DIR", str(PROJECT_ROOT / "tiles"))
 TRACKS_DIR = os.environ.get("TRACKS_DIR", str(PROJECT_ROOT / "tracks"))
 TILE_LAYERS = ("osm", "seamark")
-TILE_USER_AGENT = "MyNavApp/1.0 (map tile proxy)"
+TILE_USER_AGENT = "MyNavApp/1.0 tile proxy (+https://github.com/Dom6881org/MyNavApp)"
 MAX_TILE_BYTES = 1_048_576
 AISSTREAM_API_KEY = os.environ.get("AISSTREAM_API_KEY", "").strip()
 IS_PRODUCTION = os.environ.get("NODE_ENV") == "production"

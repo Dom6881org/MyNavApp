@@ -33,8 +33,12 @@ Notes :
     petites bbox de ports pour z14+.
   - OpenSeaMap renvoie 404 pour les zones sans marques ; c'est normal (tuile
     non sauvegardée, la couche s'affiche vide à cet endroit).
-  - La politique d'usage d'OpenStreetMap demande un User-Agent identifié et
-    un débit modéré ; le délai --delay par défaut y contribue.
+  - La politique d'usage d'OpenStreetMap exige un User-Agent identifié AVEC
+    coordonnées de contact et un débit modéré (~1 requête/s). Le User-Agent
+    embarque l'URL du projet et le délai --delay vaut 1 s par défaut : ne le
+    baissez pas. En cas de blocage serveur (403/429), le script s'ARRÊTE
+    immédiatement (exit 3, marqueur quotidien non posé) pour ne pas aggraver
+    — patientez avant de relancer : https://operations.osmfoundation.org/policies/tiles/
 """
 
 import argparse
@@ -52,7 +56,8 @@ LAYERS = {
     "seamark": "https://tiles.openseamap.org/seamark/{z}/{x}/{y}.png",
 }
 SUBDOMAINS = ("a", "b", "c")
-USER_AGENT = "MyNavApp tile downloader (personal offline navigation use)"
+USER_AGENT = "MyNavApp/1.0 tile downloader (+https://github.com/Dom6881org/MyNavApp)"
+PNG_SIGNATURE = b"\x89PNG\r\n\x1a\n"
 ONLINE_PROBE_URL = "https://www.openstreetmap.org/copyright"
 MARKER_FILENAME = ".last-tile-update"
 
@@ -213,9 +218,13 @@ def download_tiles(
     Les tuiles existantes et assez récentes sont skippées sans requête réseau ;
     une 404 (pas de donnée, ex. pleine mer en seamark) compte comme 'absent'
     et n'est pas sauvegardée (la couche s'affiche vide à cet endroit).
+    Un blocage serveur 403/429 (politique d'usage) interrompt IMMÉDIATEMENT
+    le run (compteur 'blocked') — on ne martèle pas un serveur qui refuse.
+    Seul un contenu PNG (signature vérifiée) est sauvegardé : une page
+    d'erreur HTML ne pollue jamais le cache.
     """
     started = time.monotonic()
-    downloaded = refreshed = skipped = absent = failed = 0
+    downloaded = refreshed = skipped = absent = failed = blocked = 0
     for index, (layer, zoom, x, y) in enumerate(tiles, start=1):
         target = os.path.join(out, layer, str(zoom), str(x), f"{y}.png")
         if os.path.isfile(target):
@@ -236,6 +245,17 @@ def download_tiles(
         except urllib.error.HTTPError as error:
             if error.code == 404:
                 absent += 1  # pas de donnée à cet endroit (normal en pleine eau)
+            elif error.code in (403, 429):
+                # Blocage serveur (politique d'usage OSM) : arrêt immédiat.
+                blocked += 1
+                if verbose:
+                    print(
+                        f"HTTP {error.code} : {url}\n"
+                        "Blocage serveur (politique d'usage des tuiles) — arrêt "
+                        "immédiat. Patientez avant de relancer et gardez un "
+                        "délai >= 1 s (https://operations.osmfoundation.org/policies/tiles/)."
+                    )
+                break
             else:
                 failed += 1
                 if verbose:
@@ -245,13 +265,19 @@ def download_tiles(
             if verbose:
                 print(f"Erreur : {url} ({error})")
         else:
-            os.makedirs(os.path.dirname(target), exist_ok=True)
-            with open(target, "wb") as file:
-                file.write(body)
-            if mode == "new":
-                downloaded += 1
+            if not body.startswith(PNG_SIGNATURE):
+                # Réponse 200 mais pas un PNG (page d'erreur, HTML…) : rejetée.
+                failed += 1
+                if verbose:
+                    print(f"Contenu non-PNG rejeté : {url}")
             else:
-                refreshed += 1
+                os.makedirs(os.path.dirname(target), exist_ok=True)
+                with open(target, "wb") as file:
+                    file.write(body)
+                if mode == "new":
+                    downloaded += 1
+                else:
+                    refreshed += 1
         finally:
             if verbose and index % log_every == 0:
                 print(
@@ -272,12 +298,12 @@ def download_tiles(
                 return {
                     "downloaded": downloaded, "refreshed": refreshed,
                     "skipped": skipped, "absent": absent, "failed": failed,
-                    "capped": index,
+                    "blocked": blocked, "capped": index,
                 }
     return {
         "downloaded": downloaded, "refreshed": refreshed,
         "skipped": skipped, "absent": absent, "failed": failed,
-        "capped": 0,
+        "blocked": blocked, "capped": 0,
     }
 
 
@@ -293,6 +319,8 @@ def _count_suffix(counts: dict[str, int]) -> str:
         parts.append(f"{counts['absent']} absentes (pleine mer)")
     if counts["failed"]:
         parts.append(f"{counts['failed']} erreurs")
+    if counts.get("blocked"):
+        parts.append(f"{counts['blocked']} blocage serveur (politique d'usage)")
     return ", ".join(parts) if parts else "rien à faire"
 
 
@@ -306,7 +334,8 @@ def main() -> int:
     parser.add_argument("--zooms", default="8-16", help="zooms en mode --bbox, ex: 8-16 ou 12 (défaut : 8-16)")
     parser.add_argument("--layers", default="osm,seamark", help="couches en mode --bbox (défaut : osm,seamark)")
     parser.add_argument("--out", default="tiles", help="dossier de sortie (défaut : tiles)")
-    parser.add_argument("--delay", type=float, default=0.15, help="délai entre requêtes en secondes (défaut : 0.15)")
+    parser.add_argument("--delay", type=float, default=1.0,
+                        help="délai entre requêtes en secondes (défaut : 1.0 — politique d'usage OSM, ne pas baisser)")
     parser.add_argument("--refresh-days", type=int, default=None,
                          help="re-télécharger les tuiles plus vieilles que N jours (sinon: toute tuile présente est ignorée)")
     parser.add_argument("--max-minutes", type=float, default=None,
@@ -374,7 +403,7 @@ def main() -> int:
         print("Dry-run : rien téléchargé.")
         return 0
 
-    summary = {"downloaded": 0, "refreshed": 0, "skipped": 0, "absent": 0, "failed": 0, "capped": 0}
+    summary = {"downloaded": 0, "refreshed": 0, "skipped": 0, "absent": 0, "failed": 0, "blocked": 0, "capped": 0}
     for name, tiles in groups:
         if total > len(tiles):
             print(f"--- {name}")
@@ -385,6 +414,8 @@ def main() -> int:
         for key in summary:
             summary[key] += counts[key]
         print(f"{name} : {_count_suffix(counts)}")
+        if counts["blocked"]:
+            break
         if counts["capped"]:
             break
 
@@ -393,6 +424,9 @@ def main() -> int:
     print(f"Récap : {_count_suffix(summary)}")
     if summary["downloaded"] or summary["refreshed"] or summary["skipped"]:
         print(f"Cache : {os.path.abspath(args.out)} — démarrage : python -m server.app")
+    if summary["blocked"]:
+        print("Blocage serveur (politique d'usage OSM) : marqueur quotidien NON posé — patientez avant de relancer.")
+        return 3
     if args.once_a_day:
         mark_ran_today(args.out)
     return 0 if summary["failed"] == 0 else 1
