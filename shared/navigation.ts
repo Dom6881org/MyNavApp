@@ -173,6 +173,12 @@ export interface RoutingPlan {
   startPosition: Position | null;
   finishPosition: Position | null;
   polarId: string | null;
+  /**
+   * Seuil de relais moteur B1 (#133) : sous cette vitesse voile (SOG polaire,
+   * noeuds), le tronçon passe en moteur a 4.0 kt. Defaut 2.0 ; null = pur
+   * voile (pas de relais, back-compat moteur).
+   */
+  engineBelowKts: number | null;
 }
 
 /**
@@ -247,6 +253,14 @@ export interface RoutingRouteResult {
    *  sogKts[j] = vitesse d'arrivee au point j (sogKts[0] artificiel, patche moteur). */
   timesS?: number[];
   sogKts?: number[];
+  /**
+   * B1 (#133) : flags moteur par point — meme convention moteur que sogKts
+   * (#123) : len == len(coords), entree j = troncon d'arrivee au point j
+   * (index 0 artificiel, miroir du troncon 1). Null = pur voile.
+   * engineBelowKts = echo du seuil effectif du plan (null = pur voile).
+   */
+  motorFlags?: boolean[] | null;
+  engineBelowKts?: number | null;
   startAdjusted?: RoutingRouteAdjustment | null;
   finishAdjusted?: RoutingRouteAdjustment | null;
 }

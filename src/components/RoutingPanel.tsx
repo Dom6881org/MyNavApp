@@ -245,11 +245,27 @@ const RoutingPanel: React.FC<RoutingPanelProps> = ({
         {endpointRow('finish', 'To', finishChip, editingFinish, () => setEditingFinish(value => !value), false)}
         {editingFinish && coordinateRow('Destination', routing.finishText, routing.setFinishText)}
 
+        {/* B1 (#133) : seuil de relais moteur — sous cette vitesse voile, le
+            tronçon passe en moteur (4.0 kt). Vide = pur voile. */}
+        <label className="routing-motor-row">
+          <span className="routing-motor-label">Motor below (kt)</span>
+          <input
+            type="text"
+            inputMode="decimal"
+            className="routing-input routing-motor-input"
+            value={routing.motorBelowText}
+            aria-label="Motor below (kt)"
+            title="Under this boat speed the leg switches to engine (empty = sailing only)"
+            onChange={event => routing.setMotorBelowText(event.target.value)}
+          />
+        </label>
+
         <div className="routing-status">
           {routing.errors.start && <p className="routing-error">{routing.errors.start}</p>}
           {routing.errors.finish && <p className="routing-error">{routing.errors.finish}</p>}
           {routing.errors.same && <p className="routing-error">{routing.errors.same}</p>}
           {routing.errors.polar && <p className="routing-error">{routing.errors.polar}</p>}
+          {routing.errors.motor && <p className="routing-error">{routing.errors.motor}</p>}
           {routing.plan && routing.distanceNm !== null && (
             <p className="routing-ok">
               Plan ready · {routing.distanceNm.toFixed(1)} NM{polarName ? ` · ${polarName}` : ''}
@@ -323,7 +339,18 @@ const RoutingPanel: React.FC<RoutingPanelProps> = ({
               {route.timesS && route.sogKts && route.sogKts.length > 1 && (
                 <SogChart timesS={route.timesS} sogKts={route.sogKts} />
               )}
-              <RouteDetails coords={route.coords} etaS={route.etaS} timesS={route.timesS} sogKts={route.sogKts} />
+              {route.motorFlags?.some(flag => flag) && (
+                <p className="routing-ok routing-result-arrival">
+                  engine legs under {route.engineBelowKts ?? 2} kt sail speed
+                </p>
+              )}
+              <RouteDetails
+                coords={route.coords}
+                etaS={route.etaS}
+                timesS={route.timesS}
+                sogKts={route.sogKts}
+                motorFlags={route.motorFlags}
+              />
             </>
           ) : (
             route.message && <p className="routing-error">{route.message}</p>

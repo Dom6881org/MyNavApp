@@ -629,6 +629,29 @@
   accent-color: #39c978;
 }
 
+/* B1 (#133) : seuil de relais moteur « Motor below (kt) ». */
+.routing-motor-row {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-size: 0.72rem;
+  color: #9fb8c2;
+}
+
+.routing-motor-label {
+  flex: 0 0 auto;
+  color: #9fb8c2;
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  cursor: pointer;
+}
+
+.routing-motor-input {
+  flex: 0 0 4.2rem;
+}
+
 .routing-chip {
   flex: 1 1 auto;
   min-width: 0;
@@ -3702,6 +3725,18 @@ html {
   color: #5c7480;
 }
 
+/* B1 (#133) : champ moteur et badge MOTOR en thème clair. */
+.theme-light .routing-motor-row,
+.theme-light .routing-motor-label {
+  color: #5c7480;
+}
+
+.theme-light .route-leg-motor {
+  border-color: rgba(180, 110, 10, 0.45);
+  background: rgba(245, 166, 35, 0.16);
+  color: #a3660a;
+}
+
 .theme-light .routing-chip {
   border-color: rgba(16, 32, 42, 0.24);
   background: #ffffff;
@@ -4011,6 +4046,19 @@ html {
 
 .route-details-table tbody tr + tr td {
   border-top: 1px solid rgba(175, 210, 221, 0.14);
+}
+
+/* B1 (#133) : badge des jambes contenant des tronçons moteur. */
+.route-leg-motor {
+  margin-left: 0.35rem;
+  padding: 0.05rem 0.3rem;
+  border: 1px solid rgba(245, 166, 35, 0.55);
+  border-radius: 4px;
+  background: rgba(245, 166, 35, 0.14);
+  color: #f5a623;
+  font-size: 0.58rem;
+  font-weight: 700;
+  letter-spacing: 0.05em;
 }
 
 .route-details-table td:nth-child(2),

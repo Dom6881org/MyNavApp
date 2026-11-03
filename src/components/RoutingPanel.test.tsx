@@ -391,4 +391,72 @@ describe('RoutingPanel', () => {
     expect(within(table).getAllByText('—')).toHaveLength(2); // temps + SOG absents
     expect(within(table).getByText(/NM$/)).toBeInTheDocument();
   });
+
+  // B1 (#133) : seuil de relais moteur « Motor below (kt) ».
+  it('champ Motor below (kt) affiché avec le défaut 2, éditable', async () => {
+    renderPanel();
+    const user = userEvent.setup();
+
+    const input = screen.getByLabelText('Motor below (kt)') as HTMLInputElement;
+    expect(input.value).toBe('2');
+
+    await user.clear(input);
+    await user.type(input, '2.5');
+    expect(input.value).toBe('2.5');
+  });
+
+  it('seuil moteur invalide : erreur affichée et Compute route désactivé', async () => {
+    renderPanel({ routeCalc: stubRouteCalc(), onComputeRoute: vi.fn() });
+    const user = userEvent.setup();
+
+    await enterDestination(user);
+    expect(screen.getByRole('button', { name: 'Compute route' })).toBeEnabled();
+
+    const input = screen.getByLabelText('Motor below (kt)');
+    await user.clear(input);
+    await user.type(input, '15');
+    expect(screen.getByText(/Seuil moteur invalide/i)).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Compute route' })).toBeDisabled();
+
+    await user.clear(input);
+    expect(screen.queryByText(/Seuil moteur invalide/i)).not.toBeInTheDocument();
+  });
+
+  it('route avec tronçons moteur : note moteur et badge MOTOR dans la fiche (B1)', async () => {
+    const routeWithMotor: RoutingJobResult = {
+      ...ROUTE_FOUND,
+      coords: [[47.5, -4.5], [47.51, -4.5], [47.52, -4.5]],
+      timesS: [0, 1800, 3600],
+      sogKts: [4, 4, 4],
+      etaS: 3600,
+      motorFlags: [false, false, true],
+      engineBelowKts: 2
+    };
+    renderPanel({ routeCalc: stubRouteCalc(routeWithMotor), onComputeRoute: vi.fn() });
+    const user = userEvent.setup();
+
+    expect(screen.getByText(/engine legs under 2 kt sail speed/i)).toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: /Route details/i }));
+    expect(screen.getByText('MOTOR')).toBeInTheDocument();
+  });
+
+  it('route sans moteur : pas de note moteur ni de badge (B1)', async () => {
+    const routeWithoutMotor: RoutingJobResult = {
+      ...ROUTE_FOUND,
+      coords: [[47.5, -4.5], [47.51, -4.5], [47.52, -4.5]],
+      timesS: [0, 1800, 3600],
+      sogKts: [5, 5, 5],
+      etaS: 3600,
+      motorFlags: [false, false, false],
+      engineBelowKts: 2
+    };
+    renderPanel({ routeCalc: stubRouteCalc(routeWithoutMotor), onComputeRoute: vi.fn() });
+    const user = userEvent.setup();
+
+    expect(screen.queryByText(/engine legs/i)).not.toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: /Route details/i }));
+    expect(screen.queryByText('MOTOR')).not.toBeInTheDocument();
+  });
 });

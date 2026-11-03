@@ -21,6 +21,8 @@ interface RouteDetailsProps {
   timesS?: number[] | null;
   /** SOG par point du tracé (optionnels : colonnes « — » si absents). */
   sogKts?: number[] | null;
+  /** B1 (#133) : flags moteur par point (convention #123) — null = pur voile. */
+  motorFlags?: boolean[] | null;
   /** Départ en secondes epoch — défaut : maintenant. */
   startEpochS?: number;
 }
@@ -38,14 +40,14 @@ interface RouteDetailsProps {
  * re-clip, disparition de la route ; un recalcul (nouveau tracé) replie la
  * fiche. Données 100 % dérivées du résultat côté client.
  */
-const RouteDetails: React.FC<RouteDetailsProps> = ({ coords, etaS, timesS, sogKts, startEpochS }) => {
+const RouteDetails: React.FC<RouteDetailsProps> = ({ coords, etaS, timesS, sogKts, motorFlags, startEpochS }) => {
   const [expanded, setExpanded] = React.useState(false);
   const [anchor, setAnchor] = React.useState<PopoverAnchor | null>(null);
   const toggleRef = React.useRef<HTMLButtonElement | null>(null);
 
   const legs = React.useMemo(
-    () => computeRouteLegs(coords, timesS, sogKts),
-    [coords, timesS, sogKts]
+    () => computeRouteLegs(coords, timesS, sogKts, undefined, motorFlags),
+    [coords, timesS, sogKts, motorFlags]
   );
 
   // Nouveau tracé (recalcul) → fiche repliée, jamais une fiche périmée.
@@ -129,7 +131,11 @@ const RouteDetails: React.FC<RouteDetailsProps> = ({ coords, etaS, timesS, sogKt
               {legs.map((leg, index) => (
                 <tr key={`${leg.startIndex}-${leg.endIndex}-${index}`}>
                   <td>{leg.durationS !== null ? formatClock(start + leg.durationS) : '—'}</td>
-                  <td>{formatHeading(leg.headingDeg)}</td>
+                  <td>
+                    {formatHeading(leg.headingDeg)}
+                    {/* B1 (#133) : jambe contenant au moins un tronçon moteur. */}
+                    {leg.motor && <span className="route-leg-motor">MOTOR</span>}
+                  </td>
                   <td>{leg.sogKts !== null ? formatSog(leg.sogKts) : '—'}</td>
                   <td>{formatDist(leg.distanceNm)}</td>
                 </tr>

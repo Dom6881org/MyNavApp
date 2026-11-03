@@ -1,6 +1,6 @@
 # Architecture MyNavApp
 
-> Photographie de l'architecture **telle qu'elle existe** sur `main` (v1.2.0), rédigée par l'Agent Architecte (issue #64).
+> Photographie de l'architecture **telle qu'elle existe** sur `main` (v1.3.0), rédigée par l'Agent Architecte (issue #64).
 > Ce document doit être mis à jour dans la foulée de toute PR qui fait évoluer la structure, les interfaces ou les formats décrits ici.
 
 ## 1. Vue d'ensemble
@@ -10,7 +10,7 @@ MyNavApp est une application de navigation de plaisance divisée en deux process
 - un **frontend** React 19 + TypeScript (Vite, Leaflet) tournant dans le navigateur ;
 - un **backend** Python (stdlib uniquement pour le serveur HTTP, `server/`) qui collecte les données des instruments, les agrège et les pousse au frontend.
 
-Le moteur de routage (`mynav-routing`) est un paquet pip séparé, épinglé via `requirements-routing.txt` sur le tag **`v0.4.0`** (corridor + crosses_land + repli sans corridor + campagne d'acceptation ; politique d'épinglage sur tags #56).
+Le moteur de routage (`mynav-routing`) est un paquet pip séparé, épinglé via `requirements-routing.txt` sur le tag **`v0.5.0`** (corridor + crosses_land + repli sans corridor + campagne d'acceptation + relais moteur B1 ; politique d'épinglage sur tags #56).
 
 ```mermaid
 flowchart LR
@@ -30,7 +30,7 @@ flowchart LR
     OSM["Tuiles OSM + OpenSeaMap"]
     OM["API Open-Météo\n(point + prévisions + GRIB)"]
     AISR["AISstream.io"]
-    MOTOR["mynav-routing v0.4.0\n(import Python)"]
+    MOTOR["mynav-routing v0.5.0\n(import Python)"]
   end
   INSTR -->|"phrases NMEA UDP"| NMEAL --> STATE
   GPS -->|"POST /api/navigation/browser"| HTTP --> STATE
@@ -63,7 +63,7 @@ flowchart LR
 | Backend | `server/grib.py` | Téléchargement, statut et échantillonnage GRIB (ecCodes/xarray/cfgrib) |
 | Backend | `server/routing.py` | Adaptateur du moteur `mynav-routing` (calcul de route, polaires) |
 | Backend | `server/tracks.py` | Enregistreur de traces (JSONL) + export GeoJSON/GPX/CSV |
-| Moteur | `mynav-routing` (pip, pin `v0.4.0`) | Routage à voile isochrone, échantillonnage GRIB, GeoJSON |
+| Moteur | `mynav-routing` (pip, pin `v0.5.0`) | Routage à voile isochrone, échantillonnage GRIB, relais moteur B1, GeoJSON |
 
 Le backend n'utilise **aucun framework web** : `http.server` de la stdlib, threads dédiés pour NMEA et AISstream, état global protégé par un `threading.RLock` (`state_lock`).
 
@@ -146,7 +146,7 @@ Toutes les réponses sont JSON (`{ "error": "…" }` en cas d'erreur), `Cache-Co
 | `/api/navigation/browser` | `BrowserNavigationUpdate` (validé par `_valid_browser_update`) | `202` + snapshot |
 | `/api/ais/settings` | `{ source: local\|internet, visible: bool }` | `202` + snapshot |
 | `/api/ais/replay-position` | `{ position }` ou `{ position: null }` — force la zone AISstream en tests (valide 5 s) | `202 { ok }` |
-| `/api/routing/compute` | plan (le champ `wind` du client est ignoré — autorité vent serveur, C2/#102) | `RoutingRouteResult` ; `422` si plan invalide |
+| `/api/routing/compute` | plan (le champ `wind` du client est ignoré — autorité vent serveur, C2/#102 ; `engineBelowKts` optionnel : seuil moteur B1, 0 < x ≤ 10, absent/null = pur voile) | `RoutingRouteResult` (avec `motorFlags` par point + echo `engineBelowKts`) ; `422` si plan invalide |
 | `/api/routing/jobs` | même payload que `/api/routing/compute` | `202 { jobId }` ; calcul isolé en subprocess ; `429` si trop de jobs actifs (R2) |
 | `/api/grib/download` | `{ south, north, west, east, horizonH = 72 }` | `GribStatus` ; `503` si échec |
 | `/api/grib/sample` | `{ points }` — **≤ 400 positions** | `{ fresh: bool, wind: [] }` ; `fresh: false` si le GRIB n'est pas frais, `503` en erreur |
@@ -181,8 +181,8 @@ Contrat unique entre backend (dictionnaires Python) et frontend (interfaces TS, 
 | `AISTarget` | `mmsi`, `name`, position, `sog`, `cog`, `heading`, `navigationalStatus`, `updatedAt` |
 | `AISBackendState` | `source` (effective), `requestedSource`, `localNmeaPort`, `targets`, compteurs, état internet |
 | `GribStatus` | `available`, `fresh`, `reason`, `createdAt`, `validUntil`, emprise, résolution, pas horaire |
-| `RoutingPlan` / `RoutingWindInput` | départ/arrivée/polaire ; `RoutingWindInput` = echo du repli constant **dérivé par le serveur** (C2/#102), `null` si le GRIB sert au calcul |
-| `RoutingRouteResult` | `found`, `coords [lon, lat]`, `etaS`, `timesS`/`sogKts` à chaque point du tracé (#18, `len == len(coords)`, `timesS[last] == etaS`), `dtS`, `minDistNm`, `geojson`, `windSource: 'grib'\|'constant'`, ajustements terre→eau (`offsetNm`) |
+| `RoutingPlan` / `RoutingWindInput` | départ/arrivée/polaire + `engineBelowKts` (seuil moteur B1, défaut 2, `null` = pur voile) ; `RoutingWindInput` = echo du repli constant **dérivé par le serveur** (C2/#102), `null` si le GRIB sert au calcul |
+| `RoutingRouteResult` | `found`, `coords [lon, lat]`, `etaS`, `timesS`/`sogKts` à chaque point du tracé (#18, `len == len(coords)`, `timesS[last] == etaS`), `motorFlags` par point (B1/#133, même convention #123, `null` = pur voile) + echo `engineBelowKts`, `dtS`, `minDistNm`, `geojson` (`properties.motor` si relais actif), `windSource: 'grib'\|'constant'`, ajustements terre→eau (`offsetNm`) |
 | `TrackRecorderStatus` / `TrackSummary` / `TracksResponse` | état de l'enregistreur, métadonnées des traces |
 | `DashboardLayout` / `InstrumentConfig` | disposition des instruments, thème (`light`/`dark`/`night`), unités |
 
@@ -207,7 +207,7 @@ Téléchargement (Open-Météo) via `POST /api/grib/download`, piloté automatiq
 
 ## 10. Routage
 
-Le panneau de routage construit un `RoutingPlan` (départ = position courante ou choisie sur carte, arrivée, polaire — `config/polaire-sugar.pol` par défaut). `POST /api/routing/compute` transmet au moteur **mynav-routing** (import Python, pin `v0.4.0`) : vent GRIB si frais, sinon vent constant dérivé du NMEA du serveur (MWV vent vrai + cap — autorité vent serveur, C2/#102 : le client n'envoie plus de vent). Le résultat (trace `coords`, `etaS`, `timesS`/`sogKts`, GeoJSON) est affiché par la carte et le panneau — heure d'arrivée locale et sparkline SOG (#18) ; fiche route détaillée repliable (#121, #124) — jambes à cap quasi constant (seuil 5°), heure de passage, SOG moyen et distance par jambe, dérivés côté client dans `src/utils/routeLegs.ts`, table ouverte dans un bloc flottant à côté du panneau (pas en dessous, `RouteDetails.tsx`) — rendu en portal vers `document.body` et positionné en `fixed` ancré au bouton toggle, hors du panneau de routage dont l'`overflow-y: auto` clipperait tout descendant positionné sortant (#127 ; repli géométrique en dessous si la place manque à gauche, `src/utils/popoverPosition.ts`) ; #129 : bloc décalé au-dessus du bouton et hauteur étirée jusqu'au bas de la fenêtre (max-height inline, panel en flex column) — la table affiche un maximum de jambes sans sortir de l'écran ; les points à terre sont rapprochés de l'eau la plus proche (`startAdjusted`/`finishAdjusted`, `offsetNm`). Depuis v0.4.0, si la recherche avec corridor échoue, le moteur retente sans corridor et renvoie le meilleur des deux résultats (marge de corridor effective exposée dans le résultat). Politique d'épinglage : tags uniquement (#56) ; bump par l'Agent Intégrateur après chaque release du moteur. Le calcul passe par les jobs asynchrones (**ADR-0003**) ; l'autorité du vent est documentée dans **ADR-0004**.
+Le panneau de routage construit un `RoutingPlan` (départ = position courante ou choisie sur carte, arrivée, polaire — `config/polaire-sugar.pol` par défaut — et seuil moteur `engineBelowKts`, champ « Motor below (kt) », défaut 2, vide = pur voile). `POST /api/routing/compute` transmet au moteur **mynav-routing** (import Python, pin `v0.5.0`) : vent GRIB si frais, sinon vent constant dérivé du NMEA du serveur (MWV vent vrai + cap — autorité vent serveur, C2/#102 : le client n'envoie plus de vent). Le résultat (trace `coords`, `etaS`, `timesS`/`sogKts`, `motorFlags`, GeoJSON) est affiché par la carte et le panneau — **relais moteur B1 (#133)** : sous le seuil de vitesse voile, le tronçon passe en moteur à 4,0 kt (`ENGINE_SPEED_KTS`), cap inchangé ; les tronçons moteur sont tracés en trait orange pointillé distinct (`MapViewSimple.tsx`), les jambes concernées marquées MOTOR dans la fiche (`routeLegs.ts` — une jambe mixte voile+moteur est marquée si elle contient au moins un tronçon moteur) ; une route au vent par pétoire, introuvable en pur voile, devient trouvable — heure d'arrivée locale et sparkline SOG (#18) ; fiche route détaillée repliable (#121, #124) — jambes à cap quasi constant (seuil 5°), heure de passage, SOG moyen et distance par jambe, dérivés côté client dans `src/utils/routeLegs.ts`, table ouverte dans un bloc flottant à côté du panneau (pas en dessous, `RouteDetails.tsx`) — rendu en portal vers `document.body` et positionné en `fixed` ancré au bouton toggle, hors du panneau de routage dont l'`overflow-y: auto` clipperait tout descendant positionné sortant (#127 ; repli géométrique en dessous si la place manque à gauche, `src/utils/popoverPosition.ts`) ; #129 : bloc décalé au-dessus du bouton et hauteur étirée jusqu'au bas de la fenêtre (max-height inline, panel en flex column) — la table affiche un maximum de jambes sans sortir de l'écran ; les points à terre sont rapprochés de l'eau la plus proche (`startAdjusted`/`finishAdjusted`, `offsetNm`). Depuis v0.4.0, si la recherche avec corridor échoue, le moteur retente sans corridor et renvoie le meilleur des deux résultats (marge de corridor effective exposée dans le résultat). Politique d'épinglage : tags uniquement (#56) ; bump par l'Agent Intégrateur après chaque release du moteur. Le calcul passe par les jobs asynchrones (**ADR-0003**) ; l'autorité du vent est documentée dans **ADR-0004**.
 
 ## 11. Tracks
 

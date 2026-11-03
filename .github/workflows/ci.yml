@@ -36,4 +36,17 @@ jobs:
           cache: pip
       - run: pip install -r requirements.txt -r requirements-routing.txt
       - run: python -m eccodes selfcheck
-      - run: python -m unittest discover -s server -t . -p "test_*.py"
+      # Tests serveur : en cas d'échec, les tests FAIL/ERROR sont publiés en
+      # annotations GitHub (lisibles via l'API check-runs, sans accès logs).
+      - name: Tests serveur
+        run: |
+          set +e
+          python -m unittest discover -s server -t . -p "test_*.py" 2>&1 | tee /tmp/unittest.log
+          code=${PIPESTATUS[0]}
+          grep -E "^(FAIL|ERROR):" /tmp/unittest.log | while IFS= read -r line; do
+            echo "::error title=unittest::${line}"
+          done
+          if [ "$code" -ne 0 ]; then
+            echo "::error title=unittest-log::$(tail -c 1500 /tmp/unittest.log | tr '\n' ' ')"
+          fi
+          exit "$code"

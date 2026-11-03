@@ -15,7 +15,11 @@
 # (mynav-routing #29, issue moteur #28 ; preuve terrain Banyuls -> golfe de Roses).
 # v0.4.0 (03/11) : premier tag officiel du moteur, release auto via release.yml —
 # tous les chantiers ci-dessus ; politique #56 : epinglage sur tags uniquement.
-mynav-routing @ git+https://github.com/Dom6881org/mynav-routing.git@v0.4.0
+# v0.5.0 (03/11) : B1 voile/moteur — relais moteur sous seuil de vitesse voile
+# (engine_below_kts, defaut 2.0 kt, parametrable ; ENGINE_SPEED_KTS 4.0 kt),
+# RouteResult.motor_flags par point + properties.motor en GeoJSON
+# (mynav-routing PR #34, issue MyNavApp#133).
+mynav-routing @ git+https://github.com/Dom6881org/mynav-routing.git@v0.5.0
 # GRIB (issues #16, #42) : lecture/ecriture via ecCodes.
 # Depuis ecCodes 2.43, la roue pip embarque la librairie native :
 # - Linux/macOS : via la dependance 'eccodeslib' (wheels binaires)

@@ -30,11 +30,16 @@ const distanceNm = (start: Position, finish: Position): number => {
  * Saisie du plan de routage (issue #15) : départ (position courante, manuelle
  * ou point choisi sur la carte) et arrivée (idem). La polaire du bateau est un
  * paramètre global de l'application (voir useRoutingPolar), passé en argument.
+ * B1 (#133) : seuil de relais moteur « Motor below (kt) » — défaut 2 kt,
+ * champ vidé = pur voile (null), 0 < x ≤ 10 sinon erreur.
  */
+const DEFAULT_ENGINE_BELOW_KTS = 2;
+
 export const useRoutingInput = (currentPosition: Position | null, polarId: string | null = null) => {
   const [useCurrentPosition, setUseCurrentPosition] = useState(true);
   const [startText, setStartText] = useState({ latitude: '', longitude: '' });
   const [finishText, setFinishText] = useState({ latitude: '', longitude: '' });
+  const [motorBelowText, setMotorBelowText] = useState(String(DEFAULT_ENGINE_BELOW_KTS));
 
   const setFinishFromPosition = useCallback((position: Position) => {
     setFinishText({
@@ -79,16 +84,32 @@ export const useRoutingInput = (currentPosition: Position | null, polarId: strin
     : null;
   const polarPlanError = polarId === null ? 'Aucune polaire sélectionnée (réglages).' : null;
 
+  // B1 (#133) : seuil moteur — champ vidé = pur voile (null) ; nombre valide
+  // si 0 < x ≤ 10 (validation symétrique du serveur).
+  const parseEngineBelow = (value: string): number | null | 'invalid' => {
+    const normalized = value.trim().replace(',', '.');
+    if (!normalized) return null;
+    const parsed = Number(normalized);
+    if (!Number.isFinite(parsed) || parsed <= 0 || parsed > 10) return 'invalid';
+    return parsed;
+  };
+  const parsedEngineBelow = parseEngineBelow(motorBelowText);
+  const motorError = parsedEngineBelow === 'invalid'
+    ? 'Seuil moteur invalide : nombre entre 0 (exclu) et 10 kt, ou vide pour pur voile.'
+    : null;
+  const engineBelowKts: number | null = parsedEngineBelow === 'invalid' ? null : parsedEngineBelow;
+
   const plan = useMemo<RoutingPlan | null>(() => (
-    startError || finishError || sameError || polarPlanError
+    startError || finishError || sameError || polarPlanError || motorError
       ? null
       : {
           useCurrentPosition,
           startPosition: startPosition as Position,
           finishPosition: finishPosition as Position,
-          polarId: polarId as string
+          polarId: polarId as string,
+          engineBelowKts
         }
-  ), [useCurrentPosition, startPosition, finishPosition, startError, finishError, sameError, polarPlanError, polarId]);
+  ), [useCurrentPosition, startPosition, finishPosition, startError, finishError, sameError, polarPlanError, motorError, engineBelowKts, polarId]);
 
   return {
     polarId,
@@ -100,6 +121,8 @@ export const useRoutingInput = (currentPosition: Position | null, polarId: strin
     setFinishText,
     setFinishFromPosition,
     setStartFromPosition,
+    motorBelowText,
+    setMotorBelowText,
     startPosition: isValidPosition(startPosition) ? startPosition : null,
     finishPosition: isValidPosition(finishPosition) ? finishPosition : null,
     distanceNm: isValidPosition(startPosition) && isValidPosition(finishPosition)
@@ -109,7 +132,8 @@ export const useRoutingInput = (currentPosition: Position | null, polarId: strin
       start: startError,
       finish: finishError,
       same: sameError,
-      polar: polarPlanError
+      polar: polarPlanError,
+      motor: motorError
     },
     plan
   };

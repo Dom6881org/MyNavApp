@@ -125,10 +125,12 @@ export const useRoutingRoute = (): RoutingRouteApi => {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         // C2/#103 : plan seul — le serveur est l'autorité du vent.
+        // B1/#133 : seuil de relais moteur (null = pur voile).
         body: JSON.stringify({
           start: plan.startPosition,
           finish: plan.finishPosition,
-          polarId: plan.polarId
+          polarId: plan.polarId,
+          engineBelowKts: plan.engineBelowKts
         })
       });
       value = await response.json() as RoutingJobAccepted & { error?: string };

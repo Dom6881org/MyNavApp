@@ -1,4 +1,4 @@
-"""Tests des jobs de routage asynchrones."""
+""""Tests des jobs de routage asynchrones."""
 
 import json
 import time
@@ -69,10 +69,12 @@ class RoutingJobTests(unittest.TestCase):
         route_result = {
             "found": True,
             "coords": [],
-            # Contrat compute_route complet (issue #18) : le payload lit
-            # times_s/sog_kts, le mock doit les fournir comme le moteur.
+            # Contrat compute_route complet (issue #18, motor_flags v0.5.0/B1) :
+            # le payload lit times_s/sog_kts et motor_flags, le mock doit les
+            # fournir comme le moteur.
             "times_s": [],
             "sog_kts": [],
+            "motor_flags": None,
             "eta_s": 120.0,
             "dt_s": 1800.0,
             "bin_deg": 0.03,
