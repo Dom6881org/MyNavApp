@@ -15,21 +15,24 @@ const formatDist = (nm: number): string => `${nm.toFixed(1)} NM`;
 interface RouteDetailsProps {
   coords: [number, number][];
   etaS: number;
-  /** Temps cumulés par tronçon (optionnels : colonnes « — » si absents). */
+  /** Temps cumulés par point du tracé (optionnels : colonnes « — » si absents). */
   timesS?: number[] | null;
-  /** SOG par tronçon (optionnels : colonnes « — » si absents). */
+  /** SOG par point du tracé (optionnels : colonnes « — » si absents). */
   sogKts?: number[] | null;
   /** Départ en secondes epoch — défaut : maintenant. */
   startEpochS?: number;
 }
 
 /**
- * Fiche route détaillée (issue #121) : repliée par défaut, un bouton résume
- * le nombre de jambes (tronçons à cap quasi constant) et de changements de
- * cap. Dépliée : une ligne par jambe — heure de passage au cap, cap (3
- * chiffres), SOG moyen et distance de la jambe — puis l’arrivée avec
- * distance totale. Données 100 % dérivées du résultat de routage côté
- * client : aucun appel réseau, aucun changement serveur/moteur.
+ * Fiche route détaillée (issues #121 / #124) : repliée par défaut, un bouton
+ * résume le nombre de jambes (tronçons à cap quasi constant) et de changements
+ * de cap. Dépliée (#124) : la table s’ouvre dans un **bloc flottant à côté du
+ * panneau** (à sa gauche, famille `map-tool-panel`, titre « ROUTE DETAILS »,
+ * bouton ×), pas en dessous — le panneau de routage ne dépasse pas en hauteur.
+ * Fermeture par ×, re-clip du bouton, ou disparition de la route ; un
+ * recalcul (nouveau tracé) replie la fiche. Données 100 % dérivées du
+ * résultat de routage côté client : aucun appel réseau, aucun changement
+ * serveur/moteur.
  */
 const RouteDetails: React.FC<RouteDetailsProps> = ({ coords, etaS, timesS, sogKts, startEpochS }) => {
   const [expanded, setExpanded] = React.useState(false);
@@ -38,6 +41,12 @@ const RouteDetails: React.FC<RouteDetailsProps> = ({ coords, etaS, timesS, sogKt
     () => computeRouteLegs(coords, timesS, sogKts),
     [coords, timesS, sogKts]
   );
+
+  // #124 : nouveau tracé (recalcul) → fiche repliée par défaut, jamais une
+  // fiche périmée ouverte sur une route qui n’existe plus.
+  React.useEffect(() => {
+    setExpanded(false);
+  }, [coords]);
 
   if (legs.length === 0) return null;
 
@@ -57,30 +66,43 @@ const RouteDetails: React.FC<RouteDetailsProps> = ({ coords, etaS, timesS, sogKt
         {expanded ? `Hide route details · ${summary}` : `Route details · ${summary}`}
       </button>
       {expanded && (
-        <div className="route-details-scroll">
-          <table className="route-details-table">
-            <thead>
-              <tr>
-                <th>Time</th>
-                <th>Hdg</th>
-                <th>SOG</th>
-                <th>Dist</th>
-              </tr>
-            </thead>
-            <tbody>
-              {legs.map((leg, index) => (
-                <tr key={`${leg.startIndex}-${leg.endIndex}-${index}`}>
-                  <td>{leg.durationS !== null ? formatClock(start + leg.durationS) : '—'}</td>
-                  <td>{formatHeading(leg.headingDeg)}</td>
-                  <td>{leg.sogKts !== null ? formatSog(leg.sogKts) : '—'}</td>
-                  <td>{formatDist(leg.distanceNm)}</td>
+        <div className="route-details-panel">
+          <div className="map-settings-heading">
+            <strong>ROUTE DETAILS</strong>
+            <button
+              type="button"
+              aria-label="Close route details"
+              title="Close route details"
+              onClick={() => setExpanded(false)}
+            >
+              ×
+            </button>
+          </div>
+          <div className="route-details-scroll">
+            <table className="route-details-table">
+              <thead>
+                <tr>
+                  <th>Time</th>
+                  <th>Hdg</th>
+                  <th>SOG</th>
+                  <th>Dist</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
-          <p className="route-details-arrival">
-            Arr. {formatClock(start + etaS)} · {formatDist(totalNm)}
-          </p>
+              </thead>
+              <tbody>
+                {legs.map((leg, index) => (
+                  <tr key={`${leg.startIndex}-${leg.endIndex}-${index}`}>
+                    <td>{leg.durationS !== null ? formatClock(start + leg.durationS) : '—'}</td>
+                    <td>{formatHeading(leg.headingDeg)}</td>
+                    <td>{leg.sogKts !== null ? formatSog(leg.sogKts) : '—'}</td>
+                    <td>{formatDist(leg.distanceNm)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+            <p className="route-details-arrival">
+              Arr. {formatClock(start + etaS)} · {formatDist(totalNm)}
+            </p>
+          </div>
         </div>
       )}
     </div>

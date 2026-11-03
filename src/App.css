@@ -3936,8 +3936,12 @@ html {
   pointer-events: none;
 }
 
-/* ── Fiche route détaillée (issue #121) : jambes, caps, SOG, heures de passage. ── */
+/* ── Fiche route détaillée (issues #121/#124) : jambes, caps, SOG, heures de passage.
+   #124 : la table s'ouvre dans un bloc flottant À CÔTÉ du panneau de routage
+   (à sa gauche, même famille que map-tool-panel), pas en dessous — le panneau
+   ne dépasse pas en hauteur. Ancre = conteneur du bouton toggle. */
 .route-details {
+  position: relative;
   margin-top: 0.3rem;
 }
 
@@ -3946,8 +3950,24 @@ html {
   width: 100%;
 }
 
+.route-details-panel {
+  position: absolute;
+  top: 0;
+  right: calc(100% + 0.5rem);
+  z-index: 1200;
+  width: 17rem;
+  padding: 0.65rem;
+  border: 1px solid rgba(175, 210, 221, 0.32);
+  border-radius: 8px;
+  background: rgba(10, 24, 35, 0.94);
+  box-shadow: 0 3px 12px rgba(0, 0, 0, 0.28);
+  color: #f4f8fb;
+  font-size: 0.75rem;
+  text-align: left;
+}
+
 .route-details-scroll {
-  max-height: 12rem;
+  max-height: min(60vh, 16rem);
   margin-top: 0.25rem;
   overflow-y: auto;
   border: 1px solid rgba(175, 210, 221, 0.24);
@@ -4027,4 +4047,25 @@ html {
 
 .theme-light .route-details-arrival {
   color: #1a2733;
+}
+
+/* Thème clair : le bloc flottant suit la famille map-tool-panel claire. */
+.theme-light .route-details-panel {
+  border-color: rgba(39, 95, 112, 0.2);
+  background: linear-gradient(145deg, #fff, #eaf2f5);
+  box-shadow: 0 8px 22px rgba(29, 66, 78, 0.1), inset 0 1px 0 #fff;
+  color: #1a2733;
+}
+
+/* Carte étroite : repli du bloc en dessous (aucune perte d'information),
+   comme pour les autres panneaux d'outils mobiles. */
+@media (max-width: 600px) {
+  .route-details-panel {
+    top: auto;
+    right: auto;
+    position: static;
+    width: auto;
+    margin-top: 0.35rem;
+    box-shadow: none;
+  }
 }
