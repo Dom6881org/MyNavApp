@@ -36,6 +36,74 @@ const stubFetch = (gribWind: unknown[], omStatus = 200) => {
 
 afterEach(() => vi.unstubAllGlobals());
 
+describe('useWindForecast vent du point GRIB-first (#140)', () => {
+  const POSITION = { latitude: 42.64, longitude: 3.05 };
+
+  const stubPointFetch = (gribResponse: unknown, gribOk = true) => {
+    const calls: string[] = [];
+    const mock = vi.fn((url: string) => {
+      calls.push(url);
+      if (url.includes('/api/grib/sample')) {
+        return Promise.resolve({
+          ok: gribOk,
+          status: gribOk ? 200 : 503,
+          json: () => Promise.resolve(gribResponse)
+        });
+      }
+      if (url.includes('open-meteo')) {
+        return Promise.resolve({
+          ok: true,
+          status: 200,
+          headers: new Headers(),
+          json: () => Promise.resolve(omForecast(1))
+        });
+      }
+      return Promise.resolve({ ok: false, status: 404, headers: new Headers(), json: () => Promise.resolve({}) });
+    });
+    vi.stubGlobal('fetch', mock);
+    return calls;
+  };
+
+  it('GRIB frais + couvert : vent du point pris du GRIB, aucun appel Open-Météo', async () => {
+    const calls = stubPointFetch({ fresh: true, wind: [{ ...POSITION, speed: 12.3, direction: 210 }] });
+    const { result } = renderHook(() => useWindForecast(POSITION));
+    await waitFor(() => expect(result.current.wind).not.toBeNull());
+    expect(result.current.wind).toEqual({ speed: 12.3, direction: 210, gust: 12.3, source: 'GRIB' });
+    expect(result.current.status.isLoading).toBe(false);
+    expect(result.current.status.error).toBeNull();
+    expect(calls.some(url => url.includes('open-meteo'))).toBe(false);
+  });
+
+  it('hors zone GRIB (wind vide) : repli Open-Météo, source affichée', async () => {
+    const calls = stubPointFetch({ fresh: true, wind: [] });
+    const { result } = renderHook(() => useWindForecast(POSITION));
+    await waitFor(() => expect(result.current.wind?.source).toBe('Open-Meteo'));
+    expect(result.current.wind).toEqual({ speed: 10, direction: 90, gust: 12, source: 'Open-Meteo' });
+    expect(calls.some(url => url.includes('open-meteo'))).toBe(true);
+  });
+
+  it('GRIB expiré (fresh false) : repli Open-Météo', async () => {
+    stubPointFetch({ fresh: false, wind: [] });
+    const { result } = renderHook(() => useWindForecast(POSITION));
+    await waitFor(() => expect(result.current.wind?.source).toBe('Open-Meteo'));
+    expect(result.current.status.error).toBeNull();
+  });
+
+  it('échec /api/grib/sample : repli Open-Météo silencieux', async () => {
+    stubPointFetch({ fresh: true, wind: [] }, false);
+    const { result } = renderHook(() => useWindForecast(POSITION));
+    await waitFor(() => expect(result.current.wind?.source).toBe('Open-Meteo'));
+    expect(result.current.status.error).toBeNull();
+  });
+
+  it('direction GRIB négative normalisée vers 0-360', async () => {
+    stubPointFetch({ fresh: true, wind: [{ ...POSITION, speed: 8, direction: -5 }] });
+    const { result } = renderHook(() => useWindForecast(POSITION));
+    await waitFor(() => expect(result.current.wind?.source).toBe('GRIB'));
+    expect(result.current.wind?.direction).toBe(355);
+  });
+});
+
 describe('useWindForecast grille GRIB (#82)', () => {
   it('GRIB complet : aucun appel Open-Météo pour la grille', async () => {
     const calls = stubFetch(POINTS.map(p => ({ ...p, speed: 8, direction: 180 })));
