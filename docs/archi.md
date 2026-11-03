@@ -1,6 +1,6 @@
 # Architecture MyNavApp
 
-> Photographie de l'architecture **telle qu'elle existe** sur `main` (v1.1.0), rédigée par l'Agent Architecte (issue #64).
+> Photographie de l'architecture **telle qu'elle existe** sur `main` (v1.2.0), rédigée par l'Agent Architecte (issue #64).
 > Ce document doit être mis à jour dans la foulée de toute PR qui fait évoluer la structure, les interfaces ou les formats décrits ici.
 
 ## 1. Vue d'ensemble
@@ -10,7 +10,7 @@ MyNavApp est une application de navigation de plaisance divisée en deux process
 - un **frontend** React 19 + TypeScript (Vite, Leaflet) tournant dans le navigateur ;
 - un **backend** Python (stdlib uniquement pour le serveur HTTP, `server/`) qui collecte les données des instruments, les agrège et les pousse au frontend.
 
-Le moteur de routage (`mynav-routing`) est un paquet pip séparé, épinglé via `requirements-routing.txt` sur le SHA `4414c28f` de sa branche `main` (v0.4-corridor-fallback : corridor + crosses_land + repli sans corridor ; retour à un tag dès que `v0.4.0` existera).
+Le moteur de routage (`mynav-routing`) est un paquet pip séparé, épinglé via `requirements-routing.txt` sur le tag **`v0.4.0`** (corridor + crosses_land + repli sans corridor + campagne d'acceptation ; politique d'épinglage sur tags #56).
 
 ```mermaid
 flowchart LR
@@ -30,7 +30,7 @@ flowchart LR
     OSM["Tuiles OSM + OpenSeaMap"]
     OM["API Open-Météo\n(point + prévisions + GRIB)"]
     AISR["AISstream.io"]
-    MOTOR["mynav-routing v0.4-corridor-fallback\n(import Python)"]
+    MOTOR["mynav-routing v0.4.0\n(import Python)"]
   end
   INSTR -->|"phrases NMEA UDP"| NMEAL --> STATE
   GPS -->|"POST /api/navigation/browser"| HTTP --> STATE
@@ -63,7 +63,7 @@ flowchart LR
 | Backend | `server/grib.py` | Téléchargement, statut et échantillonnage GRIB (ecCodes/xarray/cfgrib) |
 | Backend | `server/routing.py` | Adaptateur du moteur `mynav-routing` (calcul de route, polaires) |
 | Backend | `server/tracks.py` | Enregistreur de traces (JSONL) + export GeoJSON/GPX/CSV |
-| Moteur | `mynav-routing` (pip, pin `4414c28f` = v0.4-corridor-fallback) | Routage à voile isochrone, échantillonnage GRIB, GeoJSON |
+| Moteur | `mynav-routing` (pip, pin `v0.4.0`) | Routage à voile isochrone, échantillonnage GRIB, GeoJSON |
 
 Le backend n'utilise **aucun framework web** : `http.server` de la stdlib, threads dédiés pour NMEA et AISstream, état global protégé par un `threading.RLock` (`state_lock`).
 
@@ -207,7 +207,7 @@ Téléchargement (Open-Météo) via `POST /api/grib/download`, piloté automatiq
 
 ## 10. Routage
 
-Le panneau de routage construit un `RoutingPlan` (départ = position courante ou choisie sur carte, arrivée, polaire — `config/polaire-sugar.pol` par défaut). `POST /api/routing/compute` transmet au moteur **mynav-routing** (import Python, pin `4414c28f` = v0.4-corridor-fallback) : vent GRIB si frais, sinon vent constant dérivé du NMEA du serveur (MWV vent vrai + cap — autorité vent serveur, C2/#102 : le client n'envoie plus de vent). Le résultat (trace `coords`, `etaS`, `timesS`/`sogKts`, GeoJSON) est affiché par la carte et le panneau — heure d'arrivée locale et sparkline SOG (#18) ; les points à terre sont rapprochés de l'eau la plus proche (`startAdjusted`/`finishAdjusted`, `offsetNm`). Depuis v0.4-corridor-fallback, si la recherche avec corridor échoue, le moteur retente sans corridor et renvoie le meilleur des deux résultats (marge de corridor effective exposée dans le résultat). Politique d'épinglage : tags en principe (#56) ; pin provisoire sur SHA de merge (`4414c28f`, v0.4-corridor-fallback) tant que le tag `v0.4.0` n'existe pas ; bump par l'Agent Intégrateur après chaque release du moteur. Le calcul passe par les jobs asynchrones (**ADR-0003**) ; l'autorité du vent est documentée dans **ADR-0004**.
+Le panneau de routage construit un `RoutingPlan` (départ = position courante ou choisie sur carte, arrivée, polaire — `config/polaire-sugar.pol` par défaut). `POST /api/routing/compute` transmet au moteur **mynav-routing** (import Python, pin `v0.4.0`) : vent GRIB si frais, sinon vent constant dérivé du NMEA du serveur (MWV vent vrai + cap — autorité vent serveur, C2/#102 : le client n'envoie plus de vent). Le résultat (trace `coords`, `etaS`, `timesS`/`sogKts`, GeoJSON) est affiché par la carte et le panneau — heure d'arrivée locale et sparkline SOG (#18) ; les points à terre sont rapprochés de l'eau la plus proche (`startAdjusted`/`finishAdjusted`, `offsetNm`). Depuis v0.4.0, si la recherche avec corridor échoue, le moteur retente sans corridor et renvoie le meilleur des deux résultats (marge de corridor effective exposée dans le résultat). Politique d'épinglage : tags uniquement (#56) ; bump par l'Agent Intégrateur après chaque release du moteur. Le calcul passe par les jobs asynchrones (**ADR-0003**) ; l'autorité du vent est documentée dans **ADR-0004**.
 
 ## 11. Tracks
 

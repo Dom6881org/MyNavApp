@@ -1,15 +1,17 @@
-# MyNavApp v1.1.0 — Routage météo complet
+# MyNavApp v1.2.0 — Routage rapide, asynchrone et fiable en côte
 
 ## Nouveautés
-- **Routage de voilier complet** : intégration du moteur [mynav-routing v0.3.3](https://github.com/Dom6881org/mynav-routing/releases/tag/v0.3.3) — isochrones, grande vitesse polaire, courants (issue #14)
-- **GRIB offline-first** (issue #16) : champ de vent GRIB2 téléchargé à terre via Open-Météo, mis en cache avec validité, lecture par ecCodes ; dégradation propre en vent constant si absent/expiré
-- **Options A + B de l'issue #36** : échantillonnage des barbes de vent depuis le GRIB (≈100× moins de requêtes Open-Météo), combiné avec le TTL cache de 60 min
-- **Densité des barbes** (issue #21)
-- **ecCodes par pip uniquement** (issue #42) : pin `eccodes>=2.43` (la roue embarque la librairie native), fin de l'installation manuelle conda/DLL Windows, `selfcheck` dans le CI
+- **Moteur [mynav-routing v0.4.0](https://github.com/Dom6881org/mynav-routing/releases/tag/v0.4.0)** — épinglage désormais sur le tag (politique #56). Sampling GRIB numpy (17,1×), corridor d'élagage (~2×), pré-filtre crosses_land (≥3×) et **fallback sans corridor** : les routes contournant un cap (Cap Béar, Cap de Creus) ne sont plus refusées à tort (#84/#89/#93/#116, diagnostic #118 résolu).
+- **Jobs routage asynchrones** (#95/#97, ADR-0003) : progression temps réel, bouton Annuler, paramètres effectifs (pas de temps, maille, durée de calcul) affichés dans le panneau (#100) ; garde-fou de 2 jobs simultanés côté serveur — 429 au-delà (#114).
+- **Heure d'arrivée + SOG** (#18) : heure d'arrivée locale et sparkline SOG le long de la route.
+- **Autorité vent serveur** (#102/#103, ADR-0004) : le front n'envoie plus de vent ; repli en vent constant dérivé du NMEA du serveur.
+- **Barbes de vent robustes** : paliers de zoom anti-churn et plafonds de cache (#62), complément Open-Météo hors zone GRIB avec badge d'état (#82), couleurs par force.
+- **Carte anti-clignotement** (#50) et chip « From » épurée (#52).
+- **Qualité & docs** : campagne d'acceptation moteur « zéro terre » à chaque push CI (mynav-routing #30) ; ADR-0003/0004 + archi.md complet (#106/#108) ; README Installation complet, venv + HTTPS LAN mkcert (#112).
 
 ## Technique
-- `server/grib.py`, `server/routing.py`, `requirements-routing.txt`
-- CI : Node 22, `test:front`, selfcheck ecCodes
+- `server/routing.py`, `server/routing_jobs.py`, `requirements-routing.txt` (pin `mynav-routing @ v0.4.0`)
+- CI : `frontend` (Node 22) + `server` ; ecCodes pip `>= 2.43`
 
-## Issues fermées
-#14, #16, #21, #36, #42
+## Issues fermées (principales)
+#18, #50, #52, #62, #82, #95, #96, #100, #102, #103, #106, #108, #112, #114, #116, #118
