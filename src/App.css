@@ -3296,3 +3296,832 @@ html {
     padding-bottom: 0.6rem;
   }
 
+  .main-layout-instruments-top .map-view > div:last-child > span {
+    display: none;
+  }
+}
+
+@media (max-width: 600px) {
+  .app .app-header {
+    gap: 0.4rem;
+    padding: 0.55rem 0.7rem;
+  }
+
+  .app .app-header .header-title h1 {
+    overflow: hidden;
+    font-size: 0.82rem !important;
+    letter-spacing: 0.01em !important;
+    white-space: nowrap;
+  }
+
+  .app .app-header .header-info {
+    flex-direction: row;
+    flex-wrap: nowrap;
+    gap: 0.35rem;
+  }
+}
+
+@media (min-width: 900px) and (min-aspect-ratio: 1/1) {
+  .main-layout.main-layout-instruments-top {
+    display: grid;
+    grid-template-columns: 300px minmax(0, 1fr) 300px;
+    grid-template-rows: minmax(520px, 1fr);
+    overflow: auto;
+  }
+
+  .main-layout-instruments-top > .instruments-sidebar {
+    width: auto;
+    height: 100%;
+    grid-row: 1;
+    border-bottom: 0;
+    border-top: 0;
+  }
+
+  .main-layout-instruments-top > .instruments-sidebar:not(.instruments-sidebar-bottom) {
+    grid-column: 1;
+    border-right: 1px solid rgba(115, 179, 199, 0.2);
+  }
+
+  .main-layout-instruments-top > .instruments-sidebar-bottom {
+    grid-column: 3;
+    border-left: 1px solid rgba(115, 179, 199, 0.2);
+  }
+
+  .main-layout-instruments-top .instrument-grid-top,
+  .main-layout-instruments-top .instrument-grid-bottom {
+    height: 100%;
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: repeat(2, minmax(190px, 1fr));
+    gap: 0.75rem;
+    padding: 0.75rem;
+  }
+
+  .main-layout-instruments-top .instrument-grid-top .instrument-wrapper,
+  .main-layout-instruments-top .instrument-grid-bottom .instrument-wrapper {
+    grid-column: 1;
+    grid-row: auto;
+    min-height: 190px;
+  }
+
+  .main-layout-instruments-top > .map-container {
+    grid-column: 2;
+    grid-row: 1;
+    min-height: 520px;
+    padding: 0.75rem 0.85rem;
+  }
+
+  .main-layout-instruments-top .compass-dial {
+    height: 110px;
+  }
+}
+
+
+/* Logo button in the map toolbar opens the About panel */
+.map-tool-button.map-logo-button,
+.map-tool-button.map-logo-button:not(.layer-visible) {
+  padding: 0.15rem;
+  background: transparent;
+  border-color: transparent;
+}
+
+.map-logo-button:hover,
+.map-logo-button.active {
+  border-color: #74e3e5;
+}
+
+.map-logo-button .app-logo {
+  width: 100%;
+  height: 100%;
+}
+
+.app-logo {
+  width: 36px;
+  height: 36px;
+  filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.3));
+}
+
+.map-about-panel {
+  display: grid;
+  gap: 0.35rem;
+}
+
+.map-about-panel strong {
+  color: #74e3e5;
+  letter-spacing: 0.06em;
+}
+
+.map-about-panel strong small {
+  margin-left: 0.35rem;
+  color: #8da5ae;
+  font-weight: 400;
+  letter-spacing: 0;
+}
+
+.map-about-panel .about-ok {
+  color: #9af0bd;
+}
+
+.map-about-panel .about-warning {
+  color: #ffc46b;
+}
+
+.theme-light .map-about-panel {
+  border-color: rgba(16, 32, 42, 0.16);
+  background: rgba(255, 255, 255, 0.96);
+  color: #1a2733;
+}
+
+.theme-light .map-about-panel strong {
+  color: #0b78a8;
+}
+
+.theme-light .map-about-panel strong small {
+  color: #5d7380;
+}
+
+.theme-light .map-about-panel .about-ok {
+  color: #1b7a43;
+}
+
+.theme-light .map-about-panel .about-warning {
+  color: #b35c00;
+}
+
+.theme-night .map-about-panel {
+  border-color: rgba(0, 255, 0, 0.3);
+  background: rgba(4, 12, 6, 0.94);
+  color: #7dff7d;
+}
+
+.theme-night .map-about-panel strong,
+.theme-night .map-about-panel .about-ok {
+  color: #00ff00;
+}
+
+/* Map toolbar themes */
+.theme-light .map-tools-toolbar {
+  border: 1px solid rgba(16, 32, 42, 0.16);
+  background: rgba(255, 255, 255, 0.94);
+  box-shadow: 0 3px 12px rgba(16, 32, 42, 0.2);
+}
+
+.theme-light .map-tool-divider {
+  background: rgba(16, 32, 42, 0.16);
+}
+
+.theme-light .map-rec-indicator {
+  border-color: rgba(160, 32, 32, 0.45);
+  color: #a02020;
+}
+
+.theme-light .map-tool-button {
+  border-color: rgba(16, 32, 42, 0.2);
+  background: #eef4f7;
+  color: #1a2733;
+}
+
+.theme-light .map-tool-button:hover,
+.theme-light .map-tool-button.layer-visible {
+  border-color: #0b78a8;
+  background: #d3ebf5;
+  color: #0b5f86;
+}
+
+.theme-light .map-tool-button:not(.layer-visible) {
+  background: #f4f7f9;
+  color: #6b8190;
+}
+
+.theme-light .map-tool-button.recenter-map-button:not(.layer-visible) {
+  color: #1b7a43;
+}
+
+.theme-light .gps-map-button.gps-connected {
+  border-color: #1b7a43;
+  color: #1b7a43;
+}
+
+.theme-light .gps-map-button.gps-disconnected {
+  color: #b35c00;
+}
+
+.theme-light .map-tool-details,
+.theme-light .map-tool-count,
+.theme-light .gps-map-indicator {
+  border-color: #ffffff;
+}
+
+.theme-light .map-tool-details {
+  background: #c5d8e0;
+}
+
+.theme-light .map-tool-details:hover,
+.theme-light .map-tool-details.active {
+  background: #8fd3e8;
+}
+
+.theme-light .map-tool-button:focus-visible,
+.theme-light .map-tool-details:focus-visible {
+  outline-color: #0b78a8;
+}
+
+/* Light theme for map sub menu cards (AIS, weather, GPS, recording, settings) */
+.theme-light .map-tool-panel {
+  border-color: rgba(39, 95, 112, 0.2);
+  background: linear-gradient(145deg, #fff, #eaf2f5);
+  box-shadow: 0 8px 22px rgba(29, 66, 78, 0.1), inset 0 1px 0 #fff;
+  color: #1a2733;
+}
+
+.theme-light .gps-map-readout strong,
+.theme-light .map-settings-heading,
+.theme-light .map-settings-panel .control-section h3 {
+  color: #0b78a8;
+}
+
+.theme-light .wind-map-readout strong {
+  color: #0b78a8;
+}
+
+.theme-light .wind-map-updated,
+.theme-light .track-map-status,
+.theme-light .track-map-item-info span,
+.theme-light .ais-map-source,
+.theme-light .ais-map-status,
+.theme-light .ais-map-coverage,
+.theme-light .ais-map-target-count,
+.theme-light .map-settings-panel .control-gps-status {
+  color: #3d5565;
+}
+
+.theme-light .ais-map-target-count strong {
+  color: #b7791f;
+}
+
+.theme-light .ais-map-source select,
+.theme-light .map-settings-panel .unit-group select,
+.theme-light .track-map-list-heading button,
+.theme-light .map-settings-heading button {
+  border-color: rgba(16, 32, 42, 0.25);
+  background: #fff;
+  color: #1a2733;
+}
+
+.theme-light .map-settings-heading button:hover {
+  border-color: #0b78a8;
+  background: #d3ebf5;
+}
+
+.theme-light .ais-map-zoom {
+  border-color: rgba(183, 121, 31, 0.7);
+  background: rgba(183, 121, 31, 0.1);
+  color: #7a4e0c;
+}
+
+.theme-light .track-map-item {
+  border-color: rgba(39, 95, 112, 0.2);
+  background: rgba(255, 255, 255, 0.7);
+}
+
+.theme-light .track-map-item-actions a {
+  border-color: rgba(11, 120, 168, 0.55);
+  background: rgba(11, 120, 168, 0.1);
+  color: #0b5f86;
+}
+
+.theme-light .track-map-item-actions button {
+  border-color: rgba(160, 32, 32, 0.5);
+  background: rgba(160, 32, 32, 0.08);
+  color: #a02020;
+}
+
+.theme-light .map-settings-panel .control-section {
+  border-color: rgba(39, 95, 112, 0.2);
+  background: rgba(255, 255, 255, 0.6);
+}
+
+.theme-light .map-settings-panel .control-gps-status {
+  background: rgba(16, 32, 42, 0.06);
+}
+
+.theme-light .map-settings-panel .control-gps-status.connected {
+  color: #1b7a43;
+}
+
+.theme-light .map-settings-panel .control-gps-status.disconnected {
+  color: #b35c00;
+}
+
+.theme-light .map-settings-panel .instrument-visibility-option,
+.theme-light .map-settings-panel .unit-group {
+  color: #1a2733;
+}
+
+.theme-light .map-settings-panel .theme-button {
+  border-color: rgba(16, 32, 42, 0.22);
+  background: #fff;
+  color: #1a2733;
+}
+
+.theme-light .map-settings-panel .theme-button.active {
+  border-color: #0b78a8;
+  background: #d3ebf5;
+  color: #0b5f86;
+}
+
+.theme-night .map-tools-toolbar {
+  border: 1px solid rgba(0, 255, 0, 0.3);
+  background: rgba(4, 12, 6, 0.92);
+}
+
+.theme-night .map-tool-divider {
+  background: rgba(0, 255, 0, 0.3);
+}
+
+.theme-night .map-rec-indicator {
+  border-color: rgba(255, 80, 80, 0.5);
+  color: #ff8f8f;
+}
+
+.theme-night .map-tool-button {
+  border-color: rgba(0, 255, 0, 0.3);
+  background: #061208;
+  color: #7dff7d;
+}
+
+.theme-night .map-tool-button:hover,
+.theme-night .map-tool-button.layer-visible {
+  border-color: #00ff00;
+  background: #0d2a10;
+  color: #00ff00;
+}
+
+.theme-night .map-tool-button:not(.layer-visible) {
+  background: #040a05;
+  color: #3f9f3f;
+}
+
+/* Light theme for map sub-menu panels and their cards (routing, settings, tracks, AIS, weather, GPS).
+   Base styles above are dark-only; these overrides make the sub menus readable in light mode. */
+.theme-light .map-tool-panel {
+  border-color: rgba(16, 32, 42, 0.16);
+  background: rgba(255, 255, 255, 0.96);
+  box-shadow: 0 3px 12px rgba(16, 32, 42, 0.18);
+  color: #1a2733;
+}
+
+.theme-light .map-tool-panel .control-section {
+  border-color: rgba(16, 32, 42, 0.14);
+  background: linear-gradient(145deg, #ffffff, #eef4f7);
+}
+
+.theme-light .map-tool-panel .control-section h3 {
+  color: #0b78a8;
+}
+
+.theme-light .map-settings-heading {
+  color: #0b78a8;
+}
+
+.theme-light .map-settings-heading button {
+  border-color: rgba(16, 32, 42, 0.2);
+  background: #eef4f7;
+  color: #1a2733;
+}
+
+.theme-light .map-settings-heading button:hover {
+  border-color: #0b78a8;
+  background: #d3ebf5;
+}
+
+.theme-light .map-settings-heading button:focus-visible {
+  outline-color: #0b78a8;
+}
+
+/* Routing sub-menu card controls */
+.theme-light .routing-input {
+  border-color: rgba(16, 32, 42, 0.24);
+  background: #ffffff;
+  color: #1a2733;
+}
+
+.theme-light .routing-input:focus-visible,
+.theme-light .routing-mini-button:focus-visible,
+.theme-light .routing-compute-button:focus-visible,
+.theme-light .routing-cancel-button:focus-visible,
+.theme-light .routing-clear-button:focus-visible {
+  outline-color: #0b78a8;
+}
+
+.theme-light .routing-section-label {
+  color: #0b78a8;
+}
+
+.theme-light .routing-endpoint-label {
+  color: #5c7480;
+}
+
+.theme-light .routing-gps-toggle {
+  color: #5c7480;
+}
+
+/* B1 (#133) : champ moteur et badge MOTOR en thème clair. */
+.theme-light .routing-motor-row,
+.theme-light .routing-motor-label {
+  color: #5c7480;
+}
+
+.theme-light .route-leg-motor {
+  border-color: rgba(180, 110, 10, 0.45);
+  background: rgba(245, 166, 35, 0.16);
+  color: #a3660a;
+}
+
+.theme-light .routing-chip {
+  border-color: rgba(16, 32, 42, 0.24);
+  background: #ffffff;
+  color: #1a2733;
+}
+
+.theme-light .routing-mini-button {
+  border-color: rgba(16, 32, 42, 0.28);
+  background: #eef4f7;
+  color: #1a2733;
+}
+
+.theme-light .routing-mini-button:hover,
+.theme-light .routing-mini-button.active {
+  border-color: #0b78a8;
+  background: #d3ebf5;
+  color: #0b5f86;
+}
+
+.theme-light .routing-mini-button:disabled {
+  border-color: rgba(16, 32, 42, 0.14);
+  background: #f4f7f9;
+  color: #8aa0ab;
+}
+
+.theme-light .routing-compute-button {
+  border-color: #0b78a8;
+  background: #0b78a8;
+  color: #ffffff;
+}
+
+.theme-light .routing-compute-button:hover:not(:disabled) {
+  background: #0b5f86;
+}
+
+.theme-light .routing-compute-button:disabled {
+  border-color: rgba(16, 32, 42, 0.14);
+  background: #f4f7f9;
+  color: #8aa0ab;
+}
+
+.theme-light .routing-cancel-button {
+  border-color: rgba(16, 32, 42, 0.28);
+  background: #eef4f7;
+  color: #5c7480;
+}
+
+.theme-light .routing-cancel-button:hover {
+  border-color: #b35c00;
+  color: #b35c00;
+}
+
+.theme-light .routing-progress {
+  color: #5c7480;
+}
+
+.theme-light .routing-params {
+  color: #5c7480;
+}
+
+.theme-light .routing-result {
+  border-color: rgba(16, 32, 42, 0.14);
+  background: linear-gradient(145deg, #ffffff, #eef4f7);
+}
+
+.theme-light .routing-result-found {
+  border-color: rgba(11, 120, 168, 0.5);
+}
+
+.theme-light .routing-result-eta {
+  color: #0b78a8;
+}
+
+.theme-light .routing-result-eta-label {
+  color: #5c7480;
+}
+
+.theme-light .routing-result-dist {
+  color: #1a2733;
+}
+
+.theme-light .routing-sog-line {
+  stroke: #0b78a8;
+}
+
+.theme-light .routing-sog-stats {
+  color: #5c7480;
+}
+
+.theme-light .routing-clear-button {
+  color: #5c7480;
+}
+
+.theme-light .routing-clear-button:hover {
+  color: #1a2733;
+}
+
+.theme-light .routing-error,
+.theme-light .routing-warn {
+  color: #b35c00;
+}
+
+.theme-light .routing-ok {
+  color: #0b78a8;
+}
+
+/* Settings sub-menu controls inside the cards */
+.theme-light .map-settings-panel .control-gps-status {
+  background: rgba(16, 32, 42, 0.06);
+  color: #415f6a;
+}
+
+.theme-light .map-settings-panel .control-gps-status.connected {
+  color: #1b7a43;
+}
+
+.theme-light .map-settings-panel .control-gps-status.disconnected {
+  color: #b35c00;
+}
+
+.theme-light .map-settings-panel .theme-button {
+  border-color: rgba(16, 32, 42, 0.2);
+  background: #ffffff;
+  color: #1a2733;
+}
+
+.theme-light .map-settings-panel .theme-button.active {
+  border-color: #0b78a8;
+  background: rgba(11, 120, 168, 0.12);
+  color: #0b5f86;
+}
+
+.theme-light .map-settings-panel .unit-group,
+.theme-light .map-settings-panel .instrument-visibility-option {
+  color: #1a2733;
+}
+
+.theme-light .map-settings-panel .unit-group select {
+  border-color: rgba(16, 32, 42, 0.24);
+  background: #ffffff;
+  color: #1a2733;
+}
+
+.theme-light .map-settings-panel .unit-group select:focus-visible {
+  outline-color: #0b78a8;
+}
+
+/* Texts inside the sub-menu panels */
+.theme-light .track-map-status,
+.theme-light .track-map-item-info span,
+.theme-light .ais-map-source,
+.theme-light .ais-map-status,
+.theme-light .ais-map-coverage,
+.theme-light .ais-map-target-count {
+  color: #415f6a;
+}
+
+.theme-light .ais-map-target-count strong {
+  color: #b35c00;
+}
+
+.theme-light .wind-map-readout strong,
+.theme-light .gps-map-readout strong {
+  color: #0b78a8;
+}
+
+.theme-light .wind-map-updated {
+  color: rgba(26, 39, 51, 0.62);
+}
+
+/* Track list cards */
+.theme-light .track-map-item {
+  border-color: rgba(16, 32, 42, 0.16);
+  background: #f2f7f9;
+}
+
+.theme-light .track-map-list-heading button {
+  border-color: rgba(16, 32, 42, 0.2);
+  background: #eef4f7;
+  color: #1a2733;
+}
+
+.theme-light .track-map-item-actions a,
+.theme-light .track-map-item-actions button {
+  border-color: rgba(11, 120, 168, 0.5);
+  background: rgba(11, 120, 168, 0.1);
+  color: #0b5f86;
+}
+
+.theme-light .track-map-item-actions button {
+  border-color: rgba(160, 32, 32, 0.45);
+  background: rgba(160, 32, 32, 0.08);
+  color: #a02020;
+}
+
+/* AIS sub-menu controls */
+.theme-light .ais-map-source select {
+  border-color: rgba(16, 32, 42, 0.24);
+  background: #ffffff;
+  color: #1a2733;
+}
+
+.theme-light .ais-map-source select:focus-visible,
+.theme-light .ais-map-visibility input:focus-visible,
+.theme-light .ais-map-zoom:focus-visible {
+  outline-color: #0b78a8;
+}
+
+.theme-light .ais-map-visibility {
+  color: #1a2733;
+}
+
+.theme-light .ais-map-zoom {
+  border-color: rgba(179, 92, 0, 0.5);
+  background: rgba(179, 92, 0, 0.1);
+  color: #b35c00;
+}
+
+/* Badge de statut discret et réutilisable sur la carte (#62). */
+.map-status-badge {
+  position: absolute;
+  bottom: 0.6rem;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 800;
+  padding: 0.2rem 0.6rem;
+  border-radius: 999px;
+  font-size: 0.75rem;
+  color: #fff;
+  background: rgba(120, 70, 10, 0.88);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.28);
+  pointer-events: none;
+}
+
+/* ── Fiche route détaillée (issues #121/#124/#127/#129) : jambes, caps, SOG,
+   heures de passage. #127 : le bloc est rendu en PORTAL vers document.body
+   (React) et positionné en `fixed` par JS, ancré au bouton toggle
+   (getBoundingClientRect) — jamais un enfant du panneau de routage, dont
+   l'overflow-y: auto clipperait tout descendant positionné sortant. Repli
+   géométrique en dessous si la place manque à gauche (utils/popoverPosition.ts),
+   pas de media query. #129 : bloc décalé un peu AU-DESSUS du bouton et
+   `max-height` inline (tout l'espace jusqu'au bas de la fenêtre, plancher
+   160px) — le panel est en flex column et la zone scrollable
+   (.route-details-scroll, flex 1 / min-height 0) fléchit dessus : la table
+   affiche un maximum de jambes sans jamais sortir de l'écran. */
+.route-details {
+  margin-top: 0.3rem;
+}
+
+.routing-details-toggle {
+  display: block;
+  width: 100%;
+}
+
+.route-details-panel {
+  position: fixed;
+  z-index: 1300;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  box-sizing: border-box; /* max-height inline inclut padding+bordure (#129) */
+  /* #127/#129 : 17rem par défaut. #137 : RouteDetails applique une largeur
+     inline (272px, ou 320px si la route contient des jambes moteur) — cette
+     règle reste le repli si l'inline est absent. */
+  width: 17rem;
+  padding: 0.65rem;
+  border: 1px solid rgba(175, 210, 221, 0.32);
+  border-radius: 8px;
+  background: rgba(10, 24, 35, 0.94);
+  box-shadow: 0 3px 12px rgba(0, 0, 0, 0.28);
+  color: #f4f8fb;
+  font-size: 0.75rem;
+  text-align: left;
+}
+
+.route-details-scroll {
+  flex: 1 1 auto;
+  min-height: 0;
+  margin-top: 0.25rem;
+  overflow-y: auto;
+  border: 1px solid rgba(175, 210, 221, 0.24);
+  border-radius: 5px;
+  padding: 0.2rem 0.35rem;
+}
+
+.route-details-table {
+  width: 100%;
+  border-collapse: collapse;
+  color: #9fb8c2;
+  font-size: 0.7rem;
+  line-height: 1.35;
+  font-variant-numeric: tabular-nums;
+}
+
+.route-details-table th,
+.route-details-table td {
+  padding: 0.12rem 0.3rem;
+  text-align: left;
+  white-space: nowrap;
+}
+
+.route-details-table th {
+  color: #f4f8fb;
+  font-size: 0.65rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  border-bottom: 1px solid rgba(175, 210, 221, 0.28);
+}
+
+.route-details-table tbody tr + tr td {
+  border-top: 1px solid rgba(175, 210, 221, 0.14);
+}
+
+/* B1 (#133) : badge des jambes contenant des tronçons moteur. */
+.route-leg-motor {
+  display: inline-block;
+  margin-left: 0.25rem; /* #137 : un espace est aussi rendu avant le badge */
+  padding: 0.05rem 0.3rem;
+  border: 1px solid rgba(245, 166, 35, 0.55);
+  border-radius: 4px;
+  background: rgba(245, 166, 35, 0.14);
+  color: #f5a623;
+  font-size: 0.58rem;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+}
+
+/* #137 : seule la cellule cap accepte le repli — cap et badge « MOTOR » sont
+   deux mots insécables séparés par un espace rendu : si la police rend plus
+   large que prévu, le badge passe SOUS le cap (ligne plus haute) au lieu de
+   faire déborder la table du bloc. Les autres colonnes restent nowrap. */
+.route-details-table td:nth-child(2) {
+  white-space: normal;
+}
+
+.route-details-table td:nth-child(2),
+.route-details-table th:nth-child(2) {
+  text-align: right;
+}
+
+.route-details-table td:nth-child(3),
+.route-details-table th:nth-child(3) {
+  text-align: right;
+}
+
+.route-details-table td:nth-child(4),
+.route-details-table th:nth-child(4) {
+  text-align: right;
+}
+
+.route-details-arrival {
+  margin: 0.2rem 0 0;
+  color: #f4f8fb;
+  font-size: 0.72rem;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Thème clair : mêmes blocs, palette claire. */
+.theme-light .route-details-scroll {
+  border-color: rgba(16, 32, 42, 0.24);
+}
+
+.theme-light .route-details-table {
+  color: #1a2733;
+}
+
+.theme-light .route-details-table th {
+  color: #1a2733;
+  border-bottom-color: rgba(16, 32, 42, 0.3);
+}
+
+.theme-light .route-details-table tbody tr + tr td {
+  border-top-color: rgba(16, 32, 42, 0.12);
+}
+
+.theme-light .route-details-arrival {
+  color: #1a2733;
+}
+
+/* Thème clair : le bloc flottant suit la famille map-tool-panel claire. */
+.theme-light .route-details-panel {
+  border-color: rgba(39, 95, 112, 0.2);
+  background: linear-gradient(145deg, #fff, #eaf2f5);
+  box-shadow: 0 8px 22px rgba(29, 66, 78, 0.1), inset 0 1px 0 #fff;
+  color: #1a2733;
+}
