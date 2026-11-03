@@ -2,7 +2,7 @@ import React from 'react';
 import { createPortal } from 'react-dom';
 
 import { computeRouteLegs } from '../utils/routeLegs';
-import { computePopoverPosition, PopoverAnchor } from '../utils/popoverPosition';
+import { computePopoverMaxHeightPx, computePopoverPosition, PopoverAnchor } from '../utils/popoverPosition';
 
 /** Même convention d’affichage que RoutingPanel (arrivée locale, #18). */
 const formatClock = (epochS: number): string =>
@@ -32,7 +32,9 @@ interface RouteDetailsProps {
  * dans le panneau de routage, dont l’`overflow-y: auto` clipperait tout
  * enfant positionné sortant (#127) — en `position: fixed` ancré au bouton
  * toggle (`getBoundingClientRect`, recalculé au resize et au scroll), à
- * gauche du bouton ou en dessous si la place manque. Fermeture par ×,
+ * gauche du bouton — légèrement au-dessus de lui (#129) — ou en dessous si la
+ * place manque ; hauteur étirée jusqu'au bas de la fenêtre (#129) : la table
+ * affiche un maximum de jambes sans jamais sortir de l'écran. Fermeture par ×,
  * re-clip, disparition de la route ; un recalcul (nouveau tracé) replie la
  * fiche. Données 100 % dérivées du résultat côté client.
  */
@@ -84,11 +86,22 @@ const RouteDetails: React.FC<RouteDetailsProps> = ({ coords, etaS, timesS, sogKt
     setExpanded(true);
   };
 
+  // Position dérivée de l’ancre : à gauche du bouton (un peu plus haut, #129)
+  // ou en dessous ; hauteur maximale étirée jusqu’au bas de la fenêtre.
+  const position = expanded && anchor ? computePopoverPosition(anchor) : null;
+
   const panel =
-    expanded && anchor ? (
+    expanded && anchor && position ? (
       <div
         className="route-details-panel"
-        style={computePopoverPosition(anchor)}
+        style={{
+          ...position,
+          // #129 : le bloc s'étire jusqu'au bas de la fenêtre (moins la
+          // marge), plancher minimal — la table affiche un maximum de jambes
+          // sans jamais sortir de l'écran. Le CSS (.route-details-panel en
+          // flex column) fait fléchir la zone scrollable sur cette hauteur.
+          maxHeight: computePopoverMaxHeightPx(position.top)
+        }}
         data-testid="route-details-panel"
       >
         <div className="map-settings-heading">

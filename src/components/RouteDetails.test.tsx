@@ -2,7 +2,7 @@ import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import RouteDetails from './RouteDetails';
-import { ANCHOR_GAP_PX, PANEL_WIDTH_PX } from '../utils/popoverPosition';
+import { ANCHOR_GAP_PX, PANEL_WIDTH_PX, SIDE_LIFT_PX } from '../utils/popoverPosition';
 
 /** 5 points : 2 segments plein nord (cap 000°) puis 2 plein est (cap 090°). */
 const COORDS: [number, number][] = [
@@ -89,9 +89,12 @@ describe('RouteDetails', () => {
     expect(document.body.contains(panel)).toBe(true);
     expect(container.contains(panel)).toBe(false);
     expect(panel.closest('.route-details')).toBeNull();
-    // Position fixed ancrée au bouton : à gauche (800 - largeur - écart).
+    // Position fixed ancrée au bouton : à gauche (800 - largeur - écart), et
+    // un peu PLUS HAUT que le bouton (#129) — plus de place pour les jambes.
     expect(panel.style.left).toBe(`${800 - PANEL_WIDTH_PX - ANCHOR_GAP_PX}px`);
-    expect(panel.style.top).toBe('100px');
+    expect(panel.style.top).toBe(`${100 - SIDE_LIFT_PX}px`);
+    // #129 : hauteur étirée jusqu'au bas de la fenêtre (moins la marge).
+    expect(panel.style.maxHeight).toBe(`${window.innerHeight - (100 - SIDE_LIFT_PX) - ANCHOR_GAP_PX}px`);
     // Contenu du bloc.
     expect(screen.getByText('ROUTE DETAILS')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Close route details' })).toBeInTheDocument();
@@ -124,6 +127,8 @@ describe('RouteDetails', () => {
     const panel = screen.getByTestId('route-details-panel');
     expect(panel.style.left).toBe('150px');
     expect(panel.style.top).toBe(`${130 + ANCHOR_GAP_PX}px`);
+    // #129 : en repli dessous aussi, la hauteur exploite tout l'espace restant.
+    expect(panel.style.maxHeight).toBe(`${window.innerHeight - (130 + ANCHOR_GAP_PX) - ANCHOR_GAP_PX}px`);
     expect(screen.getByRole('table')).toBeInTheDocument();
   });
 
