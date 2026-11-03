@@ -3935,3 +3935,96 @@ html {
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.28);
   pointer-events: none;
 }
+
+/* ── Fiche route détaillée (issue #121) : jambes, caps, SOG, heures de passage. ── */
+.route-details {
+  margin-top: 0.3rem;
+}
+
+.routing-details-toggle {
+  display: block;
+  width: 100%;
+}
+
+.route-details-scroll {
+  max-height: 12rem;
+  margin-top: 0.25rem;
+  overflow-y: auto;
+  border: 1px solid rgba(175, 210, 221, 0.24);
+  border-radius: 5px;
+  padding: 0.2rem 0.35rem;
+}
+
+.route-details-table {
+  width: 100%;
+  border-collapse: collapse;
+  color: #9fb8c2;
+  font-size: 0.7rem;
+  line-height: 1.35;
+  font-variant-numeric: tabular-nums;
+}
+
+.route-details-table th,
+.route-details-table td {
+  padding: 0.12rem 0.3rem;
+  text-align: left;
+  white-space: nowrap;
+}
+
+.route-details-table th {
+  color: #f4f8fb;
+  font-size: 0.65rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  border-bottom: 1px solid rgba(175, 210, 221, 0.28);
+}
+
+.route-details-table tbody tr + tr td {
+  border-top: 1px solid rgba(175, 210, 221, 0.14);
+}
+
+.route-details-table td:nth-child(2),
+.route-details-table th:nth-child(2) {
+  text-align: right;
+}
+
+.route-details-table td:nth-child(3),
+.route-details-table th:nth-child(3) {
+  text-align: right;
+}
+
+.route-details-table td:nth-child(4),
+.route-details-table th:nth-child(4) {
+  text-align: right;
+}
+
+.route-details-arrival {
+  margin: 0.2rem 0 0;
+  color: #f4f8fb;
+  font-size: 0.72rem;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Thème clair : mêmes blocs, palette claire. */
+.theme-light .route-details-scroll {
+  border-color: rgba(16, 32, 42, 0.24);
+}
+
+.theme-light .route-details-table {
+  color: #1a2733;
+}
+
+.theme-light .route-details-table th {
+  color: #1a2733;
+  border-bottom-color: rgba(16, 32, 42, 0.3);
+}
+
+.theme-light .route-details-table tbody tr + tr td {
+  border-top-color: rgba(16, 32, 42, 0.12);
+}
+
+.theme-light .route-details-arrival {
+  color: #1a2733;
+}
