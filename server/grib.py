@@ -353,7 +353,10 @@ def sample_points(points: list[dict[str, float]]) -> list[dict[str, float]] | No
     import numpy as _np
 
     field = _wind_field_cache["field"]
-    times = field.ds["time"].values.astype("datetime64[ns]")
+    # Contrat GRIBWindField du moteur v0.4.0 : `times` est extrait en numpy
+    # datetime64[ns] à l'initialisation — l'attribut xarray `ds` a disparu avec
+    # la refonte perf du moteur (régression après le re-pin v0.4.0).
+    times = field.times
     now = _np.datetime64(_dt.datetime.now(_dt.timezone.utc).replace(tzinfo=None), "ns")
     horizon_s = float((times[-1] - times[0]) / _np.timedelta64(1, "s"))
     elapsed_s = min(max(float((now - times[0]) / _np.timedelta64(1, "s")), 0.0), horizon_s)

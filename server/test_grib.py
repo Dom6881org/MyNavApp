@@ -9,6 +9,8 @@ import unittest
 from datetime import datetime, timedelta, timezone
 from unittest.mock import patch
 
+import numpy as np
+
 from server import grib
 from server.grib import GribError, download_grib, grid_points, status, wind_components
 
@@ -209,6 +211,76 @@ class TestDownloadGrib(unittest.TestCase):
                 with self.assertRaises(GribError) as context:
                     download_grib(46.0, 47.0, -5.0, -4.0, opener=broken_opener)
         self.assertIn("Open-Météo", str(context.exception))
+
+
+class FakeWindField:
+    """Contrat GRIBWindField du moteur v0.4.0 : `times` extrait en numpy à
+    l'initialisation, plus d'attribut xarray `ds` (supprimé par la refonte
+    perf du moteur). Aucun attribut `ds` ici : si sample_points retombe sur
+    `field.ds`, ce faux champ le fait échouer — garde-fou de la régression
+    qui crashait /api/grib/sample après le re-pin v0.4.0."""
+
+    def __init__(self, times, speed_kts, direction_from_deg):
+        self.times = times
+        radians = math.radians(direction_from_deg)
+        self._u = -speed_kts * math.sin(radians)
+        self._v = -speed_kts * math.cos(radians)
+
+    def sample(self, lat, lon, t):
+        return [self._u] * len(lat), [self._v] * len(lon)
+
+
+class TestSamplePoints(unittest.TestCase):
+    """Échantillonnage du GRIB aux points visibles (option B, #36) — le test
+    qui manquait au moment du re-pin moteur v0.4.0."""
+
+    FRESH = {
+        "fresh": True,
+        "south": 46.0,
+        "north": 47.0,
+        "west": -5.0,
+        "east": -4.0,
+        "resolutionDeg": 0.5,
+    }
+
+    def _cached_field(self):
+        now = np.datetime64(datetime.now(timezone.utc).replace(tzinfo=None), "ns")
+        times = now + np.arange(-1, 25, dtype="timedelta64[h]")
+        return FakeWindField(times, speed_kts=10.0, direction_from_deg=270.0)
+
+    def _cache(self):
+        return {
+            "path": os.path.join(grib.GRIB_CACHE_DIR, grib.GRIB_FILE),
+            "mtime": 1234.5,
+            "field": self._cached_field(),
+            "bounds": dict(self.FRESH),
+        }
+
+    def test_vent_échantillonné_depuis_le_champ_en_cache(self):
+        points = [
+            {"latitude": 46.5, "longitude": -4.5},  # couvert
+            {"latitude": 48.5, "longitude": -4.5},  # hors zone : exclu
+        ]
+        with patch.object(grib, "status", return_value=dict(self.FRESH)):
+            with patch("os.path.getmtime", return_value=1234.5):
+                with patch.dict(grib._wind_field_cache, self._cache(), clear=True):
+                    wind = grib.sample_points(points)
+        self.assertEqual(len(wind), 1)
+        self.assertEqual(wind[0]["latitude"], 46.5)
+        self.assertEqual(wind[0]["longitude"], -4.5)
+        self.assertAlmostEqual(wind[0]["speed"], 10.0, places=3)
+        self.assertAlmostEqual(wind[0]["direction"], 270.0, places=1)
+
+    def test_aucun_point_couvert_liste_vide(self):
+        points = [{"latitude": 40.0, "longitude": -4.5}]
+        with patch.object(grib, "status", return_value=dict(self.FRESH)):
+            with patch("os.path.getmtime", return_value=1234.5):
+                with patch.dict(grib._wind_field_cache, self._cache(), clear=True):
+                    self.assertEqual(grib.sample_points(points), [])
+
+    def test_grib_pas_frais_retourne_none(self):
+        with patch.object(grib, "status", return_value={"fresh": False}):
+            self.assertIsNone(grib.sample_points([{"latitude": 46.5, "longitude": -4.5}]))
 
 
 if __name__ == "__main__":
