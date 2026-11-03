@@ -50,3 +50,26 @@ describe('WindIndicator true wind (TWA)', () => {
     expect(trueNeedle?.getAttribute('transform')).toBe('rotate(-45 120 120)');
   });
 });
+
+describe('WindIndicator badge source (#140)', () => {
+  const renderForecast = (source: 'GRIB' | 'Open-Meteo') => render(
+    <WindIndicator
+      apparentWind={null}
+      trueWind={null}
+      forecastWind={{ direction: 210, speed: 12, gust: 12, source }}
+      forecastStatus={FORECAST_STATUS}
+      headingDegrees={null}
+      unit="knots"
+    />
+  );
+
+  it('vent du point servi par le GRIB : le badge affiche la source réelle', () => {
+    renderForecast('GRIB');
+    expect(screen.getByText('FORECAST · GRIB')).toBeInTheDocument();
+  });
+
+  it('repli Open-Météo : le badge reste explicite', () => {
+    renderForecast('Open-Meteo');
+    expect(screen.getByText('FORECAST · Open-Meteo')).toBeInTheDocument();
+  });
+});

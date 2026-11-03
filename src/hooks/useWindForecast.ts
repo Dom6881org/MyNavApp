@@ -317,6 +317,31 @@ export const useWindForecast = (position: Position | null) => {
       if (coordinates.latitude === null || coordinates.longitude === null) return;
       setStatus(previous => ({ ...previous, isLoading: true, error: null }));
 
+      // #140 : le vent du point est GRIB-first, comme les barbes — GRIB frais +
+      // position couverte → vent échantillonné à l'heure courante par le serveur
+      // (zéro appel Open-Météo) ; repli Open-Météo sinon (comportement #36).
+      const grib = await fetchGribSample(
+        [{ latitude: coordinates.latitude, longitude: coordinates.longitude }],
+        controller.signal
+      );
+      if (controller.signal.aborted) return;
+      if (grib && grib.fresh && grib.wind.length > 0) {
+        const entry = grib.wind[0];
+        setWind({
+          speed: entry.speed,
+          direction: (entry.direction + 360) % 360,
+          gust: entry.speed,
+          source: 'GRIB'
+        });
+        setStatus(previous => ({
+          ...previous,
+          isLoading: false,
+          error: null,
+          updatedAt: Date.now()
+        }));
+        return;
+      }
+
       try {
         const params = new URLSearchParams({
           latitude: String(coordinates.latitude),
@@ -360,7 +385,7 @@ export const useWindForecast = (position: Position | null) => {
       window.clearTimeout(initialLoadId);
       window.clearInterval(refreshId);
     };
-  }, [getResponseError, hasPosition]);
+  }, [fetchGribSample, getResponseError, hasPosition]);
 
   useEffect(() => () => {
     if (gridRetryTimeoutRef.current !== null) {
