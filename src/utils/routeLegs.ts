@@ -78,8 +78,13 @@ export const computeRouteLegs = (
 ): RouteLeg[] => {
   if (!Array.isArray(coords) || coords.length < 2) return [];
   const segmentCount = coords.length - 1;
-  const hasTime = Array.isArray(timesS) && timesS.length === segmentCount;
-  const hasSog = Array.isArray(sogKts) && sogKts.length === segmentCount;
+  // Rétrécis avant la fermeture pushLeg : une longueur incohérente avec le
+  // tracé est ignorée (dégradation gracieuse, colonnes absentes plutôt que
+  // données fausses).
+  const timesArr =
+    Array.isArray(timesS) && timesS.length === segmentCount ? timesS : null;
+  const sogsArr =
+    Array.isArray(sogKts) && sogKts.length === segmentCount ? sogKts : null;
 
   const headings: number[] = [];
   const distances: number[] = [];
@@ -95,9 +100,9 @@ export const computeRouteLegs = (
     let distanceNm = 0;
     for (let i = start; i < end; i += 1) distanceNm += distances[i];
     let sogMean: number | null = null;
-    if (hasSog) {
+    if (sogsArr !== null) {
       let total = 0;
-      for (let i = start; i < end; i += 1) total += sogKts[i];
+      for (let i = start; i < end; i += 1) total += sogsArr[i];
       sogMean = total / (end - start);
     }
     legs.push({
@@ -105,7 +110,7 @@ export const computeRouteLegs = (
       endIndex: end,
       headingDeg: headings[start],
       distanceNm,
-      durationS: hasTime ? timesS[end - 1] : null,
+      durationS: timesArr !== null ? timesArr[end - 1] : null,
       sogKts: sogMean
     });
   };

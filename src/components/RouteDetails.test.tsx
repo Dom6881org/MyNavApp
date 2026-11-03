@@ -70,9 +70,11 @@ describe('RouteDetails', () => {
     // Jambe 2 : plein est, 1 h après le départ, SOG moyen (4,4+4,2)/2 = 4,3 kt.
     expect(screen.getByText('090°')).toBeInTheDocument();
     expect(screen.getByText('4.3 kt')).toBeInTheDocument();
-    // Heure de fin de jambe 2 == heure d’arrivée (timesS[last] == etaS) :
-    // présente deux fois — dans la table et sur la ligne d’arrivée.
-    expect(screen.getAllByText(clockAt(START_EPOCH_S + 7200))).toHaveLength(2);
+    // Heure de fin de jambe 2 == heure d’arrivée (timesS[last] == etaS).
+    // getByText ne matche que le texte complet d’un élément : l’heure de la
+    // jambe 2 est seule exacte (l’arrivée est un « Arr. … · … NM » plus long,
+    // vérifié ci-dessous par sous-chaîne).
+    expect(screen.getAllByText(clockAt(START_EPOCH_S + 7200))).toHaveLength(1);
     // Ligne d’arrivée : heure locale + distance totale.
     expect(screen.getByText(/^Arr\. /)).toHaveTextContent(clockAt(START_EPOCH_S + ETA_S));
     expect(screen.getByText(/^Arr\. /)).toHaveTextContent(/NM/);

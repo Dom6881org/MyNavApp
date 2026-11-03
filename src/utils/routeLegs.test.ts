@@ -58,7 +58,8 @@ describe('computeRouteLegs', () => {
     expect(legs[0].endIndex).toBe(1);
     expect(legs[0].headingDeg).toBeCloseTo(0);
     expect(legs[1].startIndex).toBe(1);
-    expect(legs[1].headingDeg).toBeCloseTo(90);
+    // Est à 47,51° N : cap initial 89,98° (le grand cercle n'est pas exactement 90).
+    expect(legs[1].headingDeg).toBeCloseTo(90, 1);
   });
 
   it('écart sous le seuil : pas de nouvelle jambe', () => {
