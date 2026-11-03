@@ -11,8 +11,10 @@ const COORDS: [number, number][] = [
   [47.52, -4.44],
   [47.52, -4.38]
 ];
-const TIMES_S = [1800, 3600, 5400, 7200];
-const SOG_KTS = [5.2, 5.0, 4.4, 4.2];
+/** Convention moteur (#123) : une entrée PAR POINT — timesS[0] = 0, timesS[last] = etaS,
+ *  sogKts[j] = vitesse d'arrivée au point j (sogKts[0] artificiel). */
+const TIMES_S = [0, 1800, 3600, 5400, 7200];
+const SOG_KTS = [5.2, 5.2, 5.0, 4.4, 4.2];
 const ETA_S = 7200;
 const START_EPOCH_S = 1730000000;
 

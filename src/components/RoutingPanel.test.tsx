@@ -345,8 +345,9 @@ describe('RoutingPanel', () => {
     const routeWithLegs: RoutingJobResult = {
       ...ROUTE_FOUND,
       coords: [[47.5, -4.5], [47.51, -4.5], [47.52, -4.5]],
-      timesS: [1800, 3600],
-      sogKts: [5, 5],
+      // Convention moteur (#123) : une entrée par point du tracé.
+      timesS: [0, 1800, 3600],
+      sogKts: [5, 5, 5],
       etaS: 3600
     };
     renderPanel({ routeCalc: stubRouteCalc(routeWithLegs), onComputeRoute: vi.fn() });
