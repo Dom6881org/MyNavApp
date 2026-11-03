@@ -19,7 +19,9 @@
 # (engine_below_kts, defaut 2.0 kt, parametrable ; ENGINE_SPEED_KTS 4.0 kt),
 # RouteResult.motor_flags par point + properties.motor en GeoJSON
 # (mynav-routing PR #34, issue MyNavApp#133).
-mynav-routing @ git+https://github.com/Dom6881org/mynav-routing.git@v0.5.0
+# v0.6.0 (03/11) : depart hors zone GRIB signale — GRIBWindField.covers()
+# + RouteResult.start_in_grib (mynav-routing PR #35, issue MyNavApp#141).
+mynav-routing @ git+https://github.com/Dom6881org/mynav-routing.git@v0.6.0
 # GRIB (issues #16, #42) : lecture/ecriture via ecCodes.
 # Depuis ecCodes 2.43, la roue pip embarque la librairie native :
 # - Linux/macOS : via la dependance 'eccodeslib' (wheels binaires)

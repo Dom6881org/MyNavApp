@@ -342,6 +342,11 @@ const RoutingPanel: React.FC<RoutingPanelProps> = ({
                   avg along route {route.windAvg.speedKts.toFixed(0)} kt from {route.windAvg.directionFromDeg.toFixed(0)}°
                 </p>
               )}
+              {route.startInGrib === false && (
+                <p className="routing-warn routing-result-arrival">
+                  departure outside GRIB coverage — wind extrapolated from the grid edge
+                </p>
+              )}
               <p className="routing-ok routing-result-arrival">arr. {arrivalClock(route.etaS)}</p>
               {route.timesS && route.sogKts && route.sogKts.length > 1 && (
                 <SogChart timesS={route.timesS} sogKts={route.sogKts} />

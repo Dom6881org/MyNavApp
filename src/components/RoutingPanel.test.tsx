@@ -486,4 +486,38 @@ describe('RoutingPanel', () => {
     expect(screen.getByText('GRIB wind')).toBeInTheDocument();
     expect(screen.queryByText(/avg along route/i)).not.toBeInTheDocument();
   });
+
+  it('departure outside GRIB coverage: warning displayed (#141)', () => {
+    const outsideGrib: RoutingJobResult = {
+      ...ROUTE_FOUND,
+      windSource: 'grib',
+      wind: { directionFromDeg: 320, speedKts: 12 },
+      windAvg: { directionFromDeg: 340, speedKts: 11 },
+      startInGrib: false
+    };
+    renderPanel({ routeCalc: stubRouteCalc(outsideGrib), onComputeRoute: vi.fn() });
+
+    expect(screen.getByText(/departure outside GRIB coverage/i)).toBeInTheDocument();
+  });
+
+  it('departure covered by GRIB: no warning (#141)', () => {
+    const insideGrib: RoutingJobResult = {
+      ...ROUTE_FOUND,
+      windSource: 'grib',
+      wind: { directionFromDeg: 320, speedKts: 12 },
+      windAvg: { directionFromDeg: 340, speedKts: 11 },
+      startInGrib: true
+    };
+    renderPanel({ routeCalc: stubRouteCalc(insideGrib), onComputeRoute: vi.fn() });
+    expect(screen.queryByText(/departure outside GRIB coverage/i)).not.toBeInTheDocument();
+  });
+
+  it('constant wind (startInGrib null): no warning (#141)', () => {
+    const constantRoute: RoutingJobResult = {
+      ...ROUTE_FOUND,
+      startInGrib: null
+    };
+    renderPanel({ routeCalc: stubRouteCalc(constantRoute), onComputeRoute: vi.fn() });
+    expect(screen.queryByText(/departure outside GRIB coverage/i)).not.toBeInTheDocument();
+  });
 });

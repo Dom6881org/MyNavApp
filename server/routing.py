@@ -199,7 +199,9 @@ def compute_route(
     (back-compat, aucune clé "motor" dans le GeoJSON).
     Retourne un dict : found, coords, times_s, sog_kts, headings_deg,
     eta_s, min_dist_nm, motor_flags (par point, même convention que
-    sog_kts, None en pur voile), geojson, start_adjusted,
+    sog_kts, None en pur voile), start_in_grib (True/False selon l'emprise
+    du champ GRIB au départ, None si le vent n'a pas d'emprise connue —
+    issue #141), geojson, start_adjusted,
     finish_adjusted
     (ajustements vers l'eau : {latitude, longitude, offset_nm} ou None).
     Lève RoutingError avec un message clair en cas d'erreur.
@@ -266,6 +268,7 @@ def compute_route(
                 "headings_deg": [0.0],
                 "eta_s": 0.0,
                 "motor_flags": None,
+                "start_in_grib": None,
                 "min_dist_nm": float(
                     haversine_nm([start_position[0]], [start_position[1]], finish_position[0], finish_position[1])[0]
                 ),
@@ -316,6 +319,9 @@ def compute_route(
             "eta_s": 0.0,
             "min_dist_nm": result.min_dist_nm,
             "motor_flags": result.motor_flags,
+            # Départ hors zone GRIB (#141) : verdict du moteur (None si le
+            # vent n'a pas d'emprise connue, ex. ConstantWind).
+            "start_in_grib": getattr(result, "start_in_grib", None),
             "bathy_active": bathy is not None,
             "geojson": None,
             "start_adjusted": start_adjusted,
@@ -339,6 +345,9 @@ def compute_route(
         "eta_s": result.eta_s,
         "min_dist_nm": result.min_dist_nm,
         "motor_flags": result.motor_flags,
+        # Départ hors zone GRIB (#141) : verdict du moteur (None si le
+        # vent n'a pas d'emprise connue, ex. ConstantWind).
+        "start_in_grib": getattr(result, "start_in_grib", None),
         "bathy_active": bathy is not None,
         "geojson": to_geojson(result),
         "message": None,
@@ -536,6 +545,10 @@ def compute_route_payload(
         # B1 (#133) : flags moteur par point (même convention que sogKts),
         # None en pur voile ; echo du seuil effectif du plan.
         "motorFlags": result["motor_flags"],
+        # Issue #141 : départ hors zone du champ GRIB — le moteur
+        # nearest-clippe sans erreur (vent du bord de grille) ; le front
+        # affiche un avertissement. None = vent sans emprise connue.
+        "startInGrib": result.get("start_in_grib"),
         "engineBelowKts": engine_below_kts,
         "dtS": result["dt_s"],
         "minDistNm": result["min_dist_nm"],
