@@ -1,0 +1,12 @@
+[
+  {
+    "name": "golfe-du-lion-baleares",
+    "bbox": [38.6, 1.6, 43.2, 5.2],
+    "zooms": { "osm": "8-12", "seamark": "12-13" }
+  },
+  {
+    "name": "corse",
+    "bbox": [41.0, 6.5, 43.3, 10.0],
+    "zooms": { "osm": "8-12", "seamark": "12-13" }
+  }
+]

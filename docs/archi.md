@@ -217,6 +217,10 @@ Le backend enregistre la navigation consolidée dans `TRACKS_DIR` (défaut `./tr
 
 Le backend proxifie les tuiles **OSM** et **OpenSeaMap** (seamarks) avec cache disque dans `TILES_DIR` (défaut `./tiles`), User-Agent dédié, validation PNG et taille ≤ 1 Mo. `tools/download_tiles.py` permet de pré-remplir le cache pour naviguer hors ligne.
 
+**Zones de navigation configurables** (`config/tile_zones.json`) : chaque zone définit un nom, une bbox et des plages de zoom **par couche** (OSM et seamark sont énumérées indépendamment). Le mode `--zones` télécharge l'ensemble des zones ; le mode `--bbox` historique reste disponible. La configuration livrée couvre le Golfe du Lion–Baléares et la Corse (≈ 28 000 tuiles).
+
+**Rafraîchissement quotidien** : `--once-a-day` (marqueur daté dans le répertoire tuiles, au plus un run par jour civil, `--force` pour bypass), `--refresh-days N` (re-télécharge les tuiles plus vieilles que N jours ; les 404 en pleine mer sont revérifiées à chaque refresh, jamais mises en cache), `--max-minutes N` (arrêt propre au bout du budget temps, reprise au run suivant). Hors ligne ou fournisseur injoignable : exit 0 silencieux. Prévu pour le Planificateur de tâches Windows via `tools/update_tiles.bat` (ou cron), avec User-Agent identifié et délai inter-requêtes (politique d'usage des tuiles OSM). Tests : `server/test_tiles_tools.py` (stdlib pur, 22 tests, réseau mocké).
+
 ## 13. Configuration et déploiement
 
 | Variable | Défaut | Rôle |
@@ -229,7 +233,7 @@ Le backend proxifie les tuiles **OSM** et **OpenSeaMap** (seamarks) avec cache d
 | `NODE_ENV=production` | — | Le backend sert `dist/` (SPA) |
 | `VITE_HTTPS_CERT` / `VITE_HTTPS_KEY` | vide | HTTPS du serveur Vite en LAN (mkcert) — requis pour la géolocalisation sur appareils mobiles |
 
-Scripts : `npm run dev` (backend + Vite via concurrently), `dev:lan`/`start:lan` (écoute LAN), `build` (tsc + vite), `start` (prod), `test:front` (vitest), `test:server` (unittest : nmea, ais, grib, http, routing, tiles, tracks, config).
+Scripts : `npm run dev` (backend + Vite via concurrently), `dev:lan`/`start:lan` (écoute LAN), `build` (tsc + vite), `start` (prod), `test:front` (vitest), `test:server` (unittest : nmea, ais, grib, http, routing, tiles, tiles_tools, tracks, config).
 
 ⚠️ Pas d'authentification ni de HTTPS sur le backend : boucleback par défaut ; l'exposition LAN est déconseillée hors réseau de confiance (avertissement au démarrage).
 

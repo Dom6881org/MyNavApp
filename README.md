@@ -59,7 +59,34 @@ The chart loads Leaflet and its rotation plugin from the app bundle (no CDN), an
 python tools/download_tiles.py --bbox 47.0,-5.0,48.2,-2.5 --zooms 8-16
 ```
 
-OpenStreetMap serves the base layer and OpenSeaMap the seamarks; 404s on open water (no seamark tile) are skipped. Keep the area and zoom range reasonable: a 100 × 100 km coastal region at zooms 8–17 is typically a few GB. Wind forecast (Open-Meteo) and Internet AIS remain online-only features; local VHF AIS, NMEA instruments and the chart keep working offline.
+OpenStreetMap serves the base layer and OpenSeaMap the seamarks; 404s on open water (no seamark tile) are skipped. Keep the area and zoom range reasonable: a 100 × 100 km coastal region at zooms 8–17 is typically a few GB.
+
+For recurring sailing areas, prefer the zone mode with `config/tile_zones.json`:
+
+```bash
+python tools/download_tiles.py --zones config/tile_zones.json
+```
+
+Each zone has a `name`, a `bbox` (`[south, west, north, east]`) and per-layer zoom ranges. The shipped config covers the Golfe du Lion–Balearics and Corsica (OSM 8–12 + seamark 12–13, about 28 000 tiles ≈ 100–150 MB). Size rule of thumb: coastal OSM tiles are 15–25 KB (near-empty on open water) and each extra zoom level multiplies the tile count by 4 — so zoom 15+ over a full regional bbox means millions of tiles. For harbour approaches, add small port bboxes at zooms 14–16 to the JSON instead of raising the zooms of a whole zone:
+
+```json
+[
+  {"name": "port-saint-cyprien", "bbox": [42.68, 3.02, 42.72, 3.07], "zooms": {"osm": "13-16", "seamark": "13-16"}}
+]
+```
+
+To keep tiles fresh without manual runs:
+
+```bash
+python tools/download_tiles.py --zones config/tile_zones.json --once-a-day --refresh-days 30 --max-minutes 45
+```
+
+- `--once-a-day` runs at most once per calendar day (marker file inside the tiles directory; `--force` bypasses it, `--dry-run` never sets it).
+- `--refresh-days 30` re-downloads tiles whose file is older than 30 days (404s from open water are re-checked on each refresh, not cached).
+- `--max-minutes 45` stops cleanly when the time budget is spent and resumes on the next run.
+- When offline or the provider is unreachable, the script exits 0 silently — safe to schedule every day.
+- Windows: `schtasks /Create /TN "MyNavApp tiles" /TR "C:\path\to\MyNavApp\tools\update_tiles.bat" /SC DAILY /ST 08:00` (the `.bat` wrapper carries the recommended flags). On Linux/macOS, a daily cron line works the same.
+- The downloader sends an identified User-Agent and paces requests (0.15 s by default); keep the delay when adding areas, per the OSM tile usage policy. Wind forecast (Open-Meteo) and Internet AIS remain online-only features; local VHF AIS, NMEA instruments and the chart keep working offline.
 
 
 ### Routing bathymetry (GEBCO)
@@ -134,7 +161,7 @@ Notes:
 - After a routing-engine pin bump, update it with `python -m pip install --force-reinstall -r requirements-routing.txt` and restart the app (a running server never picks up the new package).
 - Optional local configuration: copy `.env.example` to `.env` (AISstream key, NMEA/HTTP ports, HTTPS certificates for LAN geolocation); the file is git-ignored.
 - HTTPS for LAN devices (geolocation on phones/tablets): follow [HTTPS for LAN devices (mkcert)](#https-for-lan-devices-mkcert) below.
-- Offline charts: `python tools/download_tiles.py --bbox 47.0,-5.0,48.2,-2.5 --zooms 8-16` pre-downloads a cruising area into `tiles/`.
+- Offline charts: `python tools/download_tiles.py --zones config/tile_zones.json` pre-downloads the configured cruising areas into `tiles/` (add `--once-a-day --refresh-days 30 --max-minutes 45` for the scheduled daily refresh).
 - Verify the install: `npm run test:front` and `npm run test:server` (routing tests are skipped automatically when the engine is missing).
 
 ## Usage
