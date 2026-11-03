@@ -362,6 +362,14 @@ describe('RoutingPanel', () => {
     expect(screen.getByRole('table')).toBeInTheDocument();
     expect(screen.getByText('000°')).toBeInTheDocument();
     expect(screen.getByText(/^Arr\. /)).toBeInTheDocument();
+
+    // Garde-fou anti-régression (#127) : le bloc doit vivre en PORTAL hors du
+    // panneau de routage — enfant de document.body, jamais descendant de
+    // .map-routing-panel (overflow-y: auto), qui le clipperait à l'écran.
+    const panel = document.querySelector('.route-details-panel');
+    expect(panel).not.toBeNull();
+    expect(panel?.parentElement).toBe(document.body);
+    expect(panel?.closest('.map-routing-panel')).toBeNull();
   });
 
   it('fiche route détaillée masquée quand la route n’est pas trouvée (issue #121)', () => {

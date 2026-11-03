@@ -3936,12 +3936,13 @@ html {
   pointer-events: none;
 }
 
-/* ── Fiche route détaillée (issues #121/#124) : jambes, caps, SOG, heures de passage.
-   #124 : la table s'ouvre dans un bloc flottant À CÔTÉ du panneau de routage
-   (à sa gauche, même famille que map-tool-panel), pas en dessous — le panneau
-   ne dépasse pas en hauteur. Ancre = conteneur du bouton toggle. */
+/* ── Fiche route détaillée (issues #121/#124/#127) : jambes, caps, SOG, heures
+   de passage. #127 : le bloc est rendu en PORTAL vers document.body (React) et
+   positionné en `fixed` par JS, ancré au bouton toggle (getBoundingClientRect)
+   — jamais un enfant du panneau de routage, dont l'overflow-y: auto clipperait
+   tout descendant positionné sortant. Repli géométrique en dessous si la place
+   manque à gauche (utils/popoverPosition.ts), pas de media query. */
 .route-details {
-  position: relative;
   margin-top: 0.3rem;
 }
 
@@ -3951,10 +3952,8 @@ html {
 }
 
 .route-details-panel {
-  position: absolute;
-  top: 0;
-  right: calc(100% + 0.5rem);
-  z-index: 1200;
+  position: fixed;
+  z-index: 1300;
   width: 17rem;
   padding: 0.65rem;
   border: 1px solid rgba(175, 210, 221, 0.32);
@@ -4055,17 +4054,4 @@ html {
   background: linear-gradient(145deg, #fff, #eaf2f5);
   box-shadow: 0 8px 22px rgba(29, 66, 78, 0.1), inset 0 1px 0 #fff;
   color: #1a2733;
-}
-
-/* Carte étroite : repli du bloc en dessous (aucune perte d'information),
-   comme pour les autres panneaux d'outils mobiles. */
-@media (max-width: 600px) {
-  .route-details-panel {
-    top: auto;
-    right: auto;
-    position: static;
-    width: auto;
-    margin-top: 0.35rem;
-    box-shadow: none;
-  }
 }
