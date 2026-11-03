@@ -9,11 +9,13 @@
 # v0.4-landperf (02/11) : pre-filtre spatial de crosses_land par cellule
 # (bucketing + echantillonnage par segment ; mynav-routing #27, issue moteur #26 ;
 # bench : >= 3x, egalite stricte legacy ; cible terrain land < 50 s).
-# v0.4-corridor-fallback (04/11) : fallback sans corridor quand found=False — les
+# v0.4-corridor-fallback (02/11) : fallback sans corridor quand found=False — les
 # routes contournant un cap (Cap de Creus, Cap Bear, contournements courts) ne sont
 # plus refusees a tort ; corridor_margin effectif expose dans RouteResult
 # (mynav-routing #29, issue moteur #28 ; preuve terrain Banyuls -> golfe de Roses).
-mynav-routing @ git+https://github.com/Dom6881org/mynav-routing.git@4414c28f71c0eedc8532ce085f2a82ff07b7bb84
+# v0.4.0 (03/11) : premier tag officiel du moteur, release auto via release.yml —
+# tous les chantiers ci-dessus ; politique #56 : epinglage sur tags uniquement.
+mynav-routing @ git+https://github.com/Dom6881org/mynav-routing.git@v0.4.0
 # GRIB (issues #16, #42) : lecture/ecriture via ecCodes.
 # Depuis ecCodes 2.43, la roue pip embarque la librairie native :
 # - Linux/macOS : via la dependance 'eccodeslib' (wheels binaires)
