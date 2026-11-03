@@ -66,9 +66,13 @@ export const headingDeltaDeg = (a: number, b: number): number => {
 
 /**
  * Regroupe les tronçons d'une route en jambes à cap quasi constant.
- * timesS (temps cumulés par tronçon) et sogKts (SOG par tronçon) sont
- * optionnels : une longueur incohérente avec le tracé est ignorée
- * (dégradation gracieuse, colonnes absentes plutôt que données fausses).
+ * timesS et sogKts sont optionnels ; leur convention est déduite de la
+ * longueur : le moteur (router.py, _traceback) fournit une entrée PAR POINT
+ * (len == len(coords), timesS[0] = 0, timesS[last] = etaS, sogKts[j] =
+ * vitesse d'arrivée au point j, sogKts[0] artificiel) ; l'ancienne lecture
+ * « par tronçon » (len == len(coords) - 1) reste acceptée. Toute autre
+ * longueur est ignorée (dégradation gracieuse, colonnes absentes plutôt
+ * que données fausses — bug #123).
  */
 export const computeRouteLegs = (
   coords: [number, number][],
@@ -77,14 +81,30 @@ export const computeRouteLegs = (
   thresholdDeg: number = HEADING_LEG_THRESHOLD_DEG
 ): RouteLeg[] => {
   if (!Array.isArray(coords) || coords.length < 2) return [];
-  const segmentCount = coords.length - 1;
-  // Rétrécis avant la fermeture pushLeg : une longueur incohérente avec le
-  // tracé est ignorée (dégradation gracieuse, colonnes absentes plutôt que
-  // données fausses).
-  const timesArr =
-    Array.isArray(timesS) && timesS.length === segmentCount ? timesS : null;
-  const sogsArr =
-    Array.isArray(sogKts) && sogKts.length === segmentCount ? sogKts : null;
+  const pointCount = coords.length;
+  const segmentCount = pointCount - 1;
+
+  // Narrowing fait dans chaque fonction (check et usage dans la même portée) :
+  // une longueur incohérente renvoie null, jamais de données fausses.
+  const timeAt = (endIndex: number): number | null => {
+    if (Array.isArray(timesS) && timesS.length === pointCount) return timesS[endIndex];
+    if (Array.isArray(timesS) && timesS.length === segmentCount) return timesS[endIndex - 1];
+    return null;
+  };
+  const sogMean = (start: number, end: number): number | null => {
+    if (Array.isArray(sogKts) && sogKts.length === pointCount) {
+      // Vitesses d'arrivée aux points start+1..end (sogKts[0] artificiel).
+      let total = 0;
+      for (let i = start + 1; i <= end; i += 1) total += sogKts[i];
+      return total / (end - start);
+    }
+    if (Array.isArray(sogKts) && sogKts.length === segmentCount) {
+      let total = 0;
+      for (let i = start; i < end; i += 1) total += sogKts[i];
+      return total / (end - start);
+    }
+    return null;
+  };
 
   const headings: number[] = [];
   const distances: number[] = [];
@@ -99,19 +119,13 @@ export const computeRouteLegs = (
   const pushLeg = (start: number, end: number): void => {
     let distanceNm = 0;
     for (let i = start; i < end; i += 1) distanceNm += distances[i];
-    let sogMean: number | null = null;
-    if (sogsArr !== null) {
-      let total = 0;
-      for (let i = start; i < end; i += 1) total += sogsArr[i];
-      sogMean = total / (end - start);
-    }
     legs.push({
       startIndex: start,
       endIndex: end,
       headingDeg: headings[start],
       distanceNm,
-      durationS: timesArr !== null ? timesArr[end - 1] : null,
-      sogKts: sogMean
+      durationS: timeAt(end),
+      sogKts: sogMean(start, end)
     });
   };
 

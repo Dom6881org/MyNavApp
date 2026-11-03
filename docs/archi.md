@@ -182,7 +182,7 @@ Contrat unique entre backend (dictionnaires Python) et frontend (interfaces TS, 
 | `AISBackendState` | `source` (effective), `requestedSource`, `localNmeaPort`, `targets`, compteurs, état internet |
 | `GribStatus` | `available`, `fresh`, `reason`, `createdAt`, `validUntil`, emprise, résolution, pas horaire |
 | `RoutingPlan` / `RoutingWindInput` | départ/arrivée/polaire ; `RoutingWindInput` = echo du repli constant **dérivé par le serveur** (C2/#102), `null` si le GRIB sert au calcul |
-| `RoutingRouteResult` | `found`, `coords [lon, lat]`, `etaS`, `timesS`/`sogKts` par tronçon (#18), `dtS`, `minDistNm`, `geojson`, `windSource: 'grib'\|'constant'`, ajustements terre→eau (`offsetNm`) |
+| `RoutingRouteResult` | `found`, `coords [lon, lat]`, `etaS`, `timesS`/`sogKts` à chaque point du tracé (#18, `len == len(coords)`, `timesS[last] == etaS`), `dtS`, `minDistNm`, `geojson`, `windSource: 'grib'\|'constant'`, ajustements terre→eau (`offsetNm`) |
 | `TrackRecorderStatus` / `TrackSummary` / `TracksResponse` | état de l'enregistreur, métadonnées des traces |
 | `DashboardLayout` / `InstrumentConfig` | disposition des instruments, thème (`light`/`dark`/`night`), unités |
 

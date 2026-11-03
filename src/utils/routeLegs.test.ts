@@ -27,7 +27,7 @@ describe('haversineNm', () => {
 });
 
 describe('computeRouteLegs', () => {
-  it('cap constant : une seule jambe, distance, durée et SOG moyens cumulés', () => {
+  it('cap constant, convention par tronçon (historique) : une seule jambe, moyenne des tronçons', () => {
     // 3 segments plein nord de ~0,6 MN chacun.
     const coords: [number, number][] = [
       [47.5, -4.5],
@@ -44,6 +44,36 @@ describe('computeRouteLegs', () => {
     expect(legs[0].distanceNm).toBeCloseTo(1.8, 0);
     expect(legs[0].durationS).toBe(5400);
     expect(legs[0].sogKts).toBeCloseTo(5);
+  });
+
+  it('convention moteur, une entrée par point (#123) : durée au point de fin de jambe, sogKts[0] artificiel exclu', () => {
+    const coords: [number, number][] = [
+      [47.5, -4.5],
+      [47.51, -4.5],
+      [47.52, -4.5]
+    ];
+    const legs = computeRouteLegs(coords, [0, 1800, 3600], [4.5, 5, 6]);
+
+    expect(legs).toHaveLength(1);
+    expect(legs[0].endIndex).toBe(2);
+    expect(legs[0].durationS).toBe(3600);
+    // Moyenne des points d'arrivée 1..2 : (5 + 6) / 2 = 5,5.
+    expect(legs[0].sogKts).toBeCloseTo(5.5);
+  });
+
+  it('convention moteur par point, deux jambes : durées et SOG par jambe', () => {
+    const coords: [number, number][] = [
+      [47.5, -4.5],
+      [47.51, -4.5],
+      [47.51, -4.44]
+    ];
+    const legs = computeRouteLegs(coords, [0, 1800, 3600], [4.5, 5, 6]);
+
+    expect(legs).toHaveLength(2);
+    expect(legs[0].durationS).toBe(1800);
+    expect(legs[0].sogKts).toBeCloseTo(5);
+    expect(legs[1].durationS).toBe(3600);
+    expect(legs[1].sogKts).toBeCloseTo(6);
   });
 
   it('changement de cap au-delà du seuil : deux jambes', () => {

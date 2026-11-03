@@ -242,7 +242,9 @@ export interface RoutingRouteResult {
   polarId: string;
   start: Position;
   finish: Position;
-  /** SOG (noeuds) et temps cumules (s) par troncon (issue #18). */
+  /** SOG (noeuds) et temps cumules (s) a chaque point du trace (issue #18) :
+   *  convention moteur — len == len(coords), timesS[0] = 0, timesS[last] = etaS,
+   *  sogKts[j] = vitesse d'arrivee au point j (sogKts[0] artificiel, patche moteur). */
   timesS?: number[];
   sogKts?: number[];
   startAdjusted?: RoutingRouteAdjustment | null;
