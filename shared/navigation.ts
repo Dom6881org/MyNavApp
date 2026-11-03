@@ -244,7 +244,12 @@ export interface RoutingRouteResult {
   message: string | null;
   geojson: RoutingRouteGeoJson | null;
   windSource: 'grib' | 'constant';
+  /** Vent au depart tel qu'utilise par le calcul (#135) : echo du champ GRIB
+   * echantillonne quand la source est GRIB ; vent du plan en constant. */
   wind: RoutingWindInput | null;
+  /** Moyenne VECTORIELLE du vent le long de la route (#135) : direction
+   * issue des composantes u/v moyennes (jamais arithmetique des degres). */
+  windAvg?: RoutingWindInput | null;
   polarId: string;
   start: Position;
   finish: Position;

@@ -8,6 +8,7 @@ exécution 100 % offline (voir issue #14).
 
 from __future__ import annotations
 
+import math
 import os
 from typing import Any
 
@@ -349,6 +350,21 @@ def compute_route(
     }
 
 
+def _scalar(value: Any) -> float:
+    """Scalaire depuis un nombre, une liste/tuple 1 élément ou un tableau numpy.
+
+    Les champs de vent du moteur renvoient u/v sous forme de tableaux numpy
+    (GRIBWindField) ou de listes (ConstantWind, stubs de test) : l'echo du vent
+    (#135) doit accepter les deux sans dépendre de numpy côté serveur.
+    """
+    if isinstance(value, (list, tuple)):
+        return float(value[0])
+    item = getattr(value, "item", None)
+    if callable(item):
+        return float(item())
+    return float(value)
+
+
 def compute_route_payload(
     payload: Any,
     phase_timings: dict[str, Any] | None = None,
@@ -472,6 +488,42 @@ def compute_route_payload(
         engine_below_kts=engine_below_kts, phase_timings=phase_timings,
     )
 
+    # Issue #135 : echo du vent réellement utilisé par la route — le SOG
+    # affiché devient vérifiable. Departure = vent du champ (GRIB échantillonné
+    # au départ) quand la source est GRIB ; moyenne = moyenne VECTORIELLE des
+    # composantes u/v sur les points de la route (jamais arithmétique des
+    # degrés : la moyenne de 350° et 10° est ~0°, pas 180°). Défensif : un
+    # échec d'échantillonnage ne doit pas casser la réponse.
+    wind_used: dict[str, float] | None = None
+    wind_avg: dict[str, float] | None = None
+    coords = result["coords"] or []
+    if coords:
+        try:
+            lats = [float(point[0]) for point in coords]
+            lons = [float(point[1]) for point in coords]
+            times_s = [float(t) for t in (result["times_s"] or [])]
+            if len(times_s) != len(coords):
+                times_s = [0.0] * len(coords)
+            u_s: list[float] = []
+            v_s: list[float] = []
+            for latitude, longitude, elapsed in zip(lats, lons, times_s):
+                u, v = wind_field.sample([latitude], [longitude], elapsed)
+                u_s.append(_scalar(u))
+                v_s.append(_scalar(v))
+            mean_u = sum(u_s) / len(u_s)
+            mean_v = sum(v_s) / len(v_s)
+            wind_avg = {
+                "directionFromDeg": round((math.degrees(math.atan2(-mean_u, -mean_v)) + 360.0) % 360.0, 1),
+                "speedKts": round(math.hypot(mean_u, mean_v), 2),
+            }
+            wind_used = {
+                "directionFromDeg": round((math.degrees(math.atan2(-u_s[0], -v_s[0])) + 360.0) % 360.0, 1),
+                "speedKts": round(math.hypot(u_s[0], v_s[0]), 2),
+            }
+        except Exception:
+            wind_used = None
+            wind_avg = None
+
     start_position = _validate_position("de départ", start)
     finish_position = _validate_position("d'arrivée", finish)
     payload_result = {
@@ -491,11 +543,16 @@ def compute_route_payload(
         "message": result["message"],
         "geojson": result["geojson"],
         "windSource": wind_source,
+        # Issue #135 : vent au départ tel qu'utilisé par le calcul (echo du
+        # champ GRIB échantillonné quand la source est GRIB ; vent du plan en
+        # constant — comportement antérieur conservé) + moyenne vectorielle le
+        # long de la route.
         "wind": (
             {"directionFromDeg": wind_values[0], "speedKts": wind_values[1]}
-            if wind_values is not None
-            else None
+            if wind_source == "constant" and wind_values is not None
+            else wind_used
         ),
+        "windAvg": wind_avg,
         "polarId": polar_id,
         "start": {"latitude": start_position[0], "longitude": start_position[1]},
         "finish": {"latitude": finish_position[0], "longitude": finish_position[1]},

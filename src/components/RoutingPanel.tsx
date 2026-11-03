@@ -330,11 +330,18 @@ const RoutingPanel: React.FC<RoutingPanelProps> = ({
               </div>
               <p className="routing-ok routing-result-sub">
                 {route.windSource === 'grib'
-                  ? 'GRIB wind'
+                  ? route.wind
+                    ? `GRIB wind from ${route.wind.directionFromDeg.toFixed(0)}° · ${route.wind.speedKts.toFixed(0)} kt`
+                    : 'GRIB wind'
                   : route.wind
                     ? `constant ${route.wind.speedKts.toFixed(0)} kt from ${route.wind.directionFromDeg.toFixed(0)}°`
                     : 'constant wind'}
               </p>
+              {route.windSource === 'grib' && route.windAvg && (
+                <p className="routing-ok routing-result-arrival">
+                  avg along route {route.windAvg.speedKts.toFixed(0)} kt from {route.windAvg.directionFromDeg.toFixed(0)}°
+                </p>
+              )}
               <p className="routing-ok routing-result-arrival">arr. {arrivalClock(route.etaS)}</p>
               {route.timesS && route.sogKts && route.sogKts.length > 1 && (
                 <SogChart timesS={route.timesS} sogKts={route.sogKts} />

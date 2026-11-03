@@ -341,6 +341,59 @@ class TestComputeRoutePayload(unittest.TestCase):
         self.assertIsNotNone(result["motorFlags"])
         self.assertFalse(any(result["motorFlags"]))
 
+    # --- #135 : echo du vent réellement utilisé par la route. ---
+
+    def test_payload_echo_vent_constant(self):
+        # Repli constant : wind = vent du plan (comportement antérieur) et
+        # windAvg = même vent (ConstantWind est uniforme).
+        with patch("server.grib.load_wind_field", return_value=None):
+            result = compute_route_payload(self.payload())
+        self.assertEqual(result["windSource"], "constant")
+        self.assertEqual(result["wind"], {"directionFromDeg": 270.0, "speedKts": 12.0})
+        self.assertIsNotNone(result["windAvg"])
+        self.assertAlmostEqual(result["windAvg"]["directionFromDeg"], 270.0, places=1)
+        self.assertAlmostEqual(result["windAvg"]["speedKts"], 12.0, places=1)
+
+    def test_payload_echo_vent_grib(self):
+        # Source GRIB : wind = vent du champ échantillonné au départ,
+        # windAvg = moyenne VECTORIELLE sur la route. Le champ factice
+        # renvoie du 350° à l'ouest de 3.2°E et du 10° à l'est : la moyenne
+        # arithmétique des degrés (~180°) serait FAUSSE — la moyenne
+        # vectorielle doit rester dans le secteur nord (350-360 / 0-10).
+        import math
+
+        class FakeGribWind:
+            """Champ de vent au contrat GRIBWindField : sample(lat, lon, t) -> (u, v)."""
+
+            def __init__(self, speed_kts=10.0):
+                self.speed_kts = speed_kts
+
+            def sample(self, lat, lon, t):
+                lons = lon if hasattr(lon, "__len__") else [lon]
+                us, vs = [], []
+                for value in lons:
+                    direction_from = 350.0 if value < 3.2 else 10.0
+                    radians = math.radians(direction_from)
+                    us.append(-self.speed_kts * math.sin(radians))
+                    vs.append(-self.speed_kts * math.cos(radians))
+                return us, vs
+
+        with patch("server.grib.load_wind_field", return_value=FakeGribWind()):
+            result = compute_route_payload(self.payload(
+                wind={"directionFromDeg": 270, "speedKts": 12},
+            ))
+        self.assertEqual(result["windSource"], "grib")
+        self.assertTrue(result["found"])
+        # Départ (lon ~3.04 < 3.2) : vent de 350° à 10 kt.
+        self.assertAlmostEqual(result["wind"]["directionFromDeg"], 350.0, places=0)
+        self.assertAlmostEqual(result["wind"]["speedKts"], 10.0, places=1)
+        # Moyenne vectorielle : secteur nord uniquement, vitesse ~10 kt.
+        avg = result["windAvg"]
+        self.assertIsNotNone(avg)
+        self.assertTrue(avg["directionFromDeg"] >= 350.0 or avg["directionFromDeg"] <= 10.0)
+        self.assertGreaterEqual(avg["speedKts"], 9.8)
+        self.assertLessEqual(avg["speedKts"], 10.0)
+
 
 def _synthetic_bathy():
     """Grille GEBCO synthétique : haut-fond (-2 m) en travers de la route directe
