@@ -4054,7 +4054,6 @@ html {
 /* B1 (#133) : badge des jambes contenant des tronçons moteur. */
 .route-leg-motor {
   display: inline-block;
-  margin-left: 0.25rem; /* #137 : un espace est aussi rendu avant le badge */
   padding: 0.05rem 0.3rem;
   border: 1px solid rgba(245, 166, 35, 0.55);
   border-radius: 4px;
@@ -4065,26 +4064,27 @@ html {
   letter-spacing: 0.05em;
 }
 
-/* #137 : seule la cellule cap accepte le repli — cap et badge « MOTOR » sont
-   deux mots insécables séparés par un espace rendu : si la police rend plus
-   large que prévu, le badge passe SOUS le cap (ligne plus haute) au lieu de
-   faire déborder la table du bloc. Les autres colonnes restent nowrap. */
-.route-details-table td:nth-child(2) {
-  white-space: normal;
+/* #139 : colonne dédiée MOTOR (présente seulement si la route contient des
+   jambes moteur) — badge centré, cellule vide pour les jambes voile. */
+.route-details-table .route-leg-motor-cell {
+  text-align: center;
 }
 
-.route-details-table td:nth-child(2),
-.route-details-table th:nth-child(2) {
+/* #139 : Hdg/SOG/Dist alignés à droite EN DERNIÈRES colonnes — juste que la
+   table compte 4 colonnes (voile) ou 5 (colonne MOTOR insérée entre Time et
+   Hdg). */
+.route-details-table td:nth-last-child(3),
+.route-details-table th:nth-last-child(3) {
   text-align: right;
 }
 
-.route-details-table td:nth-child(3),
-.route-details-table th:nth-child(3) {
+.route-details-table td:nth-last-child(2),
+.route-details-table th:nth-last-child(2) {
   text-align: right;
 }
 
-.route-details-table td:nth-child(4),
-.route-details-table th:nth-child(4) {
+.route-details-table td:last-child,
+.route-details-table th:last-child {
   text-align: right;
 }
 

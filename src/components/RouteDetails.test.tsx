@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react';
+import { render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import RouteDetails from './RouteDetails';
@@ -101,6 +101,9 @@ describe('RouteDetails', () => {
     expect(screen.getByText('ROUTE DETAILS')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Close route details' })).toBeInTheDocument();
     expect(screen.getAllByRole('row')).toHaveLength(3); // entête + 2 jambes
+    // #139 : sans jambe moteur, PAS de colonne MOTOR — table 4 colonnes
+    // inchangée (rendu identique à la version sans la colonne dédiée).
+    expect(screen.getAllByRole('columnheader')).toHaveLength(4);
     expect(screen.getByText('000°')).toBeInTheDocument();
     expect(screen.getByText('090°')).toBeInTheDocument();
     expect(screen.getByText('5.1 kt')).toBeInTheDocument();
@@ -201,7 +204,7 @@ describe('RouteDetails', () => {
     expect(screen.queryByTestId('route-details-panel')).not.toBeInTheDocument();
   });
 
-  it('#137 : route avec jambe moteur — bloc élargi à 320px, position recalculée, badge MOTOR affiché', async () => {
+  it('#139 : route avec jambe moteur — colonne dédiée MOTOR (Time · MOTOR · Hdg · SOG · Dist), bloc 320px, position recalculée', async () => {
     mockToggleRect(800, 100, 130);
     // Convention #123 : une entrée PAR POINT — flags[2] = tronçon d'arrivée
     // au point 2 = 2e segment → 1re jambe (nord) moteur, 2e jambe (est) voile.
@@ -220,14 +223,28 @@ describe('RouteDetails', () => {
     await user.click(screen.getByRole('button', { name: /Route details/i }));
 
     const panel = screen.getByTestId('route-details-panel');
-    // #137 : le badge MOTOR tient en ligne dans la colonne cap — le bloc
-    // s'élargit (272 → 320px) au lieu de comprimer les colonnes nowrap.
+    // #137 : le bloc s'élargit (272 → 320px) pour que la table (colonne MOTOR
+    // dédiée incluse, #139) tienne sans comprimer les colonnes nowrap.
     expect(panel.style.width).toBe(`${MOTOR_PANEL_WIDTH_PX}px`);
     // La géométrie « à gauche » compte la largeur effective (320px).
     expect(panel.style.left).toBe(`${800 - MOTOR_PANEL_WIDTH_PX - ANCHOR_GAP_PX}px`);
     expect(panel.style.top).toBe(`${100 - SIDE_LIFT_PX}px`);
-    expect(screen.getByText('MOTOR')).toBeInTheDocument();
-    // Une seule des deux jambes est moteur.
+    // #139 : 5 colonnes — Time, MOTOR (entête vide, aria-label), Hdg, SOG, Dist.
+    const headers = screen.getAllByRole('columnheader');
+    expect(headers).toHaveLength(5);
+    expect(headers[0]).toHaveTextContent('Time');
+    expect(headers[1]).toHaveTextContent('');
+    expect(headers[1]).toHaveAttribute('aria-label', 'Motor');
+    expect(headers[2]).toHaveTextContent('Hdg');
+    // 1re jambe (moteur) : badge en 2e cellule, cap en 3e ; 2e jambe (voile) :
+    // cellule MOTOR vide, cap en 3e cellule.
+    const rows = screen.getAllByRole('row');
+    const motorCells = within(rows[1]).getAllByRole('cell');
+    expect(motorCells[1]).toHaveTextContent('MOTOR');
+    expect(motorCells[2]).toHaveTextContent('000°');
+    const sailCells = within(rows[2]).getAllByRole('cell');
+    expect(sailCells[1]).toHaveTextContent('');
+    expect(sailCells[2]).toHaveTextContent('090°');
     expect(screen.getAllByText('MOTOR')).toHaveLength(1);
   });
 });
