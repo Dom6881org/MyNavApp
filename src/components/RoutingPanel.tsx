@@ -4,6 +4,8 @@ import { RoutingInput } from '../hooks/useRoutingInput';
 
 import { RoutingRouteApi } from '../hooks/useRoutingRoute';
 
+import RouteDetails from './RouteDetails';
+
 import { GribApi } from '../hooks/useGrib';
 
 import { Position } from '../types';
@@ -321,6 +323,7 @@ const RoutingPanel: React.FC<RoutingPanelProps> = ({
               {route.timesS && route.sogKts && route.sogKts.length > 1 && (
                 <SogChart timesS={route.timesS} sogKts={route.sogKts} />
               )}
+              <RouteDetails coords={route.coords} etaS={route.etaS} timesS={route.timesS} sogKts={route.sogKts} />
             </>
           ) : (
             route.message && <p className="routing-error">{route.message}</p>

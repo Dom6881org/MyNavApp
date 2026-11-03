@@ -1,5 +1,5 @@
 import React from 'react';
-import { render, screen } from '@testing-library/react';
+import { render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 import RoutingPanel, { RoutingPickTarget } from './RoutingPanel';
@@ -339,5 +339,47 @@ describe('RoutingPanel', () => {
 
     expect(screen.getByText(/^arr\. /)).toBeInTheDocument();
     expect(screen.queryByRole('img', { name: /SOG along legs/i })).not.toBeInTheDocument();
+  });
+
+  it('fiche route détaillée : résumé replié puis table des jambes au clic (issue #121)', async () => {
+    const routeWithLegs: RoutingJobResult = {
+      ...ROUTE_FOUND,
+      coords: [[47.5, -4.5], [47.51, -4.5], [47.52, -4.5]],
+      timesS: [1800, 3600],
+      sogKts: [5, 5],
+      etaS: 3600
+    };
+    renderPanel({ routeCalc: stubRouteCalc(routeWithLegs), onComputeRoute: vi.fn() });
+    const user = userEvent.setup();
+
+    const summary = screen.getByRole('button', { name: 'Route details · 1 leg · 0 course changes' });
+    expect(summary).toHaveAttribute('aria-expanded', 'false');
+    expect(screen.queryByRole('table')).not.toBeInTheDocument();
+
+    await user.click(summary);
+    expect(summary).toHaveAttribute('aria-expanded', 'true');
+    expect(screen.getByRole('table')).toBeInTheDocument();
+    expect(screen.getByText('000°')).toBeInTheDocument();
+    expect(screen.getByText(/^Arr\. /)).toBeInTheDocument();
+  });
+
+  it('fiche route détaillée masquée quand la route n’est pas trouvée (issue #121)', () => {
+    const partialRoute = { ...ROUTE_FOUND, found: false, geojson: null, etaS: 0, message: 'Aucune route trouvée : horizon dépassé (meilleure progression à 14.4 mn de l\'arrivée).' };
+    renderPanel({ routeCalc: stubRouteCalc(partialRoute), onComputeRoute: vi.fn() });
+
+    expect(screen.queryByRole('button', { name: /Route details/i })).not.toBeInTheDocument();
+  });
+
+  it('fiche route détaillée sans SOG remonté : jambes, caps et distances quand même (issue #121)', async () => {
+    renderPanel({ routeCalc: stubRouteCalc(ROUTE_FOUND), onComputeRoute: vi.fn() });
+    const user = userEvent.setup();
+
+    await user.click(screen.getByRole('button', { name: 'Route details · 1 leg · 0 course changes' }));
+
+    const table = screen.getByRole('table');
+    expect(within(table).getAllByRole('row')).toHaveLength(2); // entête + 1 jambe
+    expect(within(table).getByText(/^[0-9]{3}°$/)).toBeInTheDocument();
+    expect(within(table).getAllByText('—')).toHaveLength(2); // temps + SOG absents
+    expect(within(table).getByText(/NM$/)).toBeInTheDocument();
   });
 });
