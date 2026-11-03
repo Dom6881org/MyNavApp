@@ -459,4 +459,31 @@ describe('RoutingPanel', () => {
     await user.click(screen.getByRole('button', { name: /Route details/i }));
     expect(screen.queryByText('MOTOR')).not.toBeInTheDocument();
   });
+
+  it('route GRIB : vent utilisé au départ et moyenne le long de la route affichés (#135)', () => {
+    const gribRoute: RoutingJobResult = {
+      ...ROUTE_FOUND,
+      windSource: 'grib',
+      wind: { directionFromDeg: 320, speedKts: 12 },
+      windAvg: { directionFromDeg: 340, speedKts: 11 }
+    };
+    renderPanel({ routeCalc: stubRouteCalc(gribRoute), onComputeRoute: vi.fn() });
+
+    expect(screen.getByText(/GRIB wind from 320° · 12 kt/)).toBeInTheDocument();
+    expect(screen.getByText(/avg along route 11 kt from 340°/)).toBeInTheDocument();
+    expect(screen.queryByText(/constant 12 kt/i)).not.toBeInTheDocument();
+  });
+
+  it('route GRIB sans echo de vent : libellé GRIB seul, pas de moyenne (#135)', () => {
+    const gribRouteNoWind: RoutingJobResult = {
+      ...ROUTE_FOUND,
+      windSource: 'grib',
+      wind: null,
+      windAvg: null
+    };
+    renderPanel({ routeCalc: stubRouteCalc(gribRouteNoWind), onComputeRoute: vi.fn() });
+
+    expect(screen.getByText('GRIB wind')).toBeInTheDocument();
+    expect(screen.queryByText(/avg along route/i)).not.toBeInTheDocument();
+  });
 });
