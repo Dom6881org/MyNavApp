@@ -2,7 +2,7 @@ import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import RouteDetails from './RouteDetails';
-import { ANCHOR_GAP_PX, PANEL_WIDTH_PX, SIDE_LIFT_PX } from '../utils/popoverPosition';
+import { ANCHOR_GAP_PX, MOTOR_PANEL_WIDTH_PX, PANEL_WIDTH_PX, SIDE_LIFT_PX } from '../utils/popoverPosition';
 
 /** 5 points : 2 segments plein nord (cap 000°) puis 2 plein est (cap 090°). */
 const COORDS: [number, number][] = [
@@ -93,6 +93,8 @@ describe('RouteDetails', () => {
     // un peu PLUS HAUT que le bouton (#129) — plus de place pour les jambes.
     expect(panel.style.left).toBe(`${800 - PANEL_WIDTH_PX - ANCHOR_GAP_PX}px`);
     expect(panel.style.top).toBe(`${100 - SIDE_LIFT_PX}px`);
+    // #137 : sans jambe moteur, la largeur reste 17rem (rendu inchangé).
+    expect(panel.style.width).toBe(`${PANEL_WIDTH_PX}px`);
     // #129 : hauteur étirée jusqu'au bas de la fenêtre (moins la marge).
     expect(panel.style.maxHeight).toBe(`${window.innerHeight - (100 - SIDE_LIFT_PX) - ANCHOR_GAP_PX}px`);
     // Contenu du bloc.
@@ -197,5 +199,35 @@ describe('RouteDetails', () => {
     expect(container.querySelector('.route-details')).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: /Route details/i })).not.toBeInTheDocument();
     expect(screen.queryByTestId('route-details-panel')).not.toBeInTheDocument();
+  });
+
+  it('#137 : route avec jambe moteur — bloc élargi à 320px, position recalculée, badge MOTOR affiché', async () => {
+    mockToggleRect(800, 100, 130);
+    // Convention #123 : une entrée PAR POINT — flags[2] = tronçon d'arrivée
+    // au point 2 = 2e segment → 1re jambe (nord) moteur, 2e jambe (est) voile.
+    render(
+      <RouteDetails
+        coords={COORDS}
+        etaS={ETA_S}
+        timesS={TIMES_S}
+        sogKts={SOG_KTS}
+        motorFlags={[false, false, true, false, false]}
+        startEpochS={START_EPOCH_S}
+      />
+    );
+    const user = userEvent.setup();
+
+    await user.click(screen.getByRole('button', { name: /Route details/i }));
+
+    const panel = screen.getByTestId('route-details-panel');
+    // #137 : le badge MOTOR tient en ligne dans la colonne cap — le bloc
+    // s'élargit (272 → 320px) au lieu de comprimer les colonnes nowrap.
+    expect(panel.style.width).toBe(`${MOTOR_PANEL_WIDTH_PX}px`);
+    // La géométrie « à gauche » compte la largeur effective (320px).
+    expect(panel.style.left).toBe(`${800 - MOTOR_PANEL_WIDTH_PX - ANCHOR_GAP_PX}px`);
+    expect(panel.style.top).toBe(`${100 - SIDE_LIFT_PX}px`);
+    expect(screen.getByText('MOTOR')).toBeInTheDocument();
+    // Une seule des deux jambes est moteur.
+    expect(screen.getAllByText('MOTOR')).toHaveLength(1);
   });
 });

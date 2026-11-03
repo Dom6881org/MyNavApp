@@ -2,7 +2,7 @@ import React from 'react';
 import { createPortal } from 'react-dom';
 
 import { computeRouteLegs } from '../utils/routeLegs';
-import { computePopoverMaxHeightPx, computePopoverPosition, PopoverAnchor } from '../utils/popoverPosition';
+import { computePopoverMaxHeightPx, computePopoverPosition, MOTOR_PANEL_WIDTH_PX, PopoverAnchor, PANEL_WIDTH_PX } from '../utils/popoverPosition';
 
 /** Même convention d’affichage que RoutingPanel (arrivée locale, #18). */
 const formatClock = (epochS: number): string =>
@@ -74,6 +74,13 @@ const RouteDetails: React.FC<RouteDetailsProps> = ({ coords, etaS, timesS, sogKt
 
   if (legs.length === 0) return null;
 
+  // #137 : une route avec jambes moteur affiche le badge MOTOR en ligne dans
+  // la colonne cap — le bloc s'élargit (17rem → 20rem) pour l'accueillir sans
+  // décaler/comprimer les colonnes nowrap de la table ; sans moteur, rendu
+  // inchangé. La largeur effective est consommée par le positionnement.
+  const hasMotor = legs.some((leg) => leg.motor);
+  const panelWidthPx = hasMotor ? MOTOR_PANEL_WIDTH_PX : PANEL_WIDTH_PX;
+
   const start = startEpochS ?? Date.now() / 1000;
   const changes = legs.length - 1;
   const summary = `${legs.length} leg${legs.length > 1 ? 's' : ''} · ${changes} course change${changes === 1 ? '' : 's'}`;
@@ -88,9 +95,10 @@ const RouteDetails: React.FC<RouteDetailsProps> = ({ coords, etaS, timesS, sogKt
     setExpanded(true);
   };
 
-  // Position dérivée de l’ancre : à gauche du bouton (un peu plus haut, #129)
-  // ou en dessous ; hauteur maximale étirée jusqu’au bas de la fenêtre.
-  const position = expanded && anchor ? computePopoverPosition(anchor) : null;
+  // Position dérivée de l'ancre : à gauche du bouton (un peu plus haut, #129)
+  // ou en dessous ; hauteur maximale étirée jusqu'au bas de la fenêtre.
+  // #137 : calculé avec la largeur effective (272 px, 320 px si jambes moteur).
+  const position = expanded && anchor ? computePopoverPosition(anchor, panelWidthPx) : null;
 
   const panel =
     expanded && anchor && position ? (
@@ -98,6 +106,9 @@ const RouteDetails: React.FC<RouteDetailsProps> = ({ coords, etaS, timesS, sogKt
         className="route-details-panel"
         style={{
           ...position,
+          // #137 : largeur effective du bloc (272 px, ou 320 px si jambes
+          // moteur) — le badge MOTOR tient en ligne sans comprimer la table.
+          width: panelWidthPx,
           // #129 : le bloc s'étire jusqu'au bas de la fenêtre (moins la
           // marge), plancher minimal — la table affiche un maximum de jambes
           // sans jamais sortir de l'écran. Le CSS (.route-details-panel en
@@ -133,8 +144,17 @@ const RouteDetails: React.FC<RouteDetailsProps> = ({ coords, etaS, timesS, sogKt
                   <td>{leg.durationS !== null ? formatClock(start + leg.durationS) : '—'}</td>
                   <td>
                     {formatHeading(leg.headingDeg)}
-                    {/* B1 (#133) : jambe contenant au moins un tronçon moteur. */}
-                    {leg.motor && <span className="route-leg-motor">MOTOR</span>}
+                    {/* B1 (#133) : jambe contenant au moins un tronçon moteur.
+                        #137 : l'espace est rendu (pas seulement une marge) —
+                        point de rupture réel cap↔badge : si la police rend plus
+                        large que prévu, le badge replie SOUS le cap au lieu de
+                        faire déborder la table (filet de sécurité). */}
+                    {leg.motor && (
+                      <>
+                        {' '}
+                        <span className="route-leg-motor">MOTOR</span>
+                      </>
+                    )}
                   </td>
                   <td>{leg.sogKts !== null ? formatSog(leg.sogKts) : '—'}</td>
                   <td>{formatDist(leg.distanceNm)}</td>
