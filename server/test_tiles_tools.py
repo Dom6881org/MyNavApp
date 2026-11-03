@@ -20,9 +20,11 @@ if PROJECT_ROOT not in sys.path:
 
 import tools.download_tiles as dt
 
+PNG_BODY = dt.PNG_SIGNATURE + b"tile-data"
+
 
 class FakeResponse:
-    def __init__(self, body: bytes = b"png-bytes", status: int = 200):
+    def __init__(self, body: bytes = PNG_BODY, status: int = 200):
         self._body = body
         self.status = status
 
@@ -169,7 +171,7 @@ class TestDownloadTilesMocked(unittest.TestCase):
         self.tiles = [("osm", 8, 130, 99), ("seamark", 12, 2100, 1580)]
 
     def test_telechargement_puis_skip(self):
-        with patch.object(urllib.request, "urlopen", return_value=FakeResponse(b"tile-a")):
+        with patch.object(urllib.request, "urlopen", return_value=FakeResponse(dt.PNG_SIGNATURE + b"tile-a")):
             counts = dt.download_tiles(self.tiles, out=self.out, delay=0)
         self.assertEqual(counts["downloaded"], 2)
         self.assertTrue(os.path.isfile(os.path.join(self.out, "osm", "8", "130", "99.png")))
@@ -190,18 +192,18 @@ class TestDownloadTilesMocked(unittest.TestCase):
         self.assertFalse(os.path.isfile(os.path.join(self.out, "seamark", "12", "999", "999.png")))
 
     def test_refresh_ancienne_retelechargee(self):
-        with patch.object(urllib.request, "urlopen", return_value=FakeResponse(b"old")):
+        with patch.object(urllib.request, "urlopen", return_value=FakeResponse(dt.PNG_SIGNATURE + b"old")):
             dt.download_tiles(self.tiles, out=self.out, delay=0)
         # On vieillit une tuile de plus de 30 jours.
         target = os.path.join(self.out, "osm", "8", "130", "99.png")
         old = time.time() - 40 * 86400
         os.utime(target, (old, old))
-        with patch.object(urllib.request, "urlopen", return_value=FakeResponse(b"new")):
+        with patch.object(urllib.request, "urlopen", return_value=FakeResponse(dt.PNG_SIGNATURE + b"new")):
             counts = dt.download_tiles(self.tiles, out=self.out, delay=0, refresh_days=30)
         self.assertEqual(counts["refreshed"], 1)   # l'ancienne, re-téléchargée
         self.assertEqual(counts["skipped"], 1)     # la récente, ignorée
         with open(target, "rb") as file:
-            self.assertEqual(file.read(), b"new")
+            self.assertEqual(file.read(), dt.PNG_SIGNATURE + b"new")
 
     def test_plafond_duree(self):
         # max_minutes=0 : arrêt après la première tuile traitée.
@@ -209,6 +211,33 @@ class TestDownloadTilesMocked(unittest.TestCase):
             counts = dt.download_tiles(self.tiles, out=self.out, delay=0, max_minutes=0)
         self.assertEqual(counts["capped"], 1)
         self.assertEqual(mock.call_count, 1)
+
+    def test_contenu_non_png_rejete(self):
+        # Réponse 200 mais HTML (page d'erreur) : jamais sauvegardée.
+        with patch.object(urllib.request, "urlopen", return_value=FakeResponse(b"<html>blocked</html>")):
+            counts = dt.download_tiles([("osm", 8, 130, 99)], out=self.out, delay=0)
+        self.assertEqual(counts["failed"], 1)
+        self.assertFalse(os.path.isfile(os.path.join(self.out, "osm", "8", "130", "99.png")))
+
+    def test_403_arret_immediat(self):
+        # Blocage serveur : la 2e tuile ne doit PAS être requêtée.
+        def fake_urlopen(request, timeout=None):
+            raise urllib.error.HTTPError(request.full_url, 403, "Forbidden", {}, None)
+        with patch.object(urllib.request, "urlopen", side_effect=fake_urlopen) as mock:
+            counts = dt.download_tiles(self.tiles, out=self.out, delay=0)
+        self.assertEqual(counts["blocked"], 1)
+        self.assertEqual(mock.call_count, 1, "arrêt immédiat attendu sur 403")
+        self.assertFalse(os.path.exists(os.path.join(self.out, "osm")))
+
+    def test_user_agent_contient_contact(self):
+        # Politique OSM : UA identifié AVEC coordonnées de contact.
+        captured = {}
+        def fake_urlopen(request, timeout=None):
+            captured["ua"] = request.get_header("User-agent")
+            return FakeResponse()
+        with patch.object(urllib.request, "urlopen", side_effect=fake_urlopen):
+            dt.download_tiles(self.tiles, out=self.out, delay=0)
+        self.assertIn("github.com/Dom6881org/MyNavApp", captured["ua"])
 
 
 class TestMainGlue(unittest.TestCase):
@@ -244,7 +273,7 @@ class TestMainGlue(unittest.TestCase):
         return code, stdout.getvalue()
 
     def test_run_puis_deja_fait_aujourd_hui(self):
-        with patch.object(urllib.request, "urlopen", return_value=FakeResponse(b"tile")) as mock:
+        with patch.object(urllib.request, "urlopen", return_value=FakeResponse(dt.PNG_SIGNATURE + b"tile")) as mock:
             code, output = self.run_main("--once-a-day")
         self.assertEqual(code, 0)
         self.assertGreaterEqual(mock.call_count, 1)
@@ -274,6 +303,17 @@ class TestMainGlue(unittest.TestCase):
             code, output = self.run_main()
         self.assertEqual(code, 2)
         self.assertIn("invalides", output.lower())
+
+    def test_bloque_exit_3_sans_marqueur(self):
+        # Blocage serveur en cours de run : exit 3 et marqueur NON posé
+        # (le run suivant pourra retenter après la levée du blocage).
+        def fake_urlopen(request, timeout=None):
+            raise urllib.error.HTTPError(request.full_url, 403, "Forbidden", {}, None)
+        with patch.object(urllib.request, "urlopen", side_effect=fake_urlopen):
+            code, output = self.run_main("--once-a-day")
+        self.assertEqual(code, 3)
+        self.assertFalse(dt.already_ran_today(self.out), "blocage : le marqueur ne doit pas être posé")
+        self.assertIn("blocage", output.lower())
 
 
 if __name__ == "__main__":

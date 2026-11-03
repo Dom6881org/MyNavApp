@@ -67,7 +67,7 @@ For recurring sailing areas, prefer the zone mode with `config/tile_zones.json`:
 python tools/download_tiles.py --zones config/tile_zones.json
 ```
 
-Each zone has a `name`, a `bbox` (`[south, west, north, east]`) and per-layer zoom ranges. The shipped config covers the Golfe du Lion–Balearics and Corsica (OSM 8–12 + seamark 12–13, about 28 000 tiles ≈ 100–150 MB). Size rule of thumb: coastal OSM tiles are 15–25 KB (near-empty on open water) and each extra zoom level multiplies the tile count by 4 — so zoom 15+ over a full regional bbox means millions of tiles. For harbour approaches, add small port bboxes at zooms 14–16 to the JSON instead of raising the zooms of a whole zone:
+Each zone has a `name`, a `bbox` (`[south, west, north, east]`) and per-layer zoom ranges. The shipped config covers the Golfe du Lion–Balearics and Corsica (OSM 8–12 + seamark 12–13, about 28 000 tiles ≈ 100–150 MB — roughly 8 h at the default 1 s/request delay, so run the initial download overnight). Size rule of thumb: coastal OSM tiles are 15–25 KB (near-empty on open water) and each extra zoom level multiplies the tile count by 4 — so zoom 15+ over a full regional bbox means millions of tiles. For harbour approaches, add small port bboxes at zooms 14–16 to the JSON instead of raising the zooms of a whole zone:
 
 ```json
 [
@@ -86,7 +86,8 @@ python tools/download_tiles.py --zones config/tile_zones.json --once-a-day --ref
 - `--max-minutes 45` stops cleanly when the time budget is spent and resumes on the next run.
 - When offline or the provider is unreachable, the script exits 0 silently — safe to schedule every day.
 - Windows: `schtasks /Create /TN "MyNavApp tiles" /TR "C:\path\to\MyNavApp\tools\update_tiles.bat" /SC DAILY /ST 08:00` (the `.bat` wrapper carries the recommended flags). On Linux/macOS, a daily cron line works the same.
-- The downloader sends an identified User-Agent and paces requests (0.15 s by default); keep the delay when adding areas, per the OSM tile usage policy. Wind forecast (Open-Meteo) and Internet AIS remain online-only features; local VHF AIS, NMEA instruments and the chart keep working offline.
+- The downloader sends an identified User-Agent (with the project contact URL) and paces requests (1 s by default — do **not** lower it), per the [OSM tile usage policy](https://operations.osmfoundation.org/policies/tiles/). Only genuine PNG responses are cached.
+- If the provider blocks the app (HTTP 403/429), the script **stops immediately** (exit 3, daily marker not set) instead of hammering — wait before running it again, and keep the 1 s delay. Wind forecast (Open-Meteo) and Internet AIS remain online-only features; local VHF AIS, NMEA instruments and the chart keep working offline.
 
 
 ### Routing bathymetry (GEBCO)
