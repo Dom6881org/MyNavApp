@@ -326,12 +326,14 @@ class TestComputeRoutePayload(unittest.TestCase):
         )
 
     def test_payload_vent_navigable_aucun_moteur(self):
-        # 12 kt vent arrière (d'est, route vers l'est) : vitesse polaire
-        # > seuil partout → flags présents mais tous faux (pas de régression
-        # du cas nominal).
+        # 12 kt vent arrière (d'ouest, route vers l'est) : vitesse polaire
+        # > seuil partout sur la route retenue → flags présents mais tous
+        # faux (pas de régression du cas nominal). NB : ne pas utiliser un
+        # scénario au près (vent d'est) — les caps de zone morte relayés à
+        # 4.0 kt peuvent y survivre à l'élagage par cellule.
         with patch("server.grib.load_wind_field", return_value=None):
             result = compute_route_payload(self.payload(
-                wind={"directionFromDeg": 90, "speedKts": 12},
+                wind={"directionFromDeg": 270, "speedKts": 12},
                 engineBelowKts=2.0,
             ))
         self.assertTrue(result["found"])
