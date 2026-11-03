@@ -150,4 +150,58 @@ describe('computeRouteLegs', () => {
     expect(computeRouteLegs([])).toEqual([]);
     expect(computeRouteLegs([[47.5, -4.5]])).toEqual([]);
   });
+
+  // B1 (#133) : jambes marquées MOTOR quand un tronçon est en relais moteur.
+  describe('flags moteur (B1)', () => {
+    const coords: [number, number][] = [
+      [47.5, -4.5],
+      [47.51, -4.5],
+      [47.52, -4.5]
+    ];
+
+    it('convention par point (#123) : tronçon i = motorFlags[i+1], index 0 miroir', () => {
+      // Tronçon 0 voile (miroir index 0 = True mais tronçon d'arrivée au
+      // point 1 = False), tronçon 1 moteur.
+      const legs = computeRouteLegs(coords, undefined, undefined, undefined, [true, false, true]);
+      expect(legs).toHaveLength(1);
+      expect(legs[0].motor).toBe(true);
+    });
+
+    it('convention par tronçon acceptée : longueur len(coords) - 1', () => {
+      const legs = computeRouteLegs(coords, undefined, undefined, undefined, [false, false]);
+      expect(legs).toHaveLength(1);
+      expect(legs[0].motor).toBe(false);
+    });
+
+    it('pur voile : flags null → aucune jambe marquée', () => {
+      const legs = computeRouteLegs(coords, undefined, undefined, undefined, null);
+      expect(legs[0].motor).toBe(false);
+    });
+
+    it('jambe mixte voile+moteur à cap constant : marquée MOTOR (présence, pas uniformité)', () => {
+      // Deux jambes : cap 0° puis cap 90° ; seule la seconde contient du moteur.
+      const turnCoords: [number, number][] = [
+        [47.5, -4.5],
+        [47.51, -4.5],
+        [47.52, -4.5],
+        [47.52, -4.49]
+      ];
+      const legs = computeRouteLegs(
+        turnCoords,
+        undefined,
+        undefined,
+        undefined,
+        [false, false, false, true]
+      );
+      expect(legs).toHaveLength(2);
+      expect(legs[0].motor).toBe(false);
+      expect(legs[1].motor).toBe(true);
+    });
+
+    it('longueur incohérente de motorFlags : ignorée (jambe non marquée)', () => {
+      const legs = computeRouteLegs(coords, undefined, undefined, undefined, [true]);
+      expect(legs).toHaveLength(1);
+      expect(legs[0].motor).toBe(false);
+    });
+  });
 });

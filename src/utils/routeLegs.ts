@@ -21,6 +21,12 @@ export interface RouteLeg {
   durationS: number | null;
   /** SOG moyen de la jambe (kt) — null sans sogKts. */
   sogKts: number | null;
+  /**
+   * B1 (#133) : la jambe contient au moins un tronçon moteur (relais sous le
+   * seuil de vitesse voile). Une jambe mixte voile+moteur à cap constant est
+   * marquée MOTOR — le badge signale la présence du moteur, pas l'uniformité.
+   */
+  motor: boolean;
 }
 
 /** Seuil par défaut : un changement de cap affiché au-delà de 5°. */
@@ -78,7 +84,8 @@ export const computeRouteLegs = (
   coords: [number, number][],
   timesS?: readonly number[] | null,
   sogKts?: readonly number[] | null,
-  thresholdDeg: number = HEADING_LEG_THRESHOLD_DEG
+  thresholdDeg: number = HEADING_LEG_THRESHOLD_DEG,
+  motorFlags?: readonly boolean[] | null
 ): RouteLeg[] => {
   if (!Array.isArray(coords) || coords.length < 2) return [];
   const pointCount = coords.length;
@@ -90,6 +97,15 @@ export const computeRouteLegs = (
     if (Array.isArray(timesS) && timesS.length === pointCount) return timesS[endIndex];
     if (Array.isArray(timesS) && timesS.length === segmentCount) return timesS[endIndex - 1];
     return null;
+  };
+  // B1 (#133) : flag moteur du tronçon i (points i → i+1) — même déduction de
+  // convention que sogKts : par point (len == len(coords), flag[j] = tronçon
+  // d'arrivée au point j, index 0 miroir) ou par tronçon ; null = pur voile.
+  const motorAt = (segmentIndex: number): boolean => {
+    if (!Array.isArray(motorFlags)) return false;
+    if (motorFlags.length === pointCount) return Boolean(motorFlags[segmentIndex + 1]);
+    if (motorFlags.length === segmentCount) return Boolean(motorFlags[segmentIndex]);
+    return false;
   };
   const sogMean = (start: number, end: number): number | null => {
     if (Array.isArray(sogKts) && sogKts.length === pointCount) {
@@ -118,14 +134,19 @@ export const computeRouteLegs = (
   const legs: RouteLeg[] = [];
   const pushLeg = (start: number, end: number): void => {
     let distanceNm = 0;
-    for (let i = start; i < end; i += 1) distanceNm += distances[i];
+    let motor = false;
+    for (let i = start; i < end; i += 1) {
+      distanceNm += distances[i];
+      if (motorAt(i)) motor = true;
+    }
     legs.push({
       startIndex: start,
       endIndex: end,
       headingDeg: headings[start],
       distanceNm,
       durationS: timeAt(end),
-      sogKts: sogMean(start, end)
+      sogKts: sogMean(start, end),
+      motor
     });
   };
 

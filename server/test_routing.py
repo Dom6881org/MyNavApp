@@ -280,6 +280,65 @@ class TestComputeRoutePayload(unittest.TestCase):
         with self.assertRaises(RoutingError):
             compute_route_payload(self.payload(useBathy="oui"))
 
+    # --- B1 : relais moteur sous seuil de vitesse voile (issue MyNavApp#133). ---
+
+    def test_payload_engine_below_invalide(self):
+        for invalid in (0, -1, 11, "2", True):
+            with self.assertRaises(RoutingError) as context:
+                compute_route_payload(self.payload(engineBelowKts=invalid))
+            self.assertIn("engineBelowKts", str(context.exception))
+
+    def test_payload_pur_voile_par_defaut(self):
+        # Clé absente ou null = pur voile (back-compat) : aucun flag, pas de
+        # clé "motor" dans le GeoJSON.
+        with patch("server.grib.load_wind_field", return_value=None):
+            result = compute_route_payload(self.payload())
+        self.assertTrue(result["found"])
+        self.assertIsNone(result["motorFlags"])
+        self.assertIsNone(result["engineBelowKts"])
+        properties = result["geojson"]["features"][0].get("properties") or {}
+        self.assertNotIn("motor", properties)
+        with patch("server.grib.load_wind_field", return_value=None):
+            result_null = compute_route_payload(self.payload(engineBelowKts=None))
+        self.assertIsNone(result_null["motorFlags"])
+
+    def test_payload_calme_relais_moteur(self):
+        # Vent arrière 4 kt : polaire ~2.1 kn — seuil 2.5 → tronçons sous le
+        # seuil en moteur à 4.0 kn (ENGINE_SPEED_KTS), flags par point.
+        with patch("server.grib.load_wind_field", return_value=None):
+            result = compute_route_payload(self.payload(
+                wind={"directionFromDeg": 270, "speedKts": 4},
+                engineBelowKts=2.5,
+            ))
+        self.assertTrue(result["found"])
+        self.assertEqual(result["engineBelowKts"], 2.5)
+        flags = result["motorFlags"]
+        self.assertIsNotNone(flags)
+        self.assertEqual(len(flags), len(result["coords"]))
+        self.assertTrue(any(flags))
+        # Tout tronçon moteur file à 4.0 kn (flags[0] artificiel exclu).
+        for flag, sog in zip(flags[1:], result["sogKts"][1:]):
+            if flag:
+                self.assertAlmostEqual(sog, 4.0, places=6)
+        # GeoJSON : clé motor == flags quand le relais est actif.
+        self.assertEqual(
+            result["geojson"]["features"][0]["properties"]["motor"], flags
+        )
+
+    def test_payload_vent_navigable_aucun_moteur(self):
+        # 12 kt vent arrière (d'est, route vers l'est) : vitesse polaire
+        # > seuil partout → flags présents mais tous faux (pas de régression
+        # du cas nominal).
+        with patch("server.grib.load_wind_field", return_value=None):
+            result = compute_route_payload(self.payload(
+                wind={"directionFromDeg": 90, "speedKts": 12},
+                engineBelowKts=2.0,
+            ))
+        self.assertTrue(result["found"])
+        self.assertEqual(result["engineBelowKts"], 2.0)
+        self.assertIsNotNone(result["motorFlags"])
+        self.assertFalse(any(result["motorFlags"]))
+
 
 def _synthetic_bathy():
     """Grille GEBCO synthétique : haut-fond (-2 m) en travers de la route directe

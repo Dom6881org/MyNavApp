@@ -10,7 +10,8 @@ const PLAN: RoutingPlan = {
   useCurrentPosition: false,
   startPosition: { latitude: 42.62, longitude: 3.02 },
   finishPosition: { latitude: 42.62, longitude: 3.5 },
-  polarId: 'polaire-sugar'
+  polarId: 'polaire-sugar',
+  engineBelowKts: 2
 };
 
 const ROUTE: RoutingRouteResult = {
@@ -106,7 +107,8 @@ describe('useRoutingRoute', () => {
       body: JSON.stringify({
         start: PLAN.startPosition,
         finish: PLAN.finishPosition,
-        polarId: PLAN.polarId
+        polarId: PLAN.polarId,
+        engineBelowKts: PLAN.engineBelowKts
       })
     });
     // C2/#103 : le front n'envoie plus de vent (autorité vent serveur).
@@ -399,5 +401,23 @@ describe('useRoutingRoute', () => {
     expect(result.current.route).toBeNull();
     expect(result.current.error).toBeNull();
     expect(fetchMock.mock.calls.some(c => c[1]?.method === 'DELETE')).toBe(false);
+  });
+
+  // B1 (#133) : le seuil moteur transite tel quel — null = pur voile.
+  it('plan en pur voile : engineBelowKts null dans le POST', async () => {
+    const fetchMock = stubFetch((url, init) => {
+      if (url === '/api/routing/jobs' && init?.method === 'POST') {
+        return Promise.resolve(jsonResponse(202, { jobId: 'job-1' }));
+      }
+      return Promise.resolve(jsonResponse(200, jobSnapshot({ status: 'running' })));
+    });
+    const { result } = renderHook(() => useRoutingRoute());
+
+    await act(async () => {
+      await result.current.compute({ ...PLAN, engineBelowKts: null });
+    });
+
+    const postedBody = JSON.parse(String(fetchMock.mock.calls.find(c => c[1]?.method === 'POST')?.[1]?.body));
+    expect(postedBody.engineBelowKts).toBeNull();
   });
 });

@@ -176,6 +176,7 @@ def compute_route(
     tws_max: float | None = None,
     use_bathy: bool = True,
     min_depth_m: float | None = None,
+    engine_below_kts: float | None = None,
     phase_timings: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     """Calcule la route la plus rapide de start vers finish.
@@ -191,8 +192,14 @@ def compute_route(
     use_bathy : activer la contrainte de profondeur (GEBCO) si disponible ;
     min_depth_m : profondeur minimale acceptée (m), défaut ROUTING_MIN_DEPTH_M
     ou 10 m. Aucune bathymétrie configurée = contrainte désactivée.
+    engine_below_kts : relais moteur B1 (issue MyNavApp#133) — sous ce seuil
+    de vitesse voile (SOG polaire, noeuds), le tronçon passe en moteur à
+    ENGINE_SPEED_KTS (4.0 kt), cap inchangé ; None = pur voile
+    (back-compat, aucune clé "motor" dans le GeoJSON).
     Retourne un dict : found, coords, times_s, sog_kts, headings_deg,
-    eta_s, min_dist_nm, geojson, start_adjusted, finish_adjusted
+    eta_s, min_dist_nm, motor_flags (par point, même convention que
+    sog_kts, None en pur voile), geojson, start_adjusted,
+    finish_adjusted
     (ajustements vers l'eau : {latitude, longitude, offset_nm} ou None).
     Lève RoutingError avec un message clair en cas d'erreur.
     """
@@ -257,6 +264,7 @@ def compute_route(
                 "sog_kts": [0.0],
                 "headings_deg": [0.0],
                 "eta_s": 0.0,
+                "motor_flags": None,
                 "min_dist_nm": float(
                     haversine_nm([start_position[0]], [start_position[1]], finish_position[0], finish_position[1])[0]
                 ),
@@ -285,6 +293,7 @@ def compute_route(
         "tws_max": tws_max,
         "bathy": bathy,
         "min_depth_m": min_depth_m,
+        "engine_below_kts": engine_below_kts,
         "phase_timings": phase_timings,
     }
     if land_mask is not None:
@@ -305,6 +314,7 @@ def compute_route(
             "headings_deg": result.headings_deg,
             "eta_s": 0.0,
             "min_dist_nm": result.min_dist_nm,
+            "motor_flags": result.motor_flags,
             "bathy_active": bathy is not None,
             "geojson": None,
             "start_adjusted": start_adjusted,
@@ -327,6 +337,7 @@ def compute_route(
         "headings_deg": result.headings_deg,
         "eta_s": result.eta_s,
         "min_dist_nm": result.min_dist_nm,
+        "motor_flags": result.motor_flags,
         "bathy_active": bathy is not None,
         "geojson": to_geojson(result),
         "message": None,
@@ -348,9 +359,13 @@ def compute_route_payload(
     Attend : start/finish = {latitude, longitude}, polarId = id de polaire
     (voir list_polars), wind = {directionFromDeg, speedKts} (optionnel —
     autorité vent serveur C2/#102 : fourni par server/app.py à partir du NMEA
-    du serveur, jamais par le client ; sans GRIB ni wind, la requête échoue).
+    du serveur, jamais par le client ; sans GRIB ni wind, la requête échoue),
+    engineBelowKts = seuil de relais moteur B1 (issue MyNavApp#133) : nombre
+    en noeuds, 0 < x <= 10 ; absent ou null = pur voile (back-compat).
     Retourne un dict JSON-ready : found, coords, etaS, timesS, sogKts, dtS,
-    minDistNm, message, geojson, wind, polarId, startAdjusted, finishAdjusted
+    minDistNm, motorFlags (par point, None en pur voile), engineBelowKts
+    (echo du seuil effectif), message, geojson, wind, polarId, startAdjusted,
+    finishAdjusted
     (rapprochement à
     l'eau si le point demandé était classé "à terre" : {latitude, longitude,
     offsetNm} ou null).
@@ -433,9 +448,28 @@ def compute_route_payload(
         if min_depth_m <= 0:
             raise RoutingError("minDepthM invalide : valeur strictement positive attendue.")
 
+    # Relais moteur B1 (issue MyNavApp#133) : seuil de vitesse voile (SOG
+    # polaire) sous lequel le tronçon passe en moteur (4.0 kt, constante du
+    # moteur ENGINE_SPEED_KTS). Absent ou null = pur voile (back-compat :
+    # un client qui n'envoie pas la clé obtient le comportement antérieur).
+    engine_below_payload = payload.get("engineBelowKts")
+    if engine_below_payload is None:
+        engine_below_kts: float | None = None
+    elif isinstance(engine_below_payload, bool):
+        raise RoutingError("engineBelowKts invalide : nombre attendu (seuil de vitesse voile en noeuds).")
+    elif isinstance(engine_below_payload, (int, float)):
+        engine_below_kts = float(engine_below_payload)
+        if not 0.0 < engine_below_kts <= 10.0:
+            raise RoutingError(
+                "engineBelowKts invalide : seuil moteur attendu entre 0 (exclu) et 10 noeuds."
+            )
+    else:
+        raise RoutingError("engineBelowKts invalide : nombre attendu (seuil de vitesse voile en noeuds).")
+
     result = compute_route(
         start, finish, wind=wind_field, polar_path=polar["path"],
-        use_bathy=use_bathy, min_depth_m=min_depth_m, phase_timings=phase_timings,
+        use_bathy=use_bathy, min_depth_m=min_depth_m,
+        engine_below_kts=engine_below_kts, phase_timings=phase_timings,
     )
 
     start_position = _validate_position("de départ", start)
@@ -447,6 +481,10 @@ def compute_route_payload(
         # Issue #18 : SOG (noeuds) et temps cumules par troncon, pour l'affichage ETA/SOG.
         "timesS": result["times_s"],
         "sogKts": result["sog_kts"],
+        # B1 (#133) : flags moteur par point (même convention que sogKts),
+        # None en pur voile ; echo du seuil effectif du plan.
+        "motorFlags": result["motor_flags"],
+        "engineBelowKts": engine_below_kts,
         "dtS": result["dt_s"],
         "minDistNm": result["min_dist_nm"],
         "bathyActive": result["bathy_active"],

@@ -74,4 +74,50 @@ describe('useRoutingInput', () => {
     expect(result.current.errors.polar).toContain('polaire');
     expect(result.current.plan).toBeNull();
   });
+
+  // B1 (#133) : seuil de relais moteur « Motor below (kt) ».
+  it('défaut : seuil moteur 2 kt dans le plan', () => {
+    const { result } = renderHook(() => useRoutingInput(POSITION, POLAR_ID));
+
+    act(() => result.current.setFinishFromPosition({ latitude: 47.6, longitude: -4.6 }));
+
+    expect(result.current.plan?.engineBelowKts).toBe(2);
+    expect(result.current.errors.motor).toBeNull();
+  });
+
+  it('champ vidé : pur voile (engineBelowKts null), plan valide', () => {
+    const { result } = renderHook(() => useRoutingInput(POSITION, POLAR_ID));
+
+    act(() => {
+      result.current.setFinishFromPosition({ latitude: 47.6, longitude: -4.6 });
+      result.current.setMotorBelowText('');
+    });
+
+    expect(result.current.plan).not.toBeNull();
+    expect(result.current.plan?.engineBelowKts).toBeNull();
+    expect(result.current.errors.motor).toBeNull();
+  });
+
+  it('seuil moteur invalide (texte, hors 0<x≤10) : erreur et pas de plan', () => {
+    const { result } = renderHook(() => useRoutingInput(POSITION, POLAR_ID));
+
+    act(() => {
+      result.current.setFinishFromPosition({ latitude: 47.6, longitude: -4.6 });
+      result.current.setMotorBelowText('abc');
+    });
+    expect(result.current.errors.motor).toContain('Seuil moteur invalide');
+    expect(result.current.plan).toBeNull();
+
+    act(() => result.current.setMotorBelowText('11'));
+    expect(result.current.errors.motor).toContain('Seuil moteur invalide');
+    expect(result.current.plan).toBeNull();
+
+    act(() => result.current.setMotorBelowText('0'));
+    expect(result.current.errors.motor).toContain('Seuil moteur invalide');
+    expect(result.current.plan).toBeNull();
+
+    act(() => result.current.setMotorBelowText('2.5'));
+    expect(result.current.errors.motor).toBeNull();
+    expect(result.current.plan?.engineBelowKts).toBe(2.5);
+  });
 });

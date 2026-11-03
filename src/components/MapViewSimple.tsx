@@ -335,14 +335,46 @@ const MapViewSimple: React.FC<MapViewSimpleProps> = ({
       ? result.geojson.features[0]?.geometry.coordinates.map(([lon, lat]) => [lat, lon]) ?? []
       : result.coords;
     if (latlngs.length < 2) return;
-    L.polyline(latlngs, {
-      color: '#a78bfa',
-      weight: 3,
-      opacity: 0.95,
-      lineCap: 'round',
-      lineJoin: 'round',
-      dashArray: result.found ? undefined : '5 6'
-    }).addTo(mapInstance.routingLayer);
+    // B1 (#133) : tronçons moteur (relais sous le seuil de vitesse voile)
+    // dessinés en trait distinct — segments consécutifs de même mode regroupés
+    // (une polyline par run). Flags par point (convention #123) : tronçon i =
+    // motorFlags[i+1] ; par tronçon : motorFlags[i]. Sans flags : trace unique.
+    const motorFlags = result.motorFlags;
+    const segmentMotor = (i: number): boolean => {
+      if (!Array.isArray(motorFlags)) return false;
+      if (motorFlags.length === latlngs.length) return Boolean(motorFlags[i + 1]);
+      if (motorFlags.length === latlngs.length - 1) return Boolean(motorFlags[i]);
+      return false;
+    };
+    const hasMotor = result.found && Array.isArray(motorFlags)
+      && motorFlags.slice(1).some(flag => flag);
+    if (result.found && hasMotor) {
+      let runStart = 0;
+      for (let i = 0; i <= latlngs.length - 2; i += 1) {
+        const modeChange = i === latlngs.length - 2 || segmentMotor(i) !== segmentMotor(i + 1);
+        if (!modeChange) continue;
+        const run = latlngs.slice(runStart, i + 2);
+        const motor = segmentMotor(runStart);
+        L.polyline(run, {
+          color: motor ? '#f5a623' : '#a78bfa',
+          weight: 3,
+          opacity: 0.95,
+          lineCap: 'round',
+          lineJoin: 'round',
+          dashArray: motor ? '4 5' : undefined
+        }).addTo(mapInstance.routingLayer);
+        runStart = i + 1;
+      }
+    } else {
+      L.polyline(latlngs, {
+        color: '#a78bfa',
+        weight: 3,
+        opacity: 0.95,
+        lineCap: 'round',
+        lineJoin: 'round',
+        dashArray: result.found ? undefined : '5 6'
+      }).addTo(mapInstance.routingLayer);
+    }
     L.circleMarker(latlngs[0], {
       radius: 5,
       color: '#a78bfa',
