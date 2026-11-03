@@ -1,6 +1,8 @@
 import React from 'react';
+import { createPortal } from 'react-dom';
 
 import { computeRouteLegs } from '../utils/routeLegs';
+import { computePopoverPosition, PopoverAnchor } from '../utils/popoverPosition';
 
 /** Même convention d’affichage que RoutingPanel (arrivée locale, #18). */
 const formatClock = (epochS: number): string =>
@@ -24,29 +26,47 @@ interface RouteDetailsProps {
 }
 
 /**
- * Fiche route détaillée (issues #121 / #124) : repliée par défaut, un bouton
- * résume le nombre de jambes (tronçons à cap quasi constant) et de changements
- * de cap. Dépliée (#124) : la table s’ouvre dans un **bloc flottant à côté du
- * panneau** (à sa gauche, famille `map-tool-panel`, titre « ROUTE DETAILS »,
- * bouton ×), pas en dessous — le panneau de routage ne dépasse pas en hauteur.
- * Fermeture par ×, re-clip du bouton, ou disparition de la route ; un
- * recalcul (nouveau tracé) replie la fiche. Données 100 % dérivées du
- * résultat de routage côté client : aucun appel réseau, aucun changement
- * serveur/moteur.
+ * Fiche route détaillée (issues #121/#124/#127) : repliée par défaut, un
+ * bouton résume le nombre de jambes et de changements de cap. Dépliée : la
+ * table s’ouvre dans un bloc **rendu en portal vers document.body** — jamais
+ * dans le panneau de routage, dont l’`overflow-y: auto` clipperait tout
+ * enfant positionné sortant (#127) — en `position: fixed` ancré au bouton
+ * toggle (`getBoundingClientRect`, recalculé au resize et au scroll), à
+ * gauche du bouton ou en dessous si la place manque. Fermeture par ×,
+ * re-clip, disparition de la route ; un recalcul (nouveau tracé) replie la
+ * fiche. Données 100 % dérivées du résultat côté client.
  */
 const RouteDetails: React.FC<RouteDetailsProps> = ({ coords, etaS, timesS, sogKts, startEpochS }) => {
   const [expanded, setExpanded] = React.useState(false);
+  const [anchor, setAnchor] = React.useState<PopoverAnchor | null>(null);
+  const toggleRef = React.useRef<HTMLButtonElement | null>(null);
 
   const legs = React.useMemo(
     () => computeRouteLegs(coords, timesS, sogKts),
     [coords, timesS, sogKts]
   );
 
-  // #124 : nouveau tracé (recalcul) → fiche repliée par défaut, jamais une
-  // fiche périmée ouverte sur une route qui n’existe plus.
+  // Nouveau tracé (recalcul) → fiche repliée, jamais une fiche périmée.
   React.useEffect(() => {
     setExpanded(false);
   }, [coords]);
+
+  // Réancrage pendant l’ouverture : le bloc suit le bouton au resize et au
+  // scroll (capture : inclut le scroll interne du panneau de routage).
+  React.useEffect(() => {
+    if (!expanded) return undefined;
+    const measure = () => {
+      const rect = toggleRef.current?.getBoundingClientRect();
+      if (rect) setAnchor({ left: rect.left, top: rect.top, bottom: rect.bottom });
+    };
+    measure();
+    window.addEventListener('resize', measure);
+    window.addEventListener('scroll', measure, true);
+    return () => {
+      window.removeEventListener('resize', measure);
+      window.removeEventListener('scroll', measure, true);
+    };
+  }, [expanded]);
 
   if (legs.length === 0) return null;
 
@@ -55,56 +75,74 @@ const RouteDetails: React.FC<RouteDetailsProps> = ({ coords, etaS, timesS, sogKt
   const summary = `${legs.length} leg${legs.length > 1 ? 's' : ''} · ${changes} course change${changes === 1 ? '' : 's'}`;
   const totalNm = legs.reduce((total, leg) => total + leg.distanceNm, 0);
 
+  // #127 : le bloc est mesuré AVANT l’ouverture (pas de flash de bloc mal
+  // placé), rendu en portal hors du panneau, et simplement absent si l’ancre
+  // n’a pas pu être mesurée.
+  const openPanel = () => {
+    const rect = toggleRef.current?.getBoundingClientRect();
+    if (rect) setAnchor({ left: rect.left, top: rect.top, bottom: rect.bottom });
+    setExpanded(true);
+  };
+
+  const panel =
+    expanded && anchor ? (
+      <div
+        className="route-details-panel"
+        style={computePopoverPosition(anchor)}
+        data-testid="route-details-panel"
+      >
+        <div className="map-settings-heading">
+          <strong>ROUTE DETAILS</strong>
+          <button
+            type="button"
+            aria-label="Close route details"
+            title="Close route details"
+            onClick={() => setExpanded(false)}
+          >
+            ×
+          </button>
+        </div>
+        <div className="route-details-scroll">
+          <table className="route-details-table">
+            <thead>
+              <tr>
+                <th>Time</th>
+                <th>Hdg</th>
+                <th>SOG</th>
+                <th>Dist</th>
+              </tr>
+            </thead>
+            <tbody>
+              {legs.map((leg, index) => (
+                <tr key={`${leg.startIndex}-${leg.endIndex}-${index}`}>
+                  <td>{leg.durationS !== null ? formatClock(start + leg.durationS) : '—'}</td>
+                  <td>{formatHeading(leg.headingDeg)}</td>
+                  <td>{leg.sogKts !== null ? formatSog(leg.sogKts) : '—'}</td>
+                  <td>{formatDist(leg.distanceNm)}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+          <p className="route-details-arrival">
+            Arr. {formatClock(start + etaS)} · {formatDist(totalNm)}
+          </p>
+        </div>
+      </div>
+    ) : null;
+
   return (
     <div className="route-details">
       <button
+        ref={toggleRef}
         type="button"
         className="routing-details-toggle routing-mini-button"
         aria-expanded={expanded}
-        onClick={() => setExpanded(value => !value)}
+        aria-haspopup="dialog"
+        onClick={() => (expanded ? setExpanded(false) : openPanel())}
       >
         {expanded ? `Hide route details · ${summary}` : `Route details · ${summary}`}
       </button>
-      {expanded && (
-        <div className="route-details-panel">
-          <div className="map-settings-heading">
-            <strong>ROUTE DETAILS</strong>
-            <button
-              type="button"
-              aria-label="Close route details"
-              title="Close route details"
-              onClick={() => setExpanded(false)}
-            >
-              ×
-            </button>
-          </div>
-          <div className="route-details-scroll">
-            <table className="route-details-table">
-              <thead>
-                <tr>
-                  <th>Time</th>
-                  <th>Hdg</th>
-                  <th>SOG</th>
-                  <th>Dist</th>
-                </tr>
-              </thead>
-              <tbody>
-                {legs.map((leg, index) => (
-                  <tr key={`${leg.startIndex}-${leg.endIndex}-${index}`}>
-                    <td>{leg.durationS !== null ? formatClock(start + leg.durationS) : '—'}</td>
-                    <td>{formatHeading(leg.headingDeg)}</td>
-                    <td>{leg.sogKts !== null ? formatSog(leg.sogKts) : '—'}</td>
-                    <td>{formatDist(leg.distanceNm)}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-            <p className="route-details-arrival">
-              Arr. {formatClock(start + etaS)} · {formatDist(totalNm)}
-            </p>
-          </div>
-        </div>
-      )}
+      {panel !== null && createPortal(panel, document.body)}
     </div>
   );
 };

@@ -1,7 +1,8 @@
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import RouteDetails from './RouteDetails';
+import { ANCHOR_GAP_PX, PANEL_WIDTH_PX } from '../utils/popoverPosition';
 
 /** 5 points : 2 segments plein nord (cap 000°) puis 2 plein est (cap 090°). */
 const COORDS: [number, number][] = [
@@ -22,9 +23,31 @@ const START_EPOCH_S = 1730000000;
 const clockAt = (epochS: number): string =>
   new Date(epochS * 1000).toLocaleString(undefined, { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
 
+/**
+ * Mock du rect du bouton toggle (#127) : jsdom ne fait pas de layout, on
+ * fournit une géométrie explicite pour vérifier la position calculée du bloc.
+ */
+const mockToggleRect = (left: number, top: number, bottom: number): void => {
+  vi.spyOn(HTMLElement.prototype, 'getBoundingClientRect').mockReturnValue({
+    left,
+    top,
+    bottom,
+    right: left + 100,
+    width: 100,
+    height: bottom - top,
+    x: left,
+    y: top,
+    toJSON: () => ({})
+  } as DOMRect);
+};
+
+afterEach(() => {
+  vi.restoreAllMocks();
+});
+
 describe('RouteDetails', () => {
   it('résumé replié par défaut : jambes et changements de cap, pas de table ni de bloc', () => {
-    render(
+    const { container } = render(
       <RouteDetails
         coords={COORDS}
         etaS={ETA_S}
@@ -40,10 +63,51 @@ describe('RouteDetails', () => {
     expect(screen.getByRole('button', { name: 'Route details · 2 legs · 1 course change' }))
       .toHaveAttribute('aria-expanded', 'false');
     expect(screen.queryByRole('table')).not.toBeInTheDocument();
-    expect(screen.queryByText('ROUTE DETAILS')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('route-details-panel')).not.toBeInTheDocument();
+    expect(container.querySelector('.route-details-panel')).not.toBeInTheDocument();
   });
 
-  it('dépliage au clic : bloc à côté avec titre, une ligne par jambe + arrivée', async () => {
+  it('dépliage : bloc en PORTAL hors du panneau (jamais clippable par son overflow, #127), positionné à gauche du bouton', async () => {
+    mockToggleRect(800, 100, 130);
+    const { container } = render(
+      <RouteDetails
+        coords={COORDS}
+        etaS={ETA_S}
+        timesS={TIMES_S}
+        sogKts={SOG_KTS}
+        startEpochS={START_EPOCH_S}
+      />
+    );
+    const user = userEvent.setup();
+
+    await user.click(screen.getByRole('button', { name: /Route details/i }));
+
+    const panel = screen.getByTestId('route-details-panel');
+    // Cause racine #127 : le bloc vit en portal dans document.body, il n'est
+    // le descendant NI du conteneur rendu, NI de .route-details (le panneau de
+    // routage et son overflow-y: auto ne peuvent plus le clipper).
+    expect(document.body.contains(panel)).toBe(true);
+    expect(container.contains(panel)).toBe(false);
+    expect(panel.closest('.route-details')).toBeNull();
+    // Position fixed ancrée au bouton : à gauche (800 - largeur - écart).
+    expect(panel.style.left).toBe(`${800 - PANEL_WIDTH_PX - ANCHOR_GAP_PX}px`);
+    expect(panel.style.top).toBe('100px');
+    // Contenu du bloc.
+    expect(screen.getByText('ROUTE DETAILS')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Close route details' })).toBeInTheDocument();
+    expect(screen.getAllByRole('row')).toHaveLength(3); // entête + 2 jambes
+    expect(screen.getByText('000°')).toBeInTheDocument();
+    expect(screen.getByText('090°')).toBeInTheDocument();
+    expect(screen.getByText('5.1 kt')).toBeInTheDocument();
+    expect(screen.getByText('4.3 kt')).toBeInTheDocument();
+    expect(screen.getAllByText(clockAt(START_EPOCH_S + 3600))).toHaveLength(1);
+    expect(screen.getAllByText(clockAt(START_EPOCH_S + 7200))).toHaveLength(1);
+    expect(screen.getByText(/^Arr\. /)).toHaveTextContent(clockAt(START_EPOCH_S + ETA_S));
+    expect(screen.getByText(/^Arr\. /)).toHaveTextContent(/NM/);
+  });
+
+  it('pas de place à gauche : le bloc s’ouvre EN DESSOUS du bouton (repli géométrique #127)', async () => {
+    mockToggleRect(150, 100, 130);
     render(
       <RouteDetails
         coords={COORDS}
@@ -57,35 +121,13 @@ describe('RouteDetails', () => {
 
     await user.click(screen.getByRole('button', { name: /Route details/i }));
 
-    expect(screen.getByRole('button', { name: /Hide route details/i }))
-      .toHaveAttribute('aria-expanded', 'true');
-    // Bloc flottant #124 : titre et bouton × propres au bloc.
-    expect(screen.getByText('ROUTE DETAILS')).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Close route details' })).toBeInTheDocument();
-    // Entête + 2 jambes.
-    expect(screen.getAllByRole('row')).toHaveLength(3);
-    expect(screen.getByRole('columnheader', { name: 'Time' })).toBeInTheDocument();
-    expect(screen.getByRole('columnheader', { name: 'Hdg' })).toBeInTheDocument();
-    expect(screen.getByRole('columnheader', { name: 'SOG' })).toBeInTheDocument();
-    expect(screen.getByRole('columnheader', { name: 'Dist' })).toBeInTheDocument();
-    // Jambe 1 : plein nord, 30 min après le départ, SOG moyen (5,2+5,0)/2 = 5,1 kt.
-    expect(screen.getByText('000°')).toBeInTheDocument();
-    expect(screen.getAllByText(clockAt(START_EPOCH_S + 3600))).toHaveLength(1);
-    expect(screen.getByText('5.1 kt')).toBeInTheDocument();
-    // Jambe 2 : plein est, 1 h après le départ, SOG moyen (4,4+4,2)/2 = 4,3 kt.
-    expect(screen.getByText('090°')).toBeInTheDocument();
-    expect(screen.getByText('4.3 kt')).toBeInTheDocument();
-    // Heure de fin de jambe 2 == heure d’arrivée (timesS[last] == etaS).
-    // getByText ne matche que le texte complet d’un élément : l’heure de la
-    // jambe 2 est seule exacte (l’arrivée est un « Arr. … · … NM » plus long,
-    // vérifié ci-dessous par sous-chaîne).
-    expect(screen.getAllByText(clockAt(START_EPOCH_S + 7200))).toHaveLength(1);
-    // Ligne d’arrivée : heure locale + distance totale.
-    expect(screen.getByText(/^Arr\. /)).toHaveTextContent(clockAt(START_EPOCH_S + ETA_S));
-    expect(screen.getByText(/^Arr\. /)).toHaveTextContent(/NM/);
+    const panel = screen.getByTestId('route-details-panel');
+    expect(panel.style.left).toBe('150px');
+    expect(panel.style.top).toBe(`${130 + ANCHOR_GAP_PX}px`);
+    expect(screen.getByRole('table')).toBeInTheDocument();
   });
 
-  it('bloc à côté : fermeture par ×, re-clip du bouton, repli au recalcul (#124)', async () => {
+  it('fermeture par ×, re-clip du bouton, repli au recalcul (#124)', async () => {
     const { rerender } = render(
       <RouteDetails
         coords={COORDS}
@@ -98,18 +140,18 @@ describe('RouteDetails', () => {
     const user = userEvent.setup();
 
     await user.click(screen.getByRole('button', { name: /Route details/i }));
-    expect(screen.getByRole('table')).toBeInTheDocument();
+    expect(screen.getByTestId('route-details-panel')).toBeInTheDocument();
 
-    // × ferme le bloc, le toggle repasse replié.
+    // × ferme le bloc, le toggle repasse replié, le bloc est démonté du DOM.
     await user.click(screen.getByRole('button', { name: 'Close route details' }));
     expect(screen.getByRole('button', { name: 'Route details · 2 legs · 1 course change' }))
       .toHaveAttribute('aria-expanded', 'false');
+    expect(screen.queryByTestId('route-details-panel')).not.toBeInTheDocument();
     expect(screen.queryByRole('table')).not.toBeInTheDocument();
-    expect(screen.queryByText('ROUTE DETAILS')).not.toBeInTheDocument();
 
-    // Re-clip du bouton : déplie à nouveau.
+    // Re-clip du bouton : déplie à nouveau (en portal).
     await user.click(screen.getByRole('button', { name: /Route details/i }));
-    expect(screen.getByRole('table')).toBeInTheDocument();
+    expect(screen.getByTestId('route-details-panel')).toBeInTheDocument();
 
     // Recalcul (nouveau tracé) : la fiche se replie, jamais de fiche périmée.
     rerender(
@@ -124,7 +166,7 @@ describe('RouteDetails', () => {
     expect(
       screen.getByRole('button', { name: 'Route details · 1 leg · 0 course changes' })
     ).toHaveAttribute('aria-expanded', 'false');
-    expect(screen.queryByRole('table')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('route-details-panel')).not.toBeInTheDocument();
   });
 
   it('sans timesS/sogKts : jambes affichées avec caps et distances, cellules « — »', async () => {
@@ -139,7 +181,6 @@ describe('RouteDetails', () => {
     expect(screen.getByText('000°')).toBeInTheDocument();
     expect(screen.getByText('090°')).toBeInTheDocument();
     expect(screen.getAllByText('—')).toHaveLength(4); // 2 jambes × (temps + SOG)
-    // La ligne d’arrivée reste utile : heure locale + distance totale.
     expect(screen.getByText(/^Arr\. /)).toBeInTheDocument();
   });
 
@@ -150,5 +191,6 @@ describe('RouteDetails', () => {
 
     expect(container.querySelector('.route-details')).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: /Route details/i })).not.toBeInTheDocument();
+    expect(screen.queryByTestId('route-details-panel')).not.toBeInTheDocument();
   });
 });
