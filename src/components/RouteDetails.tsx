@@ -133,6 +133,10 @@ const RouteDetails: React.FC<RouteDetailsProps> = ({ coords, etaS, timesS, sogKt
             <thead>
               <tr>
                 <th>Time</th>
+                {/* #139 : colonne dédiée MOTOR (Time · MOTOR · Hdg · SOG · Dist)
+                    — uniquement si la route contient des jambes moteur ; entête
+                    vide (le badge est sa propre légende). */}
+                {hasMotor && <th aria-label="Motor" />}
                 <th>Hdg</th>
                 <th>SOG</th>
                 <th>Dist</th>
@@ -142,20 +146,15 @@ const RouteDetails: React.FC<RouteDetailsProps> = ({ coords, etaS, timesS, sogKt
               {legs.map((leg, index) => (
                 <tr key={`${leg.startIndex}-${leg.endIndex}-${index}`}>
                   <td>{leg.durationS !== null ? formatClock(start + leg.durationS) : '—'}</td>
-                  <td>
-                    {formatHeading(leg.headingDeg)}
-                    {/* B1 (#133) : jambe contenant au moins un tronçon moteur.
-                        #137 : l'espace est rendu (pas seulement une marge) —
-                        point de rupture réel cap↔badge : si la police rend plus
-                        large que prévu, le badge replie SOUS le cap au lieu de
-                        faire déborder la table (filet de sécurité). */}
-                    {leg.motor && (
-                      <>
-                        {' '}
-                        <span className="route-leg-motor">MOTOR</span>
-                      </>
-                    )}
-                  </td>
+                  {/* B1 (#133) : badge des jambes contenant au moins un tronçon
+                      moteur ; #139 : colonne dédiée, badge centré, cellule
+                      vide pour les jambes voile. */}
+                  {hasMotor && (
+                    <td className="route-leg-motor-cell">
+                      {leg.motor && <span className="route-leg-motor">MOTOR</span>}
+                    </td>
+                  )}
+                  <td>{formatHeading(leg.headingDeg)}</td>
                   <td>{leg.sogKts !== null ? formatSog(leg.sogKts) : '—'}</td>
                   <td>{formatDist(leg.distanceNm)}</td>
                 </tr>
