@@ -28,3 +28,7 @@ mynav-routing @ git+https://github.com/Dom6881org/mynav-routing.git@v0.5.0
 eccodes>=2.43
 xarray>=2024.1
 cfgrib>=0.9.14
+# Bathymetrie GEBCO (issue #145, extra 'bathy' du moteur) : lecture du format
+# netCDF du portail GEBCO. xarray est deja fourni ci-dessus (GRIB/cfgrib) ;
+# netCDF4 manquait -- sans lui, seul le format .npz etait lisible localement.
+netCDF4>=1.6

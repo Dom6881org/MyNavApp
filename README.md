@@ -62,6 +62,26 @@ python tools/download_tiles.py --bbox 47.0,-5.0,48.2,-2.5 --zooms 8-16
 OpenStreetMap serves the base layer and OpenSeaMap the seamarks; 404s on open water (no seamark tile) are skipped. Keep the area and zoom range reasonable: a 100 × 100 km coastal region at zooms 8–17 is typically a few GB. Wind forecast (Open-Meteo) and Internet AIS remain online-only features; local VHF AIS, NMEA instruments and the chart keep working offline.
 
 
+### Routing bathymetry (GEBCO)
+
+Routing avoids water shallower than `ROUTING_MIN_DEPTH_M` (default 10 m) by sampling GEBCO elevation data along candidate legs. The depth constraint is disabled when no bathymetry is configured. Two file formats are accepted:
+
+1. **GEBCO NetCDF** — the official product: variable `elevation`, dimensions `lat`/`lon`, elevation in meters (GEBCO convention: negative = depth below sea level, positive = land). Download the global 15 arc-second grid (~1 GB) or, preferably, a **regional subset** of your cruising area from the [GEBCO download portal](https://download.gebco.net/) — pick the **netCDF** format, not GeoTIFF/ESRI ASCII. Read via `xarray` + `netCDF4` (both in `requirements-routing.txt`).
+2. **`.npz`** — a lightweight custom extract with keys `elev` (2D array, meters), `lats`, `lons`. No extra dependency (numpy only); handy for an offline Raspberry Pi install.
+
+Configure in the ignored root `.env` file (see `.env.example`) and restart the backend — the grid is loaded once per process:
+
+```bash
+# Local file (priority) — e.g. a regional extract downloaded from the portal
+MYNAV_ROUTING_BATHY_FILE=./data/gebco_extract.nc
+# OR a URL, downloaded once then cached on disk and reused offline afterwards
+# MYNAV_ROUTING_BATHY_URL=https://example.org/gebco_extract.nc
+# Minimum depth kept by the routing, in meters (default 10)
+# ROUTING_MIN_DEPTH_M=10
+```
+
+Existing installs need a one-time `python -m pip install -r requirements-routing.txt` to get `netCDF4`. Outside the grid coverage no depth constraint is applied (deep ocean assumed); land is always handled by the land mask.
+
 ### Track recording and export
 
 Recording runs in the Python backend: start it with the record button in the map toolbar (or `POST /api/tracks/start`), stop it with the same button (`POST /api/tracks/stop`). A recording keeps running across frontend reloads and records the merged position whether it comes from NMEA or browser GPS; the development GPX replay is not recorded. Points are written to `tracks/` (configurable with `TRACKS_DIR`, ignored by Git) in one JSONL file per track, flushed continuously: a power loss on the Raspberry loses at most the last second. A point is stored when the vessel has moved at least 5 m since the previous one, and at most one point per second; when stationary, a heartbeat point is kept every 60 s. Each point keeps SOG, COG, heading, depth and GPS accuracy when available.
