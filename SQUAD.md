@@ -40,7 +40,7 @@ Cette squad de développement IA travaille sur **MyNavApp** (app principale) et 
 - Issue de rôle : #34. Branches : n/a (intervention en revue)
 
 ### 👑 Dom Latge (humain)
-- Unique approbateur : **aucune PR ne peut être fusionnée sans sa revue et son approbation**.
+- Approbateur final de toutes les PR ; **délègue le merge des PRs « front pur »** (décision du 03/11/2026, détails dans Règles).
 - Priorise le backlog (issues), tranche les arbitrages techniques et fonctionnels.
 
 ## Responsable de ticket et appel de spécialistes
@@ -55,14 +55,14 @@ Cette squad de développement IA travaille sur **MyNavApp** (app principale) et 
 2. L'agent responsable crée une branche depuis `main` et committe régulièrement.
 3. L'agent ouvre une **PR** avec le template (référence l'issue via "Closes #N").
 4. L'**Agent Validation** passe en revue et commente.
-5. **Dom** révise puis approuve et fusionne (squash par défaut).
+5. **Dom** révise puis approuve et fusionne (squash par défaut) — **exception : les PRs « front pur » peuvent être fusionnées par l'orchestrateur dès que la CI est verte et le rapport de Validation posté** (décision du 03/11/2026).
 6. L'issue se ferme automatiquement à la fusion.
 
 ## Règles
 
 - Une PR = une issue, périmètre minimal.
 - Pas de merge direct sur `main` (branche protégée).
-- Les agents ne fusionnent jamais seuls ; Dom a le dernier mot.
+- **Merge délégué « front pur » (03/11/2026, décision de Dom)** : l'orchestrateur peut fusionner (squash) une PR dont le périmètre est **front uniquement** — fichiers sous `src/` + la doc associée (`archi.md`) — dès que la **CI est verte** (frontend+server success, `mergeable_state: clean`) et le **rapport de l'Agent Validation posté**. Tout le reste (serveur, `shared/`, releases, pins moteur, dépôt mynav-routing, docs structurelles, SQUAD.md) reste fusionné par Dom seul. Si Dom a commenté ou demandé des changements sur la PR, son feu vert redevient requis. Dom peut révoquer la délégation à tout moment.
 - mynav-routing : toute évolution du moteur passe par une PR sur ce dépôt, puis intégration côté MyNavApp (mise à jour de la dépendance).
 
 ## Économie de crédits Copilot — mode API-first (02/11/2026, décision de Dom)
