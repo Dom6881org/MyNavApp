@@ -90,7 +90,8 @@ export function tickMarks(
   minorEvery: number
 ): { angle: number; major: boolean }[] {
   const marks: { angle: number; major: boolean }[] = [];
-  const span = normalizeDeg(toDeg - fromDeg);
+  let span = normalizeDeg(toDeg - fromDeg);
+  if (span === 0) span = 360; // tour complet : 350->350 ou 0->360 balaye 360, pas 0
   for (let a = 0; a < span; a += minorEvery) {
     const angle = normalizeDeg(fromDeg + a);
     marks.push({ angle, major: angle % majorEvery === 0 });
