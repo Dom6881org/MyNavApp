@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import type { ReactNode } from 'react';
 import type { InstrumentMode } from '../../utils/instrumentPrimitives';
+import { readInstrumentMode, writeInstrumentMode } from '../../utils/instrumentMode';
 
 /** Carte d'instrument générique (refonte instruments, Phase 0 — #156).
  *
@@ -23,7 +24,19 @@ const InstrumentCard: React.FC<InstrumentCardProps> = ({
   defaultMode = 'dial',
   info = null
 }) => {
-  const [mode, setMode] = useState<InstrumentMode>(defaultMode);
+  const [mode, setMode] = useState<InstrumentMode>(() =>
+    // Persistance par instrument (Phase 2 #160) : la préférence 123/◉ de
+    // chaque carte survit aux rechargements ; defaultMode = repli.
+    readInstrumentMode(title, defaultMode)
+  );
+
+  const toggleMode = () => {
+    setMode((m) => {
+      const next: InstrumentMode = m === 'dial' ? 'numeric' : 'dial';
+      writeInstrumentMode(title, next);
+      return next;
+    });
+  };
 
   return (
     <div className="instrument-card" data-testid={`instrument-${title}`}>
@@ -35,7 +48,7 @@ const InstrumentCard: React.FC<InstrumentCardProps> = ({
           className="instrument-mode-toggle"
           aria-label={`${title} display mode`}
           data-mode={mode}
-          onClick={() => setMode((m) => (m === 'dial' ? 'numeric' : 'dial'))}
+          onClick={toggleMode}
         >
           {mode === 'dial' ? '123' : '◉'}
         </button>

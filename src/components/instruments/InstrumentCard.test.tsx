@@ -1,6 +1,11 @@
 import { fireEvent, render, screen } from '@testing-library/react';
-import { describe, expect, it } from 'vitest';
+import { beforeEach, describe, expect, it } from 'vitest';
 import InstrumentCard from './InstrumentCard';
+
+// Persistance par instrument (#160) : isolement des tests.
+beforeEach(() => {
+  window.localStorage.clear();
+});
 
 describe('InstrumentCard', () => {
   it('rend le titre et le contenu enfants', () => {
@@ -52,5 +57,37 @@ describe('InstrumentCard', () => {
       </InstrumentCard>
     );
     expect(screen.getByText('GRIB')).toBeTruthy();
+  });
+});
+
+describe('InstrumentCard — persistance du mode (Phase 2 #160)', () => {
+  it('mode persiste par titre entre deux rendus', () => {
+    const { unmount } = render(
+      <InstrumentCard title="WIND">
+        <p>12 kt</p>
+      </InstrumentCard>
+    );
+    fireEvent.click(screen.getByLabelText('WIND display mode'));
+    expect(screen.getByLabelText('WIND display mode').getAttribute('data-mode')).toBe('numeric');
+    unmount();
+    // nouveau rendu : la préférence survit
+    render(
+      <InstrumentCard title="WIND">
+        <p>12 kt</p>
+      </InstrumentCard>
+    );
+    expect(screen.getByLabelText('WIND display mode').getAttribute('data-mode')).toBe('numeric');
+  });
+
+  it('titres distincts, préférences indépendantes', () => {
+    render(
+      <>
+        <InstrumentCard title="WIND"><p>12 kt</p></InstrumentCard>
+        <InstrumentCard title="SOG"><p>4.8 kn</p></InstrumentCard>
+      </>
+    );
+    fireEvent.click(screen.getByLabelText('WIND display mode'));
+    expect(screen.getByLabelText('WIND display mode').getAttribute('data-mode')).toBe('numeric');
+    expect(screen.getByLabelText('SOG display mode').getAttribute('data-mode')).toBe('dial');
   });
 });

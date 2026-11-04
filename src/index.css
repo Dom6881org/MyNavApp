@@ -827,3 +827,105 @@ html, body {
   fill: var(--warning-color);
   font-size: 11px;
 }
+
+/* ===== Refonte instruments — Phase 2 : COASTAL / OVERVIEW + persistance (#160) ===== */
+
+.instrument-modes-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.instrument-modes-switch {
+  display: flex;
+  gap: 0.3rem;
+}
+
+.wind-dial {
+  max-width: 100%;
+}
+
+.wind-dial-tws {
+  font-size: 22px;
+}
+
+.wind-arrow {
+  fill: var(--accent-secondary);
+}
+
+.coastal-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.coastal-tiles {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.4rem;
+}
+
+.coastal-tile {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.15rem;
+  background: var(--bg-tertiary);
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  padding: 0.5rem 0.3rem;
+}
+
+.coastal-tile span {
+  font-size: 0.6rem;
+  letter-spacing: 0.08em;
+  color: var(--text-secondary);
+}
+
+.coastal-tile strong {
+  font-size: 1.3rem;
+  font-variant-numeric: tabular-nums;
+  color: var(--text-primary);
+}
+
+.coastal-tile small {
+  font-size: 0.6rem;
+  color: var(--text-secondary);
+}
+
+.coastal-tile.alarm {
+  border-color: var(--danger-color);
+}
+
+.coastal-tile.alarm strong {
+  color: var(--danger-color);
+}
+
+.overview-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  padding: 0.6rem;
+}
+
+.overview-row {
+  display: grid;
+  grid-template-columns: 4.5rem 1fr;
+  align-items: baseline;
+  gap: 0.4rem;
+}
+
+.overview-row span {
+  font-size: 0.6rem;
+  letter-spacing: 0.08em;
+  color: var(--text-secondary);
+}
+
+.overview-row strong {
+  font-size: 0.85rem;
+  font-variant-numeric: tabular-nums;
+  color: var(--text-primary);
+}
