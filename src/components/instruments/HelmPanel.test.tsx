@@ -55,9 +55,13 @@ describe('HelmPanel', () => {
     expect(screen.getByTestId('helm-vmg').textContent).toBe('VMG --');
   });
 
-  it('STW jumele SOG : double tiret tant que VHW est absent', () => {
+  it('STW jume SOG partout : double tiret tant que VHW est absent (#166)', () => {
     render(<HelmPanel data={data()} />);
-    expect(screen.getByText('loch (VHW)')).toBeTruthy();
+    // compact SOG : STW jumele dans la meme rangee
+    expect(screen.getByTestId('helm-compact-sog').textContent).toContain('STW --');
+    // central VITESSE : STW jumele aussi
+    fireEvent.click(screen.getByRole('tab', { name: 'VITESSE' }));
+    expect(screen.getByText(/STW --/)).toBeTruthy();
   });
 
   it('bascule cadran/numerique de la carte centrale (InstrumentCard #157)', () => {

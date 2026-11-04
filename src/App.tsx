@@ -1,6 +1,7 @@
 import React from 'react';
 import { useAISSettings, useNavigationData, useDashboardLayout, useTrackRecorder, useRoutingInput, useRoutingPolar, useRoutingRoute, useGrib } from './hooks';
 import { InstrumentPanel, MotionPanel, InstrumentModesPanel } from './components';
+import BottomInstrumentsPanel from './components/instruments/BottomInstrumentsPanel';
 import { getUiMode } from './utils/instrumentMode';
 import { Position } from './types';
 import MapView from './components/MapView';
@@ -204,7 +205,7 @@ const App: React.FC = () => {
           ) && (
             <aside className="instruments-sidebar instruments-sidebar-bottom">
               <div className="instruments-container instrument-grid instrument-grid-bottom">
-                {renderInstrumentCards(['wind', 'depth'], 'bottom')}
+                <BottomInstrumentsPanel data={navigationData} />
               </div>
             </aside>
           )}

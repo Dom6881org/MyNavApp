@@ -23,6 +23,9 @@ const HelmPanel: React.FC<HelmPanelProps> = ({ data }) => {
   const sog = data.speed?.sog ?? null;
   const tws = data.trueWind?.speedKnots ?? null;
   const twa = data.trueWind?.angleDegrees ?? null;
+  // Jumelage design revue 2 : SOG+STW ensemble partout — STW reste `--`
+  // tant que la phrase VHW (loch) n'est pas reçue (chantier serveur séparé).
+  const stw = data.speed?.stw ?? null;
   const vmg = useMemo(() => vmgToWind(sog, twa), [sog, twa]);
 
   const centralTitle = central === 'compass' ? 'COMPASS' : central === 'speed' ? 'SOG' : 'WIND';
@@ -33,7 +36,9 @@ const HelmPanel: React.FC<HelmPanelProps> = ({ data }) => {
     ) : central === 'speed' ? (
       <div className="helm-central-value">
         <span className="helm-big-value">{sog === null ? '--' : sog.toFixed(1)}</span>
-        <span className="helm-unit">kn SOG</span>
+        <span className="helm-unit">
+          kn SOG · STW {stw === null ? '--' : stw.toFixed(1)}
+        </span>
       </div>
     ) : (
       <div className="helm-central-value">
@@ -85,7 +90,7 @@ const HelmPanel: React.FC<HelmPanelProps> = ({ data }) => {
           <div className="helm-compact-row" data-testid="helm-compact-sog">
             <span>SOG</span>
             <strong>{sog === null ? '--' : sog.toFixed(1)}</strong>
-            <small>kn</small>
+            <small>{stw === null ? 'kn · STW --' : `kn · STW ${stw.toFixed(1)}`}</small>
           </div>
         )}
         {central !== 'wind' && (
@@ -95,13 +100,6 @@ const HelmPanel: React.FC<HelmPanelProps> = ({ data }) => {
             <small>{twa === null ? 'no wind' : `kt · TWA ${Math.round(twa)}°`}</small>
           </div>
         )}
-        {/* STW : jumelé au SOG du design, mais la phrase VHW (loch) n'existe
-            pas encore — chantier serveur séparé (pré-requis #158). */}
-        <div className="helm-compact-row">
-          <span>STW</span>
-          <strong>--</strong>
-          <small>loch (VHW)</small>
-        </div>
       </div>
     </div>
   );
