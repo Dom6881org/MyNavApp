@@ -2,14 +2,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import type { NavigationData } from '../../types';
 import { setUiMode } from '../../utils/instrumentMode';
 import type { UiMode } from '../../utils/instrumentMode';
-import type { RoutingInput } from '../../hooks/useRoutingInput';
-import type { RoutingRouteApi } from '../../hooks/useRoutingRoute';
-import type { GribApi } from '../../hooks/useGrib';
 import { decideAutoMode, readAutoSwitch, writeAutoSwitch } from '../../utils/autoMode';
-import CoastalPanel from './CoastalPanel';
-import HelmPanel from './HelmPanel';
-import OverviewPanel from './OverviewPanel';
-import PrepRoutingPanel from './PrepRoutingPanel';
 
 /** Commutateur des modes d'instruments (refonte instruments, Phase 2 — #160,
  * Phase 3 — #162) : HELM / COASTAL / OVERVIEW / PREP ROUTING en onglets,
@@ -21,41 +14,28 @@ import PrepRoutingPanel from './PrepRoutingPanel';
  * profondeur, opt-in « AUTO » persisté (mynav:ui-auto, désactivé par
  * défaut), pas de retour arrière automatique.
  *
- * Layout #170 : `onModeChange` remonte le mode actif à App (qui masque
- * la carte en HELM/COASTAL) ; `hideActivePanel` laisse App rendre le
- * panneau du mode ailleurs (OVERVIEW : tuiles au-dessus de la carte). */
+ * Mise en page v3 (#172) : BARRE DE MODES pleine largeur en haut de
+ * l'écran — plus de corps ici : App rend le panneau du mode (HELM /
+ * COASTAL plein écran, OVERVIEW/ROUTING = tuiles + carte, le routing
+ * complet dans le cartouche). `onModeChange` remonte le mode actif. */
 
 interface InstrumentModesPanelProps {
   data: NavigationData;
   initialMode: UiMode;
-  routing?: RoutingInput;
-  routingPickTarget?: 'start' | 'finish' | null;
-  onRequestRoutingPick?: (target: 'start' | 'finish') => void;
-  routeCalc?: RoutingRouteApi;
-  onComputeRoute?: () => void;
-  gribCalc?: GribApi;
   onModeChange?: (mode: UiMode) => void;
-  hideActivePanel?: boolean;
 }
 
 const MODES: { id: UiMode; label: string }[] = [
   { id: 'helm', label: 'HELM' },
   { id: 'coastal', label: 'COASTAL' },
   { id: 'overview', label: 'OVERVIEW' },
-  { id: 'prep', label: 'PREP' }
+  { id: 'prep', label: 'ROUTING' }
 ];
 
 const InstrumentModesPanel: React.FC<InstrumentModesPanelProps> = ({
   data,
   initialMode,
-  routing,
-  routingPickTarget = null,
-  onRequestRoutingPick,
-  routeCalc,
-  onComputeRoute,
-  gribCalc,
-  onModeChange,
-  hideActivePanel = false
+  onModeChange
 }) => {
   const [mode, setMode] = useState<UiMode>(initialMode);
   const [autoSwitch, setAutoSwitch] = useState<boolean>(() => readAutoSwitch());
@@ -125,23 +105,8 @@ const InstrumentModesPanel: React.FC<InstrumentModesPanelProps> = ({
           {autoNotice}
         </p>
       )}
-      {!hideActivePanel && mode === 'helm' && <HelmPanel data={data} />}
-      {!hideActivePanel && mode === 'coastal' && <CoastalPanel data={data} />}
-      {!hideActivePanel && mode === 'overview' && <OverviewPanel data={data} />}
-      {!hideActivePanel && mode === 'prep' && (routing && onRequestRoutingPick ? (
-        <PrepRoutingPanel
-          routing={routing}
-          pickTarget={routingPickTarget}
-          onRequestPick={onRequestRoutingPick}
-          routeCalc={routeCalc}
-          onComputeRoute={onComputeRoute}
-          gribCalc={gribCalc}
-        />
-      ) : (
-        <p className="prep-routing-empty" data-testid="prep-unavailable">
-          Routing unavailable in this mode.
-        </p>
-      ))}
+      {/* #172 : plus de corps ici — App rend le panneau du mode actif
+          (HELM/COASTAL plein écran, OVERVIEW/ROUTING tuiles + carte). */}
     </div>
   );
 };

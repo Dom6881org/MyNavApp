@@ -60,6 +60,9 @@ interface MapViewSimpleProps {
   backendStatus?: { isConnected: boolean; error?: string | null };
   trackRecorder?: TrackRecorderControls;
   size?: { width: number | string; height: number | string };
+  /** #172 : masque l'outil routing de la carte (bouton + panneau) quand
+   *  tout le routing vit dans le cartouche (vues OVERVIEW/ROUTING). */
+  hideRoutingTool?: boolean;
 }
 
 type TrackRecorderControls = {
@@ -101,6 +104,7 @@ type GPSStatus = {
  */
 const MapViewSimple: React.FC<MapViewSimpleProps> = ({
   data,
+  hideRoutingTool = false,
   onWindGridRequest,
   onRoutingMapPick,
   routingPickTarget = null,
@@ -309,7 +313,7 @@ const MapViewSimple: React.FC<MapViewSimpleProps> = ({
       const toNumber = (value: number | (() => number)): number =>
         typeof value === 'function' ? value() : value;
       onRoutingMapPick({ latitude: toNumber(event.latlng.lat), longitude: toNumber(event.latlng.lng) });
-      setActiveMapTool('routing');
+      if (!hideRoutingTool) setActiveMapTool('routing');
     };
     mapInstance.map.on('click', handleRoutingPick);
     const container = mapInstance.map.getContainer() as HTMLElement;
@@ -318,7 +322,7 @@ const MapViewSimple: React.FC<MapViewSimpleProps> = ({
       mapInstance.map.off('click', handleRoutingPick);
       container.style.cursor = '';
     };
-  }, [mapInstance, routingPickTarget, onRoutingMapPick]);
+  }, [mapInstance, routingPickTarget, onRoutingMapPick, hideRoutingTool]);
 
   // Route calculée (issue #17) : LineString GeoJSON (ou meilleure progression
   // si found=false) + marqueurs départ/arrivée, sur une couche dédiée.
@@ -998,7 +1002,7 @@ const MapViewSimple: React.FC<MapViewSimpleProps> = ({
                 </section>
               )}
             </div>
-            {routing && (
+            {routing && !hideRoutingTool && (
               <div className="map-tool-item">
                 <button
                   className={`map-tool-button ${activeMapTool === 'routing' ? 'layer-visible' : ''}`}
@@ -1106,7 +1110,7 @@ const MapViewSimple: React.FC<MapViewSimpleProps> = ({
             )}
           </div>
         </div>
-        {activeMapTool === 'routing' && routing && (
+        {activeMapTool === 'routing' && routing && !hideRoutingTool && (
           <RoutingPanel
             routing={routing}
             pickTarget={routingPickTarget}

@@ -1,8 +1,10 @@
 import React from 'react';
 import { useAISSettings, useNavigationData, useDashboardLayout, useTrackRecorder, useRoutingInput, useRoutingPolar, useRoutingRoute, useGrib } from './hooks';
-import { InstrumentPanel, MotionPanel, InstrumentModesPanel } from './components';
+import { InstrumentPanel, MotionPanel, InstrumentModesPanel, RoutingPanel } from './components';
 import BottomInstrumentsPanel from './components/instruments/BottomInstrumentsPanel';
 import OverviewPanel from './components/instruments/OverviewPanel';
+import HelmPanel from './components/instruments/HelmPanel';
+import CoastalPanel from './components/instruments/CoastalPanel';
 import { getUiMode } from './utils/instrumentMode';
 import type { UiMode } from './utils/instrumentMode';
 import { Position } from './types';
@@ -114,12 +116,15 @@ const App: React.FC = () => {
   // rendu legacy inchangé.
   const uiMode = getUiMode();
 
-  // #170 : mode actif remonté par InstrumentModesPanel — la carte n'apparaît
-  // que sur OVERVIEW (tuiles au-dessus) et PREP ; HELM/COASTAL = écrans
-  // d'instruments purs, sans carte.
+  // #172 : mode actif remonté par la barre de modes — sélecteur en haut
+  // pleine largeur ; HELM/COASTAL = scène d'instruments plein écran ;
+  // OVERVIEW/ROUTING = tuiles au-dessus de la carte (+ cartouche routing).
   const [activeMode, setActiveMode] = React.useState<UiMode | null>(uiMode);
   const showMap = activeMode === null || activeMode === 'overview' || activeMode === 'prep';
-  const layoutClass = uiMode && !showMap ? ' main-layout-no-map' : '';
+  const showStrip = activeMode === 'overview' || activeMode === 'prep';
+  // Menu routing de la carte masqué en OVERVIEW/ROUTING : tout le routing
+  // vit dans le cartouche (#172). En legacy il reste sur la carte.
+  const hideRoutingTool = activeMode === 'overview' || activeMode === 'prep';
 
   const renderInstrumentCards = (types: string[], row: 'top' | 'bottom') => layout.instruments    .filter(instrument => types.includes(instrument.type) && instrument.visible)
     .map(instrument => (
@@ -173,6 +178,7 @@ const App: React.FC = () => {
       onRoutingCompute={handleComputeRoute}
       gribApi={grib}
       routingPolar={routingPolar}
+      hideRoutingTool={hideRoutingTool}
     />
   );
   const profiledMapView = isMapProfilingEnabled()
@@ -183,52 +189,83 @@ const App: React.FC = () => {
     <div className="app">
       {/* Main content - primary instruments, chart, then secondary instruments */}
       <main className="app-main">
-        <div className={`main-layout main-layout-instruments-top${layoutClass}`}>
-          <aside className="instruments-sidebar">
-            {uiMode ? (
-              <InstrumentModesPanel
-                data={navigationData}
-                initialMode={uiMode}
-                routing={routing}
-                routingPickTarget={routingPickTarget}
-                onRequestRoutingPick={handleRoutingPickRequest}
-                routeCalc={routingRoute}
-                onComputeRoute={handleComputeRoute}
-                gribCalc={grib}
-                onModeChange={setActiveMode}
-                hideActivePanel={activeMode === 'overview'}
-              />
-            ) : (
+        {/* Legacy (?ui=legacy) : rangées d'instruments + carte, inchangé */}
+        {uiMode === null && (
+          <div className="main-layout main-layout-instruments-top">
+            <aside className="instruments-sidebar">
               <div className="instruments-container instrument-grid instrument-grid-top">
                 {renderInstrumentCards(['speed', 'compass'], 'top')}
               </div>
-            )}
-            {/* Capteurs tablette (#152) : gîte / tangage / roulis, front pur */}
-            <MotionPanel />
-          </aside>
-          
-          {showMap && (
+              {/* Capteurs tablette (#152) : gîte / tangage / roulis, front pur */}
+              <MotionPanel />
+            </aside>
             <div className="map-container">
-              {/* #170 : OVERVIEW — instruments en tuiles AU-DESSUS de la carte */}
-              {activeMode === 'overview' && (
-                <div className="overview-strip">
-                  <OverviewPanel data={navigationData} />
-                </div>
-              )}
               {profiledMapView}
             </div>
-          )}
-
-          {layout.instruments.some(instrument =>
-            (instrument.type === 'depth' || instrument.type === 'wind') && instrument.visible
-          ) && (
-            <aside className="instruments-sidebar instruments-sidebar-bottom">
-              <div className="instruments-container instrument-grid instrument-grid-bottom">
-                <BottomInstrumentsPanel data={navigationData} />
+            {layout.instruments.some(instrument =>
+              (instrument.type === 'depth' || instrument.type === 'wind') && instrument.visible
+            ) && (
+              <aside className="instruments-sidebar instruments-sidebar-bottom">
+                <div className="instruments-container instrument-grid instrument-grid-bottom">
+                  <BottomInstrumentsPanel data={navigationData} />
+                </div>
+              </aside>
+            )}
+          </div>
+        )}
+        {uiMode !== null && (
+          <div className="ui-shell">
+            {/* #172 : choix des vues en haut, sur toute la largeur de l'écran */}
+            <div className="ui-mode-topbar">
+              <InstrumentModesPanel
+                data={navigationData}
+                initialMode={uiMode}
+                onModeChange={setActiveMode}
+              />
+            </div>
+            {/* HELM / COASTAL : les instruments remplissent l'écran —
+                l'emplacement de la carte ne reste jamais vide (#172) */}
+            {(activeMode === 'helm' || activeMode === 'coastal') && (
+              <div className="ui-stage-panels">
+                {activeMode === 'helm' && <HelmPanel data={navigationData} />}
+                {activeMode === 'coastal' && <CoastalPanel data={navigationData} />}
+                <MotionPanel />
+                <div className="ui-stage-bottom">
+                  <BottomInstrumentsPanel data={navigationData} />
+                </div>
               </div>
-            </aside>
-          )}
-        </div>
+            )}
+            {/* OVERVIEW / ROUTING : indicateurs en tuiles au-dessus de la carte */}
+            {(showMap && (activeMode === 'overview' || activeMode === 'prep')) && (
+              <div className="ui-stage-map">
+                {showStrip && (
+                  <div className="overview-strip">
+                    <OverviewPanel data={navigationData} />
+                  </div>
+                )}
+                <div className="map-container">
+                  {profiledMapView}
+                </div>
+                {/* ROUTING : tout le routing dans le cartouche (#172) */}
+                {activeMode === 'prep' && (
+                  <aside className="routing-cartouche">
+                    <RoutingPanel
+                      routing={routing}
+                      polarName={routingPolar?.polarName}
+                      pickTarget={routingPickTarget}
+                      onRequestPick={handleRoutingPickRequest}
+                      onClose={() => setActiveMode('prep')}
+                      routeCalc={routingRoute}
+                      onComputeRoute={handleComputeRoute}
+                      gribCalc={grib}
+                    />
+                    <MotionPanel />
+                  </aside>
+                )}
+              </div>
+            )}
+          </div>
+        )}
       </main>
     </div>
   );
