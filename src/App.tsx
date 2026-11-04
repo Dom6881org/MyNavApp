@@ -1,6 +1,6 @@
 import React from 'react';
 import { useAISSettings, useNavigationData, useDashboardLayout, useTrackRecorder, useRoutingInput, useRoutingPolar, useRoutingRoute, useGrib } from './hooks';
-import { InstrumentPanel } from './components';
+import { InstrumentPanel, MotionPanel } from './components';
 import { Position } from './types';
 import MapView from './components/MapView';
 import { isMapProfilingEnabled, reportMapPerformance } from './utils/mapPerformance';
@@ -173,6 +173,8 @@ const App: React.FC = () => {
             <div className="instruments-container instrument-grid instrument-grid-top">
               {renderInstrumentCards(['speed', 'compass'], 'top')}
             </div>
+            {/* Capteurs tablette (#152) : gîte / tangage / roulis, front pur */}
+            <MotionPanel />
           </aside>
           
           <div className="map-container">

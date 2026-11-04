@@ -55,6 +55,7 @@ flowchart LR
 | Frontend | `src/hooks/useWindForecast.ts` | Vent du point + grille de barbes (GRIB prioritaire, repli Open-Météo) |
 | Frontend | `src/hooks/useRouting*.ts`, `useGrib`, `useTrackRecorder`, `useAISSettings`, `useDashboardLayout` | Routage, GRIB, tracks, AIS, thème/unités/disposition |
 | Frontend | `src/components/MapViewSimple.tsx` | Carte Leaflet : bateau, barbes de vent, AIS, routage, tracks |
+| Frontend | `src/hooks/useMotionSensors.ts` + `src/utils/motion.ts` + `src/components/MotionPanel.tsx` | Capteurs de mouvement de la tablette : gîte, tangage, période de roulis (DeviceMotion, Firefox Android — #152) |
 | Frontend | `src/components/` (Speedometer, WindIndicator, Compass, DepthSounder…) | Instruments |
 | Contrat | `shared/navigation.ts` | Types TypeScript partagés, réexportés par `src/types` — contrat unique front/back |
 | Backend | `server/app.py` | Serveur HTTP multi-threads, état, SSE, tuiles, AIS, tracks |
@@ -242,3 +243,14 @@ Scripts : `npm run dev` (backend + Vite via concurrently), `dev:lan`/`start:lan`
 - Perf d'affichage carte et fiabilité des barbes à fort zoom : #55, suivi #60 (investigation), #61 (transitions/mémoïsation), #62 (clé de cache + rate-limit), #63 (couche canvas).
 - Performance du moteur de routage : mynav-routing #14 et #16-#20.
 - Pas d'authentification backend (usage monoposte/LAN de confiance).
+- Capteurs tablette (#152) : jsdom ne simule pas les capteurs — la validation réelle (signe de la gîte notamment) se fait sur la tablette au test terrain.
+
+## 15. Capteurs de mouvement de la tablette
+
+Le front exploite les capteurs MEMS de la tablette de cockpit (Samsung Galaxy Tab S8+, Firefox Android) **directement dans le navigateur** — en complément du NMEA, sans instruments de pont (issue #152, phase 1).
+
+- **Source** : `DeviceMotionEvent.accelerationIncludingGravity`. Firefox Android n'implémente pas la Generic Sensor API (pas de `Magnetometer`/`AmbientLightSensor`) et n'expose pas de cap magnétique web fiable — le cap restera NMEA (companion Android à venir, phrases `HDT`).
+- **Calculs** (`src/utils/motion.ts`, purs) : gîte et tangage par décomposition du vecteur gravité (convention de montage : tablette en paysage, bord supérieur vers l'avant, axe x vers tribord — signe inversable via `HEEL_SIGN`/`PITCH_SIGN`) ; période de roulis par passages à zéro de la gîte lissée (EMA 0,2, fenêtre glissante 12 s, ≥ 5 passages, rejet hors 1-20 s).
+- **Hook** `useMotionSensors` : listeners en refs persistantes (leçon #50), UI throttlée ~2 Hz, zéro throw si les APIs sont absentes (desktop : badge « no sensors »).
+- **Affichage** : carte compacte MOTION sous les instruments du haut dans la sidebar (gîte signée + bord STBD/PORT, tangage, période de roulis).
+- **Hors périmètre** : cap HDT, pression/température (capteur externe), STW — la suite passe par un companion Android (Termux) qui synthétisera des phrases NMEA (`HDT`, `XDR`) vers le port UDP existant (§4.1).
