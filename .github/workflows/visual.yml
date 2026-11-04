@@ -1,0 +1,71 @@
+name: Visual captures
+
+# CI visuelle (#178) : build de l'app, serveur Python + flux NMEA mock (UDP),
+# captures Playwright des 5 vues x 2 thèmes, publiées :
+#   1. en artifact (téléchargeable depuis la page de la PR),
+#   2. sur la branche visual/pr-N (PNG consultables dans le repo,
+#      lisibles par la squad via raw.githubusercontent.com).
+
+on:
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: write
+
+concurrency:
+  group: visual-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  captures:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: npm
+
+      - run: npm ci
+      - run: npm run build
+
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.12"
+          cache: pip
+      - run: pip install -r requirements.txt -r requirements-routing.txt
+
+      # Playwright : installé hors du lockfile (CI uniquement).
+      - run: npm i --no-save playwright && npx playwright install --with-deps chromium
+
+      - name: Démarrer serveur + flux NMEA mock
+        run: |
+          python tools/visual_feed.py 10111 &
+          NODE_ENV=production PORT=3001 NMEA_UDP_PORT=10111 python -m server.app &
+          for i in $(seq 1 60); do
+            if curl -sf http://127.0.0.1:3001/api/health > /dev/null; then
+              echo "serveur prêt"; exit 0
+            fi
+            sleep 1
+          done
+          echo "::error title=visual::serveur inaccessible après 60 s"; exit 1
+
+      - name: Captures (5 vues x 2 thèmes)
+        run: node tools/visual_shots.mjs
+
+      - uses: actions/upload-artifact@v7
+        with:
+          name: visual-captures
+          path: shots/
+          retention-days: 14
+
+      - name: Publier les captures sur la branche visual/pr-N
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git checkout -B visual/pr-${{ github.event.pull_request.number }}
+          git add -f shots/
+          git commit -m "Captures visuelles PR #${{ github.event.pull_request.number }}"
+          git push -f origin visual/pr-${{ github.event.pull_request.number }}
