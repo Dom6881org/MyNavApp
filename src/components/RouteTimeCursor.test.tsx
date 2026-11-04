@@ -25,7 +25,7 @@ describe('RouteTimeCursor', () => {
     render(<RouteTimeCursor coords={COORDS} timesS={TIMES} sogKts={SOG} etaS={7200} />);
     const slider = screen.getByLabelText('Time cursor');
     fireEvent.change(slider, { target: { value: '7200' } });
-    expect(screen.getByText(/T\+ 2 h/)).toBeTruthy();
+    expect(screen.getByText(/T\+ 2\.0 h/)).toBeTruthy();
     expect(screen.getByText(/5\.0 kt/)).toBeTruthy();
   });
 
@@ -34,7 +34,7 @@ describe('RouteTimeCursor', () => {
       <RouteTimeCursor coords={COORDS} timesS={TIMES} sogKts={SOG} etaS={7200} />
     );
     fireEvent.change(screen.getByLabelText('Time cursor'), { target: { value: '7200' } });
-    expect(screen.getByText(/T\+ 2 h/)).toBeTruthy();
+    expect(screen.getByText(/T\+ 2\.0 h/)).toBeTruthy();
 
     const otherCoords: [number, number][] = [[43.0, 4.0], [43.1, 4.1]];
     rerender(
