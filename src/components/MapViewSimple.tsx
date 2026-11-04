@@ -302,6 +302,25 @@ const MapViewSimple: React.FC<MapViewSimpleProps> = ({
     };
   }, [mapInstance]);
 
+  // #174 : la carte doit occuper l'espace libre — Leaflet doit être informé
+  // des changements de taille du conteneur (changement de vue HELM/COASTAL ->
+  // OVERVIEW/ROUTING, resize fenêtre), sinon des zones grises restent vides.
+  useEffect(() => {
+    if (!mapInstance || !mapRef.current || typeof ResizeObserver === 'undefined') return;
+    const observer = new ResizeObserver(() => {
+      mapInstance.map.invalidateSize();
+    });
+    observer.observe(mapRef.current);
+    return () => observer.disconnect();
+  }, [mapInstance]);
+
+  // #174 : défensif — l'outil routing carte ne doit jamais rester ouvert quand
+  // le routing vit dans le cartouche (vues OVERVIEW/ROUTING).
+  useEffect(() => {
+    if (!hideRoutingTool) return;
+    setActiveMapTool(current => (current === 'routing' ? null : current));
+  }, [hideRoutingTool]);
+
   // Routage (issue #15) : transmet les clics carte au panneau de saisie quand un
   // point (depart ou arrivee) est en cours de selection. Le panneau se rouvre
   // automatiquement une fois le point choisi.
