@@ -2,12 +2,17 @@ import React, { useMemo, useState } from 'react';
 import type { NavigationData } from '../../types';
 import { vmgToWind } from '../../utils/instrumentPrimitives';
 import CompassDial from './CompassDial';
+import WindDial from './WindDial';
 import InstrumentCard from './InstrumentCard';
 
 /** Panneau HELM (refonte instruments, Phase 1 — #158) : instrument central
  * commutable VENT / COMPAS / VITESSE en grand, les deux autres en compact,
  * VMG toujours visible (SOG × cos(TWA) au vent). Les cartes réutilisent
- * InstrumentCard (#157) : bascule cadran ⇄ numérique par instrument. */
+ * InstrumentCard (#157) : bascule cadran ⇄ numérique par instrument.
+ *
+ * #176 : le central VENT est le grand cadran Raymarine (WindDial — arcs
+ * bâbord/tribord, aiguille à la provenance, TWS + TWD en digital) avec la
+ * ligne TWA/AWA, fidèle à la maquette. */
 
 type CentralInstrument = 'wind' | 'compass' | 'speed';
 
@@ -27,6 +32,9 @@ const HelmPanel: React.FC<HelmPanelProps> = ({ data }) => {
   // tant que la phrase VHW (loch) n'est pas reçue (chantier serveur séparé).
   const stw = data.speed?.stw ?? null;
   const vmg = useMemo(() => vmgToWind(sog, twa), [sog, twa]);
+  // #176 : sources du cadran vent (mêmes que COASTAL — vent du point)
+  const twd = data.wind?.direction ?? null;
+  const awa = data.apparentWind?.angleDegrees ?? null;
 
   const centralTitle = central === 'compass' ? 'COMPASS' : central === 'speed' ? 'SOG' : 'WIND';
 
@@ -42,9 +50,12 @@ const HelmPanel: React.FC<HelmPanelProps> = ({ data }) => {
       </div>
     ) : (
       <div className="helm-central-value">
-        <span className="helm-big-value">{tws === null ? '--' : tws.toFixed(0)}</span>
-        <span className="helm-unit">
-          {twa === null ? 'no wind data' : `kt · TWA ${Math.round(twa)}°`}
+        {/* #176 : grand cadran Raymarine au central VENT, comme la maquette */}
+        <WindDial twdDeg={twd} twsKts={tws} size={280} />
+        <span className="helm-unit" data-testid="helm-wind-line">
+          {twa === null
+            ? 'no wind data'
+            : `TWA ${Math.round(twa)}°${awa === null ? '' : ` · AWA ${Math.round(Math.abs(awa))}°`}`}
         </span>
       </div>
     );
