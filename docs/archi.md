@@ -59,6 +59,7 @@ flowchart LR
 | Frontend | `src/utils/routeCursor.ts` + `src/components/RouteTimeCursor.tsx` | Curseur temporel de la route : position/cap/SOG interpolés à un instant choisi (A2 #154) |
 | Frontend | `src/components/` (Speedometer, WindIndicator, Compass, DepthSounder…) | Instruments |
 | Frontend | `src/utils/instrumentPrimitives.ts` + `src/components/instruments/InstrumentCard.tsx` | Fondations de la refonte instruments (Phase 0 #156) : primitives SVG (0° en haut, sens horaire), carte générique avec bascule cadran ⇄ numérique par instrument ; phases suivantes : panneau HELM, COASTAL/OVERVIEW, PREP ROUTING |
+| Frontend | `src/utils/helmFlag.ts` + `src/components/instruments/HelmPanel.tsx` + `CompassDial.tsx` | Refonte instruments Phase 1 (#158) : panneau HELM **derrière feature flag** (`?helm=1` ou `localStorage mynav:helm=1`, défaut désactivé = rendu inchangé) — instrument central commutable VENT/COMPAS/VITESSE, compas **COURSE-UP** (rose tournée de -COG, HDG ambre), VMG = SOG×cos(TWA) ; STW en `--` tant que la phrase VHW (loch) n'est pas reçue (§4) |
 | Contrat | `shared/navigation.ts` | Types TypeScript partagés, réexportés par `src/types` — contrat unique front/back |
 | Backend | `server/app.py` | Serveur HTTP multi-threads, état, SSE, tuiles, AIS, tracks |
 | Backend | `server/nmea.py` | Analyse des phrases NMEA (voir §4) |

@@ -1,6 +1,7 @@
 import React from 'react';
 import { useAISSettings, useNavigationData, useDashboardLayout, useTrackRecorder, useRoutingInput, useRoutingPolar, useRoutingRoute, useGrib } from './hooks';
-import { InstrumentPanel, MotionPanel } from './components';
+import { InstrumentPanel, MotionPanel, HelmPanel } from './components';
+import { isHelmEnabled } from './utils/helmFlag';
 import { Position } from './types';
 import MapView from './components/MapView';
 import { isMapProfilingEnabled, reportMapPerformance } from './utils/mapPerformance';
@@ -105,8 +106,11 @@ const App: React.FC = () => {
     document.documentElement.className = `theme-${layout.theme}`;
   }, [layout.theme]);
 
-  const renderInstrumentCards = (types: string[], row: 'top' | 'bottom') => layout.instruments
-    .filter(instrument => types.includes(instrument.type) && instrument.visible)
+  // Refonte instruments Phase 1 (#158) : panneau HELM derrière feature flag
+  // (?helm=1 ou localStorage mynav:helm=1) — défaut : rendu actuel inchangé.
+  const helmEnabled = isHelmEnabled();
+
+  const renderInstrumentCards = (types: string[], row: 'top' | 'bottom') => layout.instruments    .filter(instrument => types.includes(instrument.type) && instrument.visible)
     .map(instrument => (
       <div
         key={instrument.id}
@@ -170,9 +174,13 @@ const App: React.FC = () => {
       <main className="app-main">
         <div className="main-layout main-layout-instruments-top">
           <aside className="instruments-sidebar">
-            <div className="instruments-container instrument-grid instrument-grid-top">
-              {renderInstrumentCards(['speed', 'compass'], 'top')}
-            </div>
+            {helmEnabled ? (
+              <HelmPanel data={navigationData} />
+            ) : (
+              <div className="instruments-container instrument-grid instrument-grid-top">
+                {renderInstrumentCards(['speed', 'compass'], 'top')}
+              </div>
+            )}
             {/* Capteurs tablette (#152) : gîte / tangage / roulis, front pur */}
             <MotionPanel />
           </aside>
