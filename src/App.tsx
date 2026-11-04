@@ -243,6 +243,8 @@ const App: React.FC = () => {
                     <OverviewPanel data={navigationData} />
                   </div>
                 )}
+                {/* Carte + cartouche : la carte occupe tout l'espace libre (#174) */}
+                <div className="ui-stage-map-body">
                 <div className="map-container">
                   {profiledMapView}
                 </div>
@@ -262,6 +264,7 @@ const App: React.FC = () => {
                     <MotionPanel />
                   </aside>
                 )}
+                </div>
               </div>
             )}
           </div>
