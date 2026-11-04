@@ -1251,12 +1251,6 @@ html, body {
   padding: 0;
 }
 
-/* HELM/COASTAL : pas de carte — les instruments occupent toute la place */
-.main-layout-no-map .instruments-sidebar {
-  flex: 1 1 auto;
-  overflow-y: auto;
-}
-
 @media (max-width: 900px) {
   .overview-panel {
     grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -1264,5 +1258,122 @@ html, body {
 
   .overview-tile-position {
     grid-column: span 2;
+  }
+}
+
+/* ===== Mise en page v3 (#172) : sélecteur plein écran, scènes par mode,
+   cartouche routing complet ===== */
+.ui-shell {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+}
+
+/* Choix des vues : en haut, sur toute la largeur de l'écran */
+.ui-mode-topbar {
+  flex: 0 0 auto;
+  padding: 0.5rem 1rem 0.35rem;
+  border-bottom: 1px solid rgba(115, 179, 199, 0.2);
+  background: linear-gradient(180deg, rgba(13, 31, 45, 0.96), rgba(10, 24, 36, 0.92));
+}
+
+.ui-mode-topbar .instrument-modes-switch {
+  flex-wrap: wrap;
+}
+
+/* HELM / COASTAL : les instruments remplissent l'écran — l'emplacement
+   de la carte ne reste jamais vide */
+.ui-stage-panels {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  padding: 0.75rem 1rem;
+}
+
+.ui-stage-panels .helm-panel,
+.ui-stage-panels .coastal-panel {
+  width: 100%;
+  max-width: 1200px;
+  margin: 0 auto;
+  flex: 0 0 auto;
+}
+
+.ui-stage-panels .instrument-modes-panel {
+  display: none;
+}
+
+.ui-stage-bottom {
+  flex: 0 0 auto;
+  width: 100%;
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+/* OVERVIEW / ROUTING : tuiles au-dessus de la carte, cartouche routing à droite */
+.ui-stage-map {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: row;
+}
+
+.ui-stage-map .map-container {
+  flex: 1 1 auto;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.ui-stage-map .overview-strip {
+  flex: 0 0 auto;
+  padding: 0.6rem 1rem 0;
+}
+
+.routing-cartouche {
+  flex: 0 0 340px;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  padding: 0.5rem;
+  overflow-y: auto;
+  background: var(--bg-secondary);
+  border-left: 1px solid var(--border-color);
+}
+
+/* RoutingPanel intégré : plus de positionnement en overlay de carte */
+.routing-cartouche .map-tool-panel,
+.routing-cartouche .map-routing-panel {
+  position: static;
+  transform: none;
+  top: auto;
+  right: auto;
+  width: 100%;
+  max-height: none;
+  z-index: auto;
+  box-shadow: none;
+  border: 0;
+  background: transparent;
+  flex: 1 0 auto;
+}
+
+/* Fermeture × sans objet dans le cartouche (le panneau vit avec la vue) */
+.routing-cartouche .map-settings-heading button {
+  display: none;
+}
+
+@media (max-width: 900px) {
+  .ui-stage-map {
+    flex-direction: column;
+  }
+
+  .routing-cartouche {
+    flex: 0 0 auto;
+    max-height: 45vh;
+    border-left: 0;
+    border-top: 1px solid var(--border-color);
   }
 }

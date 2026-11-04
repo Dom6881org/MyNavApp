@@ -2,7 +2,6 @@ import { fireEvent, render, screen } from '@testing-library/react';
 import { beforeEach, describe, expect, it } from 'vitest';
 import InstrumentModesPanel from './InstrumentModesPanel';
 import type { NavigationData } from '../../types';
-import type { RoutingInput } from '../../hooks/useRoutingInput';
 
 const data: NavigationData = {
   position: null,
@@ -23,52 +22,27 @@ beforeEach(() => {
 });
 
 describe('InstrumentModesPanel', () => {
-  it('initialise sur HELM et rend le compas COURSE-UP', () => {
+  it('#172 : barre de modes sans corps — onglets rendus, HELM sélectionné', () => {
     render(<InstrumentModesPanel data={data} initialMode="helm" />);
-    expect(screen.getByText('COMPASS')).toBeTruthy();
-    expect(screen.getByText('137°')).toBeTruthy();
+    expect(screen.getByRole('tab', { name: 'HELM' }).getAttribute('aria-selected')).toBe('true');
+    expect(screen.getByRole('tab', { name: 'ROUTING' })).toBeTruthy();
+    // plus de corps : App rend le panneau du mode actif
+    expect(screen.queryByText('137°')).toBeNull();
   });
 
-  it('commutation HELM -> COASTAL -> OVERVIEW', () => {
+  it('commutation HELM -> COASTAL -> OVERVIEW -> ROUTING (barre seule)', () => {
     render(<InstrumentModesPanel data={data} initialMode="helm" />);
     fireEvent.click(screen.getByRole('tab', { name: 'COASTAL' }));
-    // COASTAL : tuiles et vent
-    expect(screen.getByTestId('coastal-tiles')).toBeTruthy();
-    expect(screen.getByText('DEPTH')).toBeTruthy();
+    expect(screen.getByRole('tab', { name: 'COASTAL' }).getAttribute('aria-selected')).toBe('true');
     fireEvent.click(screen.getByRole('tab', { name: 'OVERVIEW' }));
-    expect(screen.getByTestId('overview-wind')).toBeTruthy();
+    expect(screen.getByRole('tab', { name: 'OVERVIEW' }).getAttribute('aria-selected')).toBe('true');
+    fireEvent.click(screen.getByRole('tab', { name: 'ROUTING' }));
+    expect(screen.getByRole('tab', { name: 'ROUTING' }).getAttribute('aria-selected')).toBe('true');
   });
 
-  it('onglet PREP ROUTING : rend PrepRoutingPanel quand le routage est fourni', () => {
-    const routing = {
-      useCurrentPosition: true,
-      startPosition: { latitude: 42.5, longitude: 3.1 },
-      finishPosition: null,
-      distanceNm: null,
-      errors: { start: null, finish: null, same: null, polar: null, motor: null },
-      plan: null
-    } as unknown as RoutingInput;
-    render(
-      <InstrumentModesPanel
-        data={data}
-        initialMode="prep"
-        routing={routing}
-        onRequestRoutingPick={() => undefined}
-      />
-    );
-    expect(screen.getByRole('tab', { name: 'PREP' })).toBeTruthy();
-    expect(screen.getByText('START')).toBeTruthy();
-    expect(screen.getByText('FINISH')).toBeTruthy();
-  });
-
-  it('onglet PREP sans routage : invite explicite', () => {
-    render(<InstrumentModesPanel data={data} initialMode="prep" />);
-    expect(screen.getByTestId('prep-unavailable').textContent).toContain('Routing unavailable');
-  });
-
-  it('PREP persiste comme les autres modes', () => {
+  it('ROUTING persiste comme les autres modes', () => {
     render(<InstrumentModesPanel data={data} initialMode="helm" />);
-    fireEvent.click(screen.getByRole('tab', { name: 'PREP' }));
+    fireEvent.click(screen.getByRole('tab', { name: 'ROUTING' }));
     expect(window.localStorage.getItem('mynav:ui-mode')).toBe('prep');
   });
 
@@ -79,9 +53,8 @@ describe('InstrumentModesPanel', () => {
       depth: { ...data.depth!, alarm: true, depth: 1.5, alarmDepth: 2 }
     };
     render(<InstrumentModesPanel data={alarmData} initialMode="helm" />);
-    // reste en HELM : pas de tuiles COASTAL, pas d'avis auto
-    expect(screen.getByText('COMPASS')).toBeTruthy();
-    expect(screen.queryByTestId('coastal-tiles')).toBeNull();
+    // reste en HELM : pas d'avis auto, onglet HELM sélectionné
+    expect(screen.getByRole('tab', { name: 'HELM' }).getAttribute('aria-selected')).toBe('true');
     expect(screen.queryByTestId('instrument-auto-notice')).toBeNull();
     expect(
       screen.getByRole('button', { name: 'Auto switch to coastal on depth alarm' }).getAttribute('aria-pressed')
@@ -95,7 +68,7 @@ describe('InstrumentModesPanel', () => {
       depth: { ...data.depth!, alarm: true, depth: 1.5, alarmDepth: 2 }
     };
     render(<InstrumentModesPanel data={alarmData} initialMode="helm" />);
-    expect(screen.getByTestId('coastal-tiles')).toBeTruthy();
+    expect(screen.getByRole('tab', { name: 'COASTAL' }).getAttribute('aria-selected')).toBe('true');
     expect(screen.getByTestId('instrument-auto-notice').textContent).toContain('Depth alarm');
     expect(window.localStorage.getItem('mynav:ui-mode')).toBe('coastal');
   });
@@ -130,12 +103,9 @@ describe('InstrumentModesPanel', () => {
     expect(seen[seen.length - 1]).toBe('coastal');
   });
 
-  it('#170 : hideActivePanel masque le corps du panneau actif', () => {
-    render(
-      <InstrumentModesPanel data={data} initialMode="overview" hideActivePanel />
-    );
-    // l'onglet reste présent et sélectionné, le corps est rendu par App ailleurs
+  it('#172 : ROUTING remplace PREP comme libellé du 4e onglet', () => {
+    render(<InstrumentModesPanel data={data} initialMode="overview" />);
     expect(screen.getByRole('tab', { name: 'OVERVIEW' }).getAttribute('aria-selected')).toBe('true');
-    expect(screen.queryByTestId('overview-wind')).toBeNull();
+    expect(screen.queryByRole('tab', { name: 'PREP' })).toBeNull();
   });
 });
