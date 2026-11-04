@@ -18,6 +18,11 @@ describe('InstrumentCard', () => {
     expect(screen.getByText('137°')).toBeTruthy();
   });
 
+  it('hideToggle : pas de bouton 123/◉ pour un instrument sans cadran (#166)', () => {
+    render(<InstrumentCard title="DEPTH" hideToggle>contenu</InstrumentCard>);
+    expect(screen.queryByRole('button', { name: 'DEPTH display mode' })).toBeNull();
+  });
+
   it('bouton de bascule cadran/numerique avec aria-label et data-mode', () => {
     render(
       <InstrumentCard title="HEEL">

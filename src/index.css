@@ -682,7 +682,8 @@ html, body {
 
 .helm-panel {
   display: flex;
-  flex-direction: column;
+  flex-direction: row;
+  align-items: stretch;
   gap: 0.4rem;
   background: var(--bg-secondary);
   border: 1px solid var(--border-color);
@@ -694,6 +695,8 @@ html, body {
   display: flex;
   flex-direction: column;
   gap: 0.3rem;
+  flex: 1 1 auto;
+  min-width: 0;
 }
 
 .helm-central-switch {
@@ -747,9 +750,27 @@ html, body {
 }
 
 .helm-compact {
+  /* Maquette revue 2 : colonne de compacts à droite de l'instrument central */
   display: flex;
   flex-direction: column;
+  justify-content: center;
   gap: 0.2rem;
+  flex: 0 0 auto;
+  min-width: 5.6rem;
+  padding-left: 0.4rem;
+  border-left: 1px solid var(--border-color);
+}
+
+/* Sidebar étroite : les compacts repassent sous le central (téléphone) */
+@media (max-width: 480px) {
+  .helm-panel {
+    flex-direction: column;
+  }
+
+  .helm-compact {
+    border-left: none;
+    padding-left: 0;
+  }
 }
 
 .helm-compact-row {
@@ -1116,4 +1137,19 @@ html, body {
   color: #2dd4a7;
   border-color: rgba(45, 212, 167, 0.6);
   background: rgba(45, 212, 167, 0.15);
+}
+
+/* ===== Refonte instruments finalisation — rangée basse InstrumentCard (#166) ===== */
+.bottom-instruments {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.4rem;
+}
+
+/* Alarme profondeur : toute la rangée basse passe en alerte douce */
+.bottom-instruments.alarm {
+  border: 1px solid rgba(255, 122, 122, 0.6);
+  border-radius: 8px;
+  padding: 0.3rem;
+  background: rgba(200, 40, 40, 0.12);
 }

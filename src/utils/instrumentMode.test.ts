@@ -32,6 +32,10 @@ describe('instrumentMode (pur)', () => {
       expect(parseUiMode('', 'prep', null)).toBe('prep');
     });
 
+    it('URL ?ui=legacy (finalisation #166) : selection legacy', () => {
+      expect(parseUiMode('?ui=legacy', 'coastal', null)).toBe('legacy');
+    });
+
     it('retro-compat Phase 1 : ?helm=1 puis mynav:helm', () => {
       expect(parseUiMode('?helm=1', null, null)).toBe('helm');
       expect(parseUiMode('', null, '1')).toBe('helm');
@@ -53,13 +57,23 @@ describe('instrumentMode (pur)', () => {
 });
 
 describe('instrumentMode (navigateur)', () => {
-  it('getUiMode/setUiMode persiste et revient a null', () => {
+  it('getUiMode/setUiMode : defaut HELM depuis la finalisation (#166)', () => {
     window.localStorage.clear();
-    expect(getUiMode()).toBeNull();
+    expect(getUiMode()).toBe('helm'); // defaut, plus de vue legacy par defaut
     setUiMode('coastal');
     expect(getUiMode()).toBe('coastal');
     setUiMode(null);
+    expect(getUiMode()).toBe('helm'); // selection effacee -> defaut
+  });
+
+  it('?ui=legacy : echappatoire explicite vers la vue historique (#166)', () => {
+    window.localStorage.clear();
+    window.localStorage.setItem('mynav:ui-mode', 'coastal');
+    window.history.replaceState(null, '', '/?ui=legacy');
     expect(getUiMode()).toBeNull();
+    window.history.replaceState(null, '', '/');
+    window.localStorage.clear();
+    expect(getUiMode()).toBe('helm');
   });
 
   it('readInstrumentMode/writeInstrumentMode par instrument', () => {

@@ -16,13 +16,17 @@ interface InstrumentCardProps {
   defaultMode?: InstrumentMode;
   /** Contenu optionnel en zone info (ex. badge de source). */
   info?: ReactNode;
+  /** Cache le bouton 123/◉ : pour un instrument sans cadran possible
+   * (ex. DEPTH — finalisation #166). */
+  hideToggle?: boolean;
 }
 
 const InstrumentCard: React.FC<InstrumentCardProps> = ({
   title,
   children,
   defaultMode = 'dial',
-  info = null
+  info = null,
+  hideToggle = false
 }) => {
   const [mode, setMode] = useState<InstrumentMode>(() =>
     // Persistance par instrument (Phase 2 #160) : la préférence 123/◉ de
@@ -43,15 +47,17 @@ const InstrumentCard: React.FC<InstrumentCardProps> = ({
       <div className="instrument-card-header">
         <span className="instrument-title">{title}</span>
         <span className="instrument-card-info">{info}</span>
-        <button
-          type="button"
-          className="instrument-mode-toggle"
-          aria-label={`${title} display mode`}
-          data-mode={mode}
-          onClick={toggleMode}
-        >
-          {mode === 'dial' ? '123' : '◉'}
-        </button>
+        {!hideToggle && (
+          <button
+            type="button"
+            className="instrument-mode-toggle"
+            aria-label={`${title} display mode`}
+            data-mode={mode}
+            onClick={toggleMode}
+          >
+            {mode === 'dial' ? '123' : '◉'}
+          </button>
+        )}
       </div>
       <div className="instrument-card-body" data-testid="instrument-card-body">
         {children}

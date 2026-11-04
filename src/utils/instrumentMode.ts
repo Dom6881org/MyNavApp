@@ -1,14 +1,19 @@
 /** Modes d'affichage des instruments (refonte instruments, Phase 2 — #160,
- * Phase 3 — #162).
+ * Phase 3 — #162, finalisation #166).
  *
  * Quatre panneaux : HELM (#159), COASTAL, OVERVIEW, PREP ROUTING (#162).
- * Rétro-compatibilité Phase 1 : `?helm=1` / `localStorage mynav:helm = '1'`
- * continuent d'ouvrir le HELM. Aucun mode actif (null) = rendu legacy
- * inchangé. */
+ * Depuis la finalisation (#166), les nouveaux rendus sont le DÉFAUT :
+ * sans choix connu, l'app ouvre sur HELM. La vue historique reste
+ * accessible en échappatoire via `?ui=legacy`. Rétro-compatibilité
+ * Phase 1 : `?helm=1` / `localStorage mynav:helm = '1'` continuent
+ * d'ouvrir le HELM. */
 
 import type { InstrumentMode } from './instrumentPrimitives';
 
 export type UiMode = 'helm' | 'coastal' | 'overview' | 'prep';
+
+/** Sélection lue : un mode, ou 'legacy' pour la vue historique. */
+export type UiModeSelection = UiMode | 'legacy';
 
 const UI_MODE_KEY = 'mynav:ui-mode';
 const HELM_KEY = 'mynav:helm'; // rétro-compat Phase 1
@@ -16,15 +21,16 @@ const INSTRUMENT_MODE_PREFIX = 'mynav:instrument-mode:';
 
 const UI_MODES: UiMode[] = ['helm', 'coastal', 'overview', 'prep'];
 
-/** Pur : décide du mode actif. Ordre : URL ?ui= > mynav:ui-mode > ?helm=1 >
- * mynav:helm (Phase 1) > null (legacy). */
+/** Pur : décide du mode actif. Ordre : URL ?ui= (modes + legacy) >
+ * mynav:ui-mode > ?helm=1 > mynav:helm (Phase 1) > null (aucune sélection
+ * connue — getUiMode appliquera le défaut HELM). */
 export function parseUiMode(
   search: string,
   uiStorage: string | null,
   helmStorage: string | null
-): UiMode | null {
-  const urlUi = /[?&]ui=(helm|coastal|overview|prep)/.exec(search);
-  if (urlUi) return urlUi[1] as UiMode;
+): UiModeSelection | null {
+  const urlUi = /[?&]ui=(helm|coastal|overview|prep|legacy)/.exec(search);
+  if (urlUi) return urlUi[1] as UiModeSelection;
   if (uiStorage !== null && UI_MODES.includes(uiStorage as UiMode)) {
     return uiStorage as UiMode;
   }
@@ -48,7 +54,7 @@ export function instrumentModeKey(title: string): string {
   return INSTRUMENT_MODE_PREFIX + title.toLowerCase();
 }
 
-/** Lecture navigateur du mode UI actif (null = legacy). */
+/** Lecture navigateur du mode UI actif (null = legacy explicite ; défaut HELM). */
 export function getUiMode(): UiMode | null {
   if (typeof window === 'undefined') return null;
   let ui: string | null = null;
@@ -59,10 +65,14 @@ export function getUiMode(): UiMode | null {
   } catch {
     // stockage indisponible : null, l'URL reste disponible
   }
-  return parseUiMode(window.location.search, ui, helm);
+  const selection = parseUiMode(window.location.search, ui, helm);
+  // Finalisation (#166) : HELM par défaut, la vue legacy reste une
+  // échappatoire explicite (?ui=legacy).
+  if (selection === 'legacy') return null;
+  return selection ?? 'helm';
 }
 
-/** Persiste le mode UI (null = retour au legacy). */
+/** Persiste le mode UI (null = efface la sélection ; défaut HELM au prochain getUiMode). */
 export function setUiMode(mode: UiMode | null): void {
   if (typeof window === 'undefined') return;
   try {
