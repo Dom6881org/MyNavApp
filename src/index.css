@@ -731,20 +731,20 @@ html, body {
 }
 
 .helm-big-value {
-  font-size: 2.4rem;
+  font-size: 3.4rem;
   font-weight: 700;
   line-height: 1;
   font-variant-numeric: tabular-nums;
 }
 
 .helm-unit {
-  font-size: 0.65rem;
+  font-size: 0.75rem;
   color: var(--text-secondary);
-  margin-top: 0.2rem;
+  margin-top: 0.3rem;
 }
 
 .helm-vmg {
-  font-size: 0.62rem;
+  font-size: 0.75rem;
   color: var(--accent-secondary);
   white-space: nowrap;
 }
@@ -1177,6 +1177,11 @@ html, body {
 .wind-needle {
   stroke: #ff3b30;
   stroke-width: 3;
+}
+
+.wind-needle polygon {
+  fill: #ff3b30;
+  stroke: none;
 }
 
 .wind-dial-box {

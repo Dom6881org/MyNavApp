@@ -2,22 +2,35 @@ import { render, screen } from '@testing-library/react';
 import { describe, expect, it } from 'vitest';
 import WindDial from './WindDial';
 
-describe('WindDial', () => {
-  it('rend la fleche a la TWD quand le vent est disponible', () => {
+describe('WindDial façon Raymarine (#176)', () => {
+  it('aiguille vers la provenance, TWS dans la vignette, TWD en digital', () => {
     const { container } = render(<WindDial twdDeg={320} twsKts={12} />);
     expect(container.querySelector('[data-testid="wind-arrow"]')).toBeTruthy();
     expect(screen.getByText('12 kt')).toBeTruthy();
+    expect(screen.getByTestId('wind-dial-twd').textContent).toBe('320°');
   });
 
-  it('sans vent : pas de fleche, double tiret', () => {
+  it('arcs bâbord (rouge) et tribord (vert) présents', () => {
+    const { container } = render(<WindDial twdDeg={45} twsKts={10} />);
+    expect(container.querySelector('[data-testid="wind-arc-port"]')).toBeTruthy();
+    expect(container.querySelector('[data-testid="wind-arc-starboard"]')).toBeTruthy();
+  });
+
+  it('sans vent : pas d\'aiguille ni de TWD, un seul double tiret', () => {
     const { container } = render(<WindDial twdDeg={null} twsKts={null} />);
     expect(container.querySelector('[data-testid="wind-arrow"]')).toBeNull();
-    expect(screen.getByText('--')).toBeTruthy();
+    expect(container.querySelector('[data-testid="wind-dial-twd"]')).toBeNull();
+    expect(screen.getAllByText('--').length).toBe(1);
   });
 
-  it('graduations et cardinaux rendus', () => {
+  it('graduations (12) et cardinaux (4) rendus', () => {
     const { container } = render(<WindDial twdDeg={0} twsKts={5} />);
     expect(container.querySelectorAll('.compass-tick').length).toBe(12);
     expect(container.querySelectorAll('.compass-cardinal').length).toBe(4);
+  });
+
+  it('TWD normalisée : 370° affiché 10°', () => {
+    render(<WindDial twdDeg={370} twsKts={8} />);
+    expect(screen.getByTestId('wind-dial-twd').textContent).toBe('10°');
   });
 });

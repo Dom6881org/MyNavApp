@@ -1,29 +1,38 @@
 import React from 'react';
 import { normalizeDeg, polarToXY, tickMarks } from '../../utils/instrumentPrimitives';
 
-/** Cadran de vent compact (refonte instruments, Phase 2 — #160) :
- * design COASTAL — vent resserré, 170 px. Rose fixe, flèche indiquant
- * la direction D'OÙ vient le vent (TWD), TWS au centre, AWA en info. */
+/** Cadran de vent façon Raymarine (#176, regression #169 : la version
+ * Raymarine n'avait jamais atteint ce fichier — voir issue) :
+ * arcs ROUGE bâbord / VERT tribord, silhouette de bateau au centre,
+ * aiguille depuis le bateau vers la provenance (TWD), vignette digitale
+ * TWS + TWD. Sans donnée : `--` unique. API inchangée (twdDeg/twsKts/size). */
 
 interface WindDialProps {
   /** Direction du vent vrai (degrés, origine). */
   twdDeg: number | null;
   /** Force du vent vrai (nœuds). */
   twsKts: number | null;
-  /** Angle du vent apparent (info, affiché par le panneau appelant). */
   size?: number;
 }
 
-const R = 82;
+const R = 88;
 const CX = 100;
 const CY = 100;
 
 const WindDial: React.FC<WindDialProps> = ({ twdDeg, twsKts, size = 170 }) => {
   const marks = tickMarks(0, 360, 90, 30);
-  const arrowTip = polarToXY(CX, CY, R - 14, twdDeg ?? 0);
-  const arrowBase = polarToXY(CX, CY, 34, twdDeg ?? 0);
-  const wingL = polarToXY(CX, CY, 52, (twdDeg ?? 0) + 24);
-  const wingR = polarToXY(CX, CY, 52, (twdDeg ?? 0) - 24);
+  const twd = twdDeg === null ? null : normalizeDeg(twdDeg);
+
+  // Arcs façon Raymarine : rouge à bâbord (moitié gauche du cadran),
+  // vert à tribord (moitié droite) — le bateau pointe vers le haut.
+  const arcPort = `M ${CX - R} ${CY} A ${R} ${R} 0 0 1 ${CX} ${CY - R}`;
+  const arcStarboard = `M ${CX} ${CY - R} A ${R} ${R} 0 0 1 ${CX + R} ${CY}`;
+
+  // Aiguille : du bateau vers la provenance du vent.
+  const needleOuter = polarToXY(CX, CY, R - 16, twd ?? 0);
+  const needleBase = polarToXY(CX, CY, 22, twd ?? 0);
+  const headA = polarToXY(CX, CY, R - 6, (twd ?? 0) + 165);
+  const headB = polarToXY(CX, CY, R - 6, (twd ?? 0) - 165);
 
   return (
     <svg
@@ -33,15 +42,20 @@ const WindDial: React.FC<WindDialProps> = ({ twdDeg, twsKts, size = 170 }) => {
       height={size}
       role="img"
       aria-label={
-        twdDeg === null
+        twd === null
           ? 'Wind dial, no wind data'
-          : `Wind from ${Math.round(normalizeDeg(twdDeg))} degrees, ${twsKts?.toFixed(0) ?? '--'} knots`
+          : `Wind from ${Math.round(twd)} degrees, ${twsKts?.toFixed(0) ?? '--'} knots`
       }
     >
       <circle cx={CX} cy={CY} r={R} className="compass-rose-ring" />
+
+      {/* Arcs bâbord (rouge) / tribord (vert) — référence Raymarine Alpha */}
+      <path d={arcPort} className="wind-arc-port" data-testid="wind-arc-port" />
+      <path d={arcStarboard} className="wind-arc-starboard" data-testid="wind-arc-starboard" />
+
       {marks.map((m) => {
         const outer = polarToXY(CX, CY, R, m.angle);
-        const inner = polarToXY(CX, CY, R - 8, m.angle);
+        const inner = polarToXY(CX, CY, R - 7, m.angle);
         return (
           <line
             key={m.angle}
@@ -53,25 +67,53 @@ const WindDial: React.FC<WindDialProps> = ({ twdDeg, twsKts, size = 170 }) => {
           />
         );
       })}
-      {/* Points cardinaux discrets */}
+
+      {/* Cardinaux : N surligné, la rose est fixe (le bateau pointe au nord) */}
       {([0, 90, 180, 270] as const).map((angle) => {
-        const p = polarToXY(CX, CY, R - 22, angle);
+        const p = polarToXY(CX, CY, R - 20, angle);
         const label = angle === 0 ? 'N' : angle === 90 ? 'E' : angle === 180 ? 'S' : 'W';
         return (
-          <text key={label} x={p.x} y={p.y + 3} textAnchor="middle" className="compass-cardinal">
+          <text
+            key={label}
+            x={p.x}
+            y={p.y + 4}
+            textAnchor="middle"
+            className={angle === 0 ? 'compass-cardinal compass-cardinal-n' : 'compass-cardinal'}
+          >
             {label}
           </text>
         );
       })}
-      {/* Flèche : la pointe marque la provenance du vent */}
-      {twdDeg !== null && (
-        <polygon
-          points={`${arrowTip.x},${arrowTip.y} ${wingL.x},${wingL.y} ${arrowBase.x},${arrowBase.y} ${wingR.x},${wingR.y}`}
-          className="wind-arrow"
-          data-testid="wind-arrow"
-        />
+
+      {/* Aiguille : pointe à la provenance du vent */}
+      {twd !== null && (
+        <g className="wind-needle" data-testid="wind-arrow">
+          <line
+            x1={needleBase.x}
+            y1={needleBase.y}
+            x2={needleOuter.x}
+            y2={needleOuter.y}
+          />
+          <polygon
+            points={`${needleOuter.x},${needleOuter.y} ${headA.x},${headA.y} ${headB.x},${headB.y}`}
+          />
+        </g>
       )}
-      <text x={CX} y={CY + 34} textAnchor="middle" className="compass-cog wind-dial-tws">
+
+      {/* Silhouette du bateau, proue vers le haut */}
+      <polygon
+        points={`${CX},${CY - 30} ${CX - 9},${CY + 20} ${CX},${CY + 12} ${CX + 9},${CY + 20}`}
+        className="wind-boat"
+      />
+
+      {/* Vignette digitale : TWS dans le cadre, TWD au-dessus */}
+      {twd !== null && (
+        <text x={CX} y={CY - 42} textAnchor="middle" className="wind-dial-twd" data-testid="wind-dial-twd">
+          {`${Math.round(twd)}°`}
+        </text>
+      )}
+      <rect x={CX - 34} y={CY + 28} width={68} height={28} rx={6} className="wind-dial-box" />
+      <text x={CX} y={CY + 48} textAnchor="middle" className="compass-cog wind-dial-tws">
         {twsKts === null ? '--' : `${twsKts.toFixed(0)} kt`}
       </text>
     </svg>
