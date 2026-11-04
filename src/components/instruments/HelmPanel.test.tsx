@@ -1,6 +1,7 @@
 import { fireEvent, render, screen } from '@testing-library/react';
 import { describe, expect, it } from 'vitest';
-import HelmPanel, { vmgToWind } from './HelmPanel';
+import HelmPanel from './HelmPanel';
+import { vmgToWind } from '../../utils/instrumentPrimitives';
 import type { NavigationData } from '../../types';
 
 const data = (overrides: Partial<NavigationData> = {}): NavigationData => ({

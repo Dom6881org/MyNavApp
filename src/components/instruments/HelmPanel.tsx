@@ -1,5 +1,6 @@
 import React, { useMemo, useState } from 'react';
 import type { NavigationData } from '../../types';
+import { vmgToWind } from '../../utils/instrumentPrimitives';
 import CompassDial from './CompassDial';
 import InstrumentCard from './InstrumentCard';
 
@@ -13,12 +14,6 @@ type CentralInstrument = 'wind' | 'compass' | 'speed';
 interface HelmPanelProps {
   data: NavigationData;
 }
-
-/** VMG au vent : SOG × cos(TWA). */
-export const vmgToWind = (sog: number | null, twaDeg: number | null): number | null => {
-  if (sog === null || twaDeg === null) return null;
-  return sog * Math.cos((twaDeg * Math.PI) / 180);
-};
 
 const HelmPanel: React.FC<HelmPanelProps> = ({ data }) => {
   const [central, setCentral] = useState<CentralInstrument>('compass');

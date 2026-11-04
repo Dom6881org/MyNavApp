@@ -26,7 +26,7 @@ export function isHelmEnabled(): boolean {
   try {
     stored = window.localStorage.getItem(STORAGE_KEY);
   } catch {
-    stored = null; // stockage indisponible (mode privé, etc.)
+    // stockage indisponible (mode privé, etc.) : stored reste null
   }
   return parseHelmFlag(window.location.search, stored);
 }
