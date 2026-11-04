@@ -31,7 +31,9 @@ const OverviewPanel: React.FC<OverviewPanelProps> = ({ data }) => {
       <div className="overview-row" data-testid="overview-course">
         <span>SOG · COG</span>
         <strong>
-          {sog === null ? '--' : `${sog.toFixed(1)} kn`} · {cog === null ? '--' : `${Math.round(cog)}°`}
+          {sog === null && cog === null
+            ? '--'
+            : `${sog === null ? '--' : `${sog.toFixed(1)} kn`} · ${cog === null ? '--' : `${Math.round(cog)}°`}`}
         </strong>
       </div>
       <div className="overview-row" data-testid="overview-wind">
