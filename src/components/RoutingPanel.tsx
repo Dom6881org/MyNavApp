@@ -6,6 +6,8 @@ import { RoutingRouteApi } from '../hooks/useRoutingRoute';
 
 import RouteDetails from './RouteDetails';
 
+import RouteTimeCursor from './RouteTimeCursor';
+
 import { GribApi } from '../hooks/useGrib';
 
 import { Position } from '../types';
@@ -350,6 +352,10 @@ const RoutingPanel: React.FC<RoutingPanelProps> = ({
               <p className="routing-ok routing-result-arrival">arr. {arrivalClock(route.etaS)}</p>
               {route.timesS && route.sogKts && route.sogKts.length > 1 && (
                 <SogChart timesS={route.timesS} sogKts={route.sogKts} />
+              )}
+              {/* A2 (#154) : voyage dans le temps — lecture heure/cap/SOG à un instant. */}
+              {route.timesS && route.timesS.length === route.coords.length && route.etaS > 0 && (
+                <RouteTimeCursor coords={route.coords} timesS={route.timesS} sogKts={route.sogKts} etaS={route.etaS} />
               )}
               {route.motorFlags?.some(flag => flag) && (
                 <p className="routing-ok routing-result-arrival">

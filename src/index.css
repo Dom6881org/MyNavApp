@@ -596,3 +596,36 @@ html, body {
   font-size: 0.75rem;
   color: var(--text-secondary);
 }
+
+
+/* Route time cursor (A2 #154) : voyage dans le temps sur la route calculee */
+.routing-time-cursor {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  margin-top: 0.35rem;
+}
+
+.routing-time-cursor-label {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.routing-time-cursor-label span {
+  font-size: 0.65rem;
+  letter-spacing: 0.08em;
+  color: var(--text-secondary);
+  white-space: nowrap;
+}
+
+.routing-time-cursor input[type="range"] {
+  flex: 1;
+  accent-color: var(--accent-color);
+}
+
+.routing-time-cursor-readout {
+  font-size: 0.72rem;
+  color: var(--text-primary);
+  font-variant-numeric: tabular-nums;
+}
