@@ -98,3 +98,9 @@ export function tickMarks(
   }
   return marks;
 }
+
+/** VMG au vent (upwind/downwind) : SOG × cos(TWA). null si donnée absente. */
+export function vmgToWind(sog: number | null, twaDeg: number | null): number | null {
+  if (sog === null || twaDeg === null) return null;
+  return sog * Math.cos((twaDeg * Math.PI) / 180);
+}

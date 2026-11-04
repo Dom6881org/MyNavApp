@@ -677,3 +677,153 @@ html, body {
   justify-content: center;
   min-height: 0;
 }
+
+/* ===== Refonte instruments — Phase 1 : HELM (#158) ===== */
+
+.helm-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  padding: 0.5rem;
+}
+
+.helm-central {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+}
+
+.helm-central-switch {
+  display: flex;
+  gap: 0.3rem;
+  justify-content: center;
+}
+
+.helm-switch-btn {
+  flex: 1;
+  background: var(--bg-tertiary);
+  color: var(--text-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: 4px;
+  font-size: 0.62rem;
+  letter-spacing: 0.06em;
+  padding: 0.25rem 0;
+  cursor: pointer;
+}
+
+.helm-switch-btn.active {
+  color: var(--text-primary);
+  border-color: var(--accent-color);
+  background: var(--bg-secondary);
+}
+
+.helm-central-value {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 0.5rem 0;
+}
+
+.helm-big-value {
+  font-size: 2.4rem;
+  font-weight: 700;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+}
+
+.helm-unit {
+  font-size: 0.65rem;
+  color: var(--text-secondary);
+  margin-top: 0.2rem;
+}
+
+.helm-vmg {
+  font-size: 0.62rem;
+  color: var(--accent-secondary);
+  white-space: nowrap;
+}
+
+.helm-compact {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+}
+
+.helm-compact-row {
+  display: grid;
+  grid-template-columns: 2.2rem 1fr auto;
+  align-items: baseline;
+  gap: 0.4rem;
+  font-size: 0.7rem;
+  color: var(--text-secondary);
+}
+
+.helm-compact-row span {
+  letter-spacing: 0.06em;
+  font-size: 0.62rem;
+}
+
+.helm-compact-row strong {
+  color: var(--text-primary);
+  font-size: 0.95rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.helm-hdg {
+  color: var(--warning-color);
+}
+
+/* Compas COURSE-UP */
+.compass-dial {
+  max-width: 100%;
+}
+
+.compass-rose-ring {
+  fill: none;
+  stroke: var(--border-color);
+  stroke-width: 1.5;
+}
+
+.compass-tick {
+  stroke: var(--text-secondary);
+  stroke-width: 1;
+}
+
+.compass-tick-major {
+  stroke: var(--text-primary);
+  stroke-width: 1.5;
+}
+
+.compass-cardinal {
+  fill: var(--text-secondary);
+  font-size: 11px;
+}
+
+.compass-cardinal-n {
+  fill: var(--accent-color);
+  font-weight: 700;
+}
+
+.compass-lubber {
+  stroke: var(--accent-color);
+  stroke-width: 3;
+}
+
+.compass-boat {
+  fill: var(--text-primary);
+}
+
+.compass-cog {
+  fill: var(--text-primary);
+  font-size: 26px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.compass-hdg {
+  fill: var(--warning-color);
+  font-size: 11px;
+}

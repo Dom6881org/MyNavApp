@@ -9,3 +9,5 @@ export { default as SettingsPage } from './SettingsPage';
 export { default as RoutingPanel } from './RoutingPanel';
 export { default as MotionPanel } from './MotionPanel';
 export { default as InstrumentCard } from './instruments/InstrumentCard';
+export { default as CompassDial } from './instruments/CompassDial';
+export { default as HelmPanel } from './instruments/HelmPanel';
