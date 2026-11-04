@@ -197,7 +197,7 @@ describe('PrepRoutingPanel', () => {
         onRequestPick={() => undefined}
         routeCalc={routeCalc()}
         onComputeRoute={() => undefined}
-        gribCalc={gribCalc({ status: { available: false, fresh: false, validUntil: null } })}
+        gribCalc={gribCalc({ status: { available: false, fresh: false, validUntil: null } as unknown as GribApi['status'] })}
       />
     );
     expect(screen.getByText('No GRIB — constant wind')).toBeTruthy();
