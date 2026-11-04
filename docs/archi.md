@@ -58,6 +58,7 @@ flowchart LR
 | Frontend | `src/hooks/useMotionSensors.ts` + `src/utils/motion.ts` + `src/components/MotionPanel.tsx` | Capteurs de mouvement de la tablette : gîte, tangage, période de roulis (DeviceMotion, Firefox Android — #152) |
 | Frontend | `src/utils/routeCursor.ts` + `src/components/RouteTimeCursor.tsx` | Curseur temporel de la route : position/cap/SOG interpolés à un instant choisi (A2 #154) |
 | Frontend | `src/components/` (Speedometer, WindIndicator, Compass, DepthSounder…) | Instruments |
+| Frontend | `src/utils/instrumentPrimitives.ts` + `src/components/instruments/InstrumentCard.tsx` | Fondations de la refonte instruments (Phase 0 #156) : primitives SVG (0° en haut, sens horaire), carte générique avec bascule cadran ⇄ numérique par instrument ; phases suivantes : panneau HELM, COASTAL/OVERVIEW, PREP ROUTING |
 | Contrat | `shared/navigation.ts` | Types TypeScript partagés, réexportés par `src/types` — contrat unique front/back |
 | Backend | `server/app.py` | Serveur HTTP multi-threads, état, SSE, tuiles, AIS, tracks |
 | Backend | `server/nmea.py` | Analyse des phrases NMEA (voir §4) |
