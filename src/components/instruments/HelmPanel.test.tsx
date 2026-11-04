@@ -70,9 +70,10 @@ describe('HelmPanel', () => {
     render(<HelmPanel data={data()} />);
     // compact SOG : STW jumele dans la meme rangee
     expect(screen.getByTestId('helm-compact-sog').textContent).toContain('STW --');
-    // central VITESSE : STW jumele aussi
+    // central VITESSE : STW jumele aussi — et le compact SOG fixe le
+    // montre en permanence : le jumelage est rendu aux DEUX endroits.
     fireEvent.click(screen.getByRole('tab', { name: 'VITESSE' }));
-    expect(screen.getByText(/STW --/)).toBeTruthy();
+    expect(screen.getAllByText(/STW --/).length).toBe(2);
   });
 
   it('compact DEPTH : valeur sonde en metres, double tiret sans donnee', () => {
