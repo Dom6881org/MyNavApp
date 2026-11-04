@@ -72,6 +72,44 @@ describe('InstrumentModesPanel', () => {
     expect(window.localStorage.getItem('mynav:ui-mode')).toBe('prep');
   });
 
+  it('AUTO desactive par defaut : alarme profondeur ne change pas le mode (Phase 4)', () => {
+    window.localStorage.clear();
+    const alarmData: NavigationData = {
+      ...data,
+      depth: { ...data.depth!, alarm: true, depth: 1.5, alarmDepth: 2 }
+    };
+    render(<InstrumentModesPanel data={alarmData} initialMode="helm" />);
+    // reste en HELM : pas de tuiles COASTAL, pas d'avis auto
+    expect(screen.getByText('COMPASS')).toBeTruthy();
+    expect(screen.queryByTestId('coastal-tiles')).toBeNull();
+    expect(screen.queryByTestId('instrument-auto-notice')).toBeNull();
+    expect(
+      screen.getByRole('button', { name: 'Auto switch to coastal on depth alarm' }).getAttribute('aria-pressed')
+    ).toBe('false');
+  });
+
+  it('AUTO + alarme profondeur : bascule automatique vers COASTAL avec avis', () => {
+    window.localStorage.setItem('mynav:ui-auto', '1');
+    const alarmData: NavigationData = {
+      ...data,
+      depth: { ...data.depth!, alarm: true, depth: 1.5, alarmDepth: 2 }
+    };
+    render(<InstrumentModesPanel data={alarmData} initialMode="helm" />);
+    expect(screen.getByTestId('coastal-tiles')).toBeTruthy();
+    expect(screen.getByTestId('instrument-auto-notice').textContent).toContain('Depth alarm');
+    expect(window.localStorage.getItem('mynav:ui-mode')).toBe('coastal');
+  });
+
+  it('toggle AUTO persiste le opt-in', () => {
+    render(<InstrumentModesPanel data={data} initialMode="helm" />);
+    const toggle = screen.getByRole('button', { name: 'Auto switch to coastal on depth alarm' });
+    fireEvent.click(toggle);
+    expect(window.localStorage.getItem('mynav:ui-auto')).toBe('1');
+    expect(toggle.getAttribute('aria-pressed')).toBe('true');
+    fireEvent.click(toggle);
+    expect(window.localStorage.getItem('mynav:ui-auto')).toBeNull();
+  });
+
   it('le mode choisi est persiste (localStorage mynav:ui-mode)', () => {
     render(<InstrumentModesPanel data={data} initialMode="helm" />);
     fireEvent.click(screen.getByRole('tab', { name: 'OVERVIEW' }));
