@@ -42,6 +42,23 @@ describe('CoastalPanel', () => {
     expect(screen.getByTestId('coastal-tile-depth').className).toContain('alarm');
   });
 
+  it('alarme SHALLOW : banniere role alert avec profondeur et seuil (Phase 4)', () => {
+    render(
+      <CoastalPanel
+        data={data({ depth: { depth: 1.5, temperature: 17, alarm: true, alarmDepth: 2 } })}
+      />
+    );
+    const banner = screen.getByTestId('coastal-alarm');
+    expect(banner.textContent).toContain('SHALLOW');
+    expect(banner.textContent).toContain('1.5 m');
+    expect(banner.textContent).toContain('2.0 m');
+  });
+
+  it('sans alarme : pas de banniere', () => {
+    render(<CoastalPanel data={data()} />);
+    expect(screen.queryByTestId('coastal-alarm')).toBeNull();
+  });
+
   it('donnees absentes : double tiret sans crash', () => {
     render(
       <CoastalPanel

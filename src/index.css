@@ -1077,3 +1077,43 @@ html, body {
   color: #9db4c0;
   margin: 0;
 }
+
+/* ===== Refonte instruments Phase 4 — SHALLOW + auto-switch (#164) ===== */
+/* Bannière d'alarme profondeur dans COASTAL : rouge, role alert. */
+.coastal-alarm-banner {
+  padding: 6px 10px;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: #ffb3b3;
+  background: rgba(200, 40, 40, 0.3);
+  border: 1px solid rgba(255, 122, 122, 0.6);
+  border-radius: 8px;
+  margin-bottom: 8px;
+}
+
+/* Avis de bascule automatique (status discret, pas une alarme). */
+.instrument-auto-notice {
+  margin: 6px 0 0;
+  padding: 4px 8px;
+  font-size: 11px;
+  color: #ffc107;
+  background: rgba(255, 193, 7, 0.12);
+  border: 1px solid rgba(255, 193, 7, 0.4);
+  border-radius: 6px;
+}
+
+/* Toggle AUTO dans la rangée d'onglets : discret, distinct des onglets. */
+.helm-switch-btn.auto {
+  margin-left: auto;
+  border-style: dashed;
+  opacity: 0.8;
+}
+
+.helm-switch-btn.auto.active {
+  border-style: solid;
+  color: #2dd4a7;
+  border-color: rgba(45, 212, 167, 0.6);
+  background: rgba(45, 212, 167, 0.15);
+}

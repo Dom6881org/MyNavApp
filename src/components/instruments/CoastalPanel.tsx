@@ -14,6 +14,7 @@ interface CoastalPanelProps {
 const CoastalPanel: React.FC<CoastalPanelProps> = ({ data }) => {
   const depth = data.depth?.depth ?? null;
   const depthAlarm = data.depth?.alarm ?? false;
+  const alarmDepth = data.depth?.alarmDepth ?? null;
   const sog = data.speed?.sog ?? null;
   const cog = data.compass?.cog ?? null;
   const hdg = data.compass?.heading ?? null;
@@ -24,6 +25,11 @@ const CoastalPanel: React.FC<CoastalPanelProps> = ({ data }) => {
 
   return (
     <div className="coastal-panel" role="group" aria-label="Coastal instruments">
+      {depthAlarm && (
+        <div className="coastal-alarm-banner" role="alert" data-testid="coastal-alarm">
+          SHALLOW — {depth === null ? '--' : depth.toFixed(1)} m · alarm at {alarmDepth === null ? '--' : alarmDepth.toFixed(1)} m
+        </div>
+      )}
       <InstrumentCard
         title="WIND"
         info={awa === null ? null : <span>AWA {Math.round(Math.abs(awa))}°</span>}
