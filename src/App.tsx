@@ -223,12 +223,19 @@ const App: React.FC = () => {
                 onModeChange={setActiveMode}
               />
             </div>
-            {/* HELM / COASTAL : les instruments remplissent l'écran —
+            {/* HELM : panneau seul, plein écran — retour terrain Dom :
+                MOTION et rangée basse (WIND/DEPTH) retirés, ils dupliquent
+                le vent et la profondeur déjà dans les compacts HELM (#180). */}
+            {activeMode === 'helm' && (
+              <div className="ui-stage-panels ui-stage-helm">
+                <HelmPanel data={navigationData} />
+              </div>
+            )}
+            {/* COASTAL : les instruments remplissent l'écran —
                 l'emplacement de la carte ne reste jamais vide (#172) */}
-            {(activeMode === 'helm' || activeMode === 'coastal') && (
+            {activeMode === 'coastal' && (
               <div className="ui-stage-panels">
-                {activeMode === 'helm' && <HelmPanel data={navigationData} />}
-                {activeMode === 'coastal' && <CoastalPanel data={navigationData} />}
+                <CoastalPanel data={navigationData} />
                 <MotionPanel />
                 <div className="ui-stage-bottom">
                   <BottomInstrumentsPanel data={navigationData} />
