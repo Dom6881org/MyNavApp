@@ -1,7 +1,7 @@
 import React from 'react';
 import { useAISSettings, useNavigationData, useDashboardLayout, useTrackRecorder, useRoutingInput, useRoutingPolar, useRoutingRoute, useGrib } from './hooks';
-import { InstrumentPanel, MotionPanel, HelmPanel } from './components';
-import { isHelmEnabled } from './utils/helmFlag';
+import { InstrumentPanel, MotionPanel, InstrumentModesPanel } from './components';
+import { getUiMode } from './utils/instrumentMode';
 import { Position } from './types';
 import MapView from './components/MapView';
 import { isMapProfilingEnabled, reportMapPerformance } from './utils/mapPerformance';
@@ -106,9 +106,10 @@ const App: React.FC = () => {
     document.documentElement.className = `theme-${layout.theme}`;
   }, [layout.theme]);
 
-  // Refonte instruments Phase 1 (#158) : panneau HELM derrière feature flag
-  // (?helm=1 ou localStorage mynav:helm=1) — défaut : rendu actuel inchangé.
-  const helmEnabled = isHelmEnabled();
+  // Refonte instruments Phases 1-2 (#158, #160) : stack HELM/COASTAL/OVERVIEW
+  // activée par ?ui=... ou ?helm=1 (rétro-compat) / localStorage — défaut :
+  // rendu legacy inchangé.
+  const uiMode = getUiMode();
 
   const renderInstrumentCards = (types: string[], row: 'top' | 'bottom') => layout.instruments    .filter(instrument => types.includes(instrument.type) && instrument.visible)
     .map(instrument => (
@@ -174,8 +175,8 @@ const App: React.FC = () => {
       <main className="app-main">
         <div className="main-layout main-layout-instruments-top">
           <aside className="instruments-sidebar">
-            {helmEnabled ? (
-              <HelmPanel data={navigationData} />
+            {uiMode ? (
+              <InstrumentModesPanel data={navigationData} initialMode={uiMode} />
             ) : (
               <div className="instruments-container instrument-grid instrument-grid-top">
                 {renderInstrumentCards(['speed', 'compass'], 'top')}
