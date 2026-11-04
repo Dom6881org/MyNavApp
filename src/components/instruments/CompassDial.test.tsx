@@ -17,9 +17,10 @@ describe('CompassDial (COURSE-UP)', () => {
     ).toContain('rotate(0');
   });
 
-  it('COG affiche en grand, HDG en ambre', () => {
+  it('COG en grand sans unite + label COG TRUE, HDG en ambre', () => {
     render(<CompassDial cog={137.4} heading={132} />);
-    expect(screen.getByText('137°')).toBeTruthy();
+    expect(screen.getByText('137')).toBeTruthy();
+    expect(screen.getByText('COG °TRUE')).toBeTruthy();
     expect(screen.getByText('HDG 132°')).toBeTruthy();
   });
 
@@ -36,6 +37,23 @@ describe('CompassDial (COURSE-UP)', () => {
     const { container } = render(<CompassDial cog={0} />);
     expect(container.querySelectorAll('.compass-tick').length).toBe(36);
     expect(container.querySelectorAll('.compass-cardinal').length).toBe(4);
+    expect(container.querySelectorAll('.compass-lubber').length).toBe(1);
+  });
+
+  it('cardinaux contre-rotes : les lettres restent droites (rotation inverse de la rose)', () => {
+    const { container } = render(<CompassDial cog={137} />);
+    const cardinals = container.querySelectorAll('.compass-cardinal');
+    expect(cardinals.length).toBe(4);
+    // rose tournee de -137 (= 223) ; chaque cardinal porte rotate(-223, x, y)
+    for (const c of Array.from(cardinals)) {
+      expect(c.getAttribute('transform')).toContain('rotate(-223');
+    }
+  });
+
+  it('virole extérieure + proue/lubber rouges rendues', () => {
+    const { container } = render(<CompassDial cog={45} />);
+    expect(container.querySelectorAll('.compass-outer-ring').length).toBe(1);
+    expect(container.querySelectorAll('.compass-boat').length).toBe(1);
     expect(container.querySelectorAll('.compass-lubber').length).toBe(1);
   });
 });
