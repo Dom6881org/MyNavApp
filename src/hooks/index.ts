@@ -9,3 +9,4 @@ export * from './useRoutingPolar';
 export * from './useRoutingInput';
 export * from './useRoutingRoute';
 export * from './useGrib';
+export * from './useMotionSensors';

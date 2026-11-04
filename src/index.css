@@ -537,3 +537,62 @@ html, body {
     gap: 0.5rem;
   }
 }
+
+
+/* Motion panel (issue #152) : gîte, tangage, roulis depuis les capteurs tablette */
+.motion-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  padding: 0.75rem;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  box-shadow: 0 2px 8px var(--shadow-color);
+  color: var(--text-primary);
+}
+
+.motion-rows {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.motion-row {
+  display: flex;
+  align-items: baseline;
+  gap: 0.5rem;
+  background: rgba(0, 0, 0, 0.15);
+  border-radius: 4px;
+  padding: 0.35rem 0.5rem;
+}
+
+.motion-row span {
+  font-size: 0.7rem;
+  letter-spacing: 0.08em;
+  color: var(--text-secondary);
+}
+
+.motion-row strong {
+  font-size: 1.15rem;
+  margin-left: auto;
+  color: var(--accent-color);
+  font-variant-numeric: tabular-nums;
+}
+
+.motion-row small {
+  font-size: 0.65rem;
+  color: var(--text-secondary);
+  min-width: 2.5rem;
+  text-align: right;
+}
+
+.motion-unavailable {
+  font-size: 0.65rem;
+  color: var(--warning-color);
+}
+
+.motion-hint {
+  font-size: 0.75rem;
+  color: var(--text-secondary);
+}
