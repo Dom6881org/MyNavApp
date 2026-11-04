@@ -629,3 +629,51 @@ html, body {
   color: var(--text-primary);
   font-variant-numeric: tabular-nums;
 }
+
+/* ===== Refonte instruments (Phase 0, #156) ===== */
+
+.instrument-card {
+  display: flex;
+  flex-direction: column;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  padding: 0.5rem;
+  min-width: 0;
+}
+
+.instrument-card-header {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.instrument-card-info {
+  flex: 1;
+  font-size: 0.6rem;
+  color: var(--text-secondary);
+}
+
+.instrument-mode-toggle {
+  background: var(--bg-tertiary);
+  color: var(--text-primary);
+  border: 1px solid var(--border-color);
+  border-radius: 4px;
+  font-size: 0.7rem;
+  line-height: 1;
+  padding: 0.2rem 0.35rem;
+  cursor: pointer;
+}
+
+.instrument-mode-toggle:hover {
+  background: var(--accent-color);
+  color: var(--bg-primary);
+}
+
+.instrument-card-body {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 0;
+}

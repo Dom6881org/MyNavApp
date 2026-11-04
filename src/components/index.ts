@@ -8,3 +8,4 @@ export { default as MapView } from './MapViewSimple';
 export { default as SettingsPage } from './SettingsPage';
 export { default as RoutingPanel } from './RoutingPanel';
 export { default as MotionPanel } from './MotionPanel';
+export { default as InstrumentCard } from './instruments/InstrumentCard';
