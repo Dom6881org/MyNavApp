@@ -1,18 +1,20 @@
-/** Modes d'affichage des instruments (refonte instruments, Phase 2 — #160).
+/** Modes d'affichage des instruments (refonte instruments, Phase 2 — #160,
+ * Phase 3 — #162).
  *
- * Trois panneaux : HELM (#159), COASTAL, OVERVIEW. Rétro-compatibilité
- * Phase 1 : `?helm=1` / `localStorage mynav:helm = '1'` continuent d'ouvrir
- * le HELM. Aucun mode actif (null) = rendu legacy inchangé. */
+ * Quatre panneaux : HELM (#159), COASTAL, OVERVIEW, PREP ROUTING (#162).
+ * Rétro-compatibilité Phase 1 : `?helm=1` / `localStorage mynav:helm = '1'`
+ * continuent d'ouvrir le HELM. Aucun mode actif (null) = rendu legacy
+ * inchangé. */
 
 import type { InstrumentMode } from './instrumentPrimitives';
 
-export type UiMode = 'helm' | 'coastal' | 'overview';
+export type UiMode = 'helm' | 'coastal' | 'overview' | 'prep';
 
 const UI_MODE_KEY = 'mynav:ui-mode';
 const HELM_KEY = 'mynav:helm'; // rétro-compat Phase 1
 const INSTRUMENT_MODE_PREFIX = 'mynav:instrument-mode:';
 
-const UI_MODES: UiMode[] = ['helm', 'coastal', 'overview'];
+const UI_MODES: UiMode[] = ['helm', 'coastal', 'overview', 'prep'];
 
 /** Pur : décide du mode actif. Ordre : URL ?ui= > mynav:ui-mode > ?helm=1 >
  * mynav:helm (Phase 1) > null (legacy). */
@@ -21,7 +23,7 @@ export function parseUiMode(
   uiStorage: string | null,
   helmStorage: string | null
 ): UiMode | null {
-  const urlUi = /[?&]ui=(helm|coastal|overview)/.exec(search);
+  const urlUi = /[?&]ui=(helm|coastal|overview|prep)/.exec(search);
   if (urlUi) return urlUi[1] as UiMode;
   if (uiStorage !== null && UI_MODES.includes(uiStorage as UiMode)) {
     return uiStorage as UiMode;

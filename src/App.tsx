@@ -176,7 +176,16 @@ const App: React.FC = () => {
         <div className="main-layout main-layout-instruments-top">
           <aside className="instruments-sidebar">
             {uiMode ? (
-              <InstrumentModesPanel data={navigationData} initialMode={uiMode} />
+              <InstrumentModesPanel
+                data={navigationData}
+                initialMode={uiMode}
+                routing={routing}
+                routingPickTarget={routingPickTarget}
+                onRequestRoutingPick={handleRoutingPickRequest}
+                routeCalc={routingRoute}
+                onComputeRoute={handleComputeRoute}
+                gribCalc={grib}
+              />
             ) : (
               <div className="instruments-container instrument-grid instrument-grid-top">
                 {renderInstrumentCards(['speed', 'compass'], 'top')}

@@ -929,3 +929,151 @@ html, body {
   font-variant-numeric: tabular-nums;
   color: var(--text-primary);
 }
+
+/* ===== Refonte instruments Phase 3 — PREP ROUTING (#162) ===== */
+/* Panneau latéral compact : extrémités de route + calcul + résumé.
+   Réutilise .overview-row (Phase 2) pour les lignes du résumé. */
+.prep-routing-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 10px;
+  background: var(--instrument-card-background, rgba(15, 25, 35, 0.92));
+  border: 1px solid var(--instrument-card-border, rgba(255, 255, 255, 0.12));
+  border-radius: 10px;
+  margin-top: 8px;
+}
+
+.prep-routing-section {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.prep-routing-section-label,
+.prep-routing-label {
+  font-size: 10px;
+  letter-spacing: 0.12em;
+  color: var(--instrument-label-color, #9db4c0);
+  text-transform: uppercase;
+}
+
+.prep-routing-endpoint {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.prep-routing-endpoint .prep-routing-label {
+  width: 44px;
+  flex-shrink: 0;
+}
+
+.prep-routing-chip {
+  flex: 1;
+  min-width: 0;
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+  color: var(--instrument-value-color, #e8f1f5);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.prep-routing-pick {
+  flex-shrink: 0;
+  padding: 3px 8px;
+  font-size: 10px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  background: rgba(255, 255, 255, 0.08);
+  color: inherit;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.prep-routing-pick.active {
+  background: rgba(255, 193, 7, 0.25);
+  border-color: rgba(255, 193, 7, 0.6);
+  color: #ffc107;
+}
+
+.prep-routing-pick:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+
+.prep-routing-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.prep-routing-compute {
+  flex: 1;
+  padding: 8px 12px;
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  background: rgba(0, 200, 150, 0.18);
+  color: #2dd4a7;
+  border: 1px solid rgba(45, 212, 167, 0.5);
+  border-radius: 8px;
+  cursor: pointer;
+}
+
+.prep-routing-compute:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+
+.prep-routing-cancel {
+  padding: 6px 10px;
+  font-size: 11px;
+  background: rgba(255, 90, 90, 0.15);
+  color: #ff7a7a;
+  border: 1px solid rgba(255, 122, 122, 0.4);
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.prep-routing-progress {
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+  color: #9db4c0;
+  margin: 0;
+}
+
+.prep-routing-ok {
+  font-size: 11px;
+  color: #2dd4a7;
+  margin: 0;
+}
+
+.prep-routing-warn {
+  font-size: 11px;
+  color: #ffc107;
+  margin: 0;
+}
+
+.prep-routing-error {
+  font-size: 11px;
+  color: #ff7a7a;
+  margin: 0;
+}
+
+.prep-routing-summary {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+  padding-top: 8px;
+}
+
+.prep-routing-empty {
+  font-size: 12px;
+  color: #9db4c0;
+  margin: 0;
+}
