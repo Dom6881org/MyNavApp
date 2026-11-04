@@ -27,6 +27,11 @@ describe('instrumentMode (pur)', () => {
       expect(parseUiMode('', 'bogus', null)).toBeNull();
     });
 
+    it('URL ?ui=prep (Phase 3) prioritaire', () => {
+      expect(parseUiMode('?ui=prep', 'overview', null)).toBe('prep');
+      expect(parseUiMode('', 'prep', null)).toBe('prep');
+    });
+
     it('retro-compat Phase 1 : ?helm=1 puis mynav:helm', () => {
       expect(parseUiMode('?helm=1', null, null)).toBe('helm');
       expect(parseUiMode('', null, '1')).toBe('helm');

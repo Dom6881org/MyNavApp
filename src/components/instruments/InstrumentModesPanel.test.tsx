@@ -2,6 +2,7 @@ import { fireEvent, render, screen } from '@testing-library/react';
 import { beforeEach, describe, expect, it } from 'vitest';
 import InstrumentModesPanel from './InstrumentModesPanel';
 import type { NavigationData } from '../../types';
+import type { RoutingInput } from '../../hooks/useRoutingInput';
 
 const data: NavigationData = {
   position: null,
@@ -36,6 +37,39 @@ describe('InstrumentModesPanel', () => {
     expect(screen.getByText('DEPTH')).toBeTruthy();
     fireEvent.click(screen.getByRole('tab', { name: 'OVERVIEW' }));
     expect(screen.getByTestId('overview-wind')).toBeTruthy();
+  });
+
+  it('onglet PREP ROUTING : rend PrepRoutingPanel quand le routage est fourni', () => {
+    const routing = {
+      useCurrentPosition: true,
+      startPosition: { latitude: 42.5, longitude: 3.1 },
+      finishPosition: null,
+      distanceNm: null,
+      errors: { start: null, finish: null, same: null, polar: null, motor: null },
+      plan: null
+    } as unknown as RoutingInput;
+    render(
+      <InstrumentModesPanel
+        data={data}
+        initialMode="prep"
+        routing={routing}
+        onRequestRoutingPick={() => undefined}
+      />
+    );
+    expect(screen.getByRole('tab', { name: 'PREP' })).toBeTruthy();
+    expect(screen.getByText('START')).toBeTruthy();
+    expect(screen.getByText('FINISH')).toBeTruthy();
+  });
+
+  it('onglet PREP sans routage : invite explicite', () => {
+    render(<InstrumentModesPanel data={data} initialMode="prep" />);
+    expect(screen.getByTestId('prep-unavailable').textContent).toContain('Routing unavailable');
+  });
+
+  it('PREP persiste comme les autres modes', () => {
+    render(<InstrumentModesPanel data={data} initialMode="helm" />);
+    fireEvent.click(screen.getByRole('tab', { name: 'PREP' }));
+    expect(window.localStorage.getItem('mynav:ui-mode')).toBe('prep');
   });
 
   it('le mode choisi est persiste (localStorage mynav:ui-mode)', () => {

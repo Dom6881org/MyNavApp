@@ -13,5 +13,6 @@ export { default as CompassDial } from './instruments/CompassDial';
 export { default as HelmPanel } from './instruments/HelmPanel';
 export { default as WindDial } from './instruments/WindDial';
 export { default as CoastalPanel } from './instruments/CoastalPanel';
+export { default as PrepRoutingPanel } from './instruments/PrepRoutingPanel';
 export { default as OverviewPanel } from './instruments/OverviewPanel';
 export { default as InstrumentModesPanel } from './instruments/InstrumentModesPanel';
