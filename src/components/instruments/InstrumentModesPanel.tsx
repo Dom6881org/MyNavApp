@@ -19,7 +19,11 @@ import PrepRoutingPanel from './PrepRoutingPanel';
  *
  * Phase 4 — #164 : auto-switch vers COASTAL à l'activation de l'alarme
  * profondeur, opt-in « AUTO » persisté (mynav:ui-auto, désactivé par
- * défaut), pas de retour arrière automatique. */
+ * défaut), pas de retour arrière automatique.
+ *
+ * Layout #170 : `onModeChange` remonte le mode actif à App (qui masque
+ * la carte en HELM/COASTAL) ; `hideActivePanel` laisse App rendre le
+ * panneau du mode ailleurs (OVERVIEW : tuiles au-dessus de la carte). */
 
 interface InstrumentModesPanelProps {
   data: NavigationData;
@@ -30,6 +34,8 @@ interface InstrumentModesPanelProps {
   routeCalc?: RoutingRouteApi;
   onComputeRoute?: () => void;
   gribCalc?: GribApi;
+  onModeChange?: (mode: UiMode) => void;
+  hideActivePanel?: boolean;
 }
 
 const MODES: { id: UiMode; label: string }[] = [
@@ -47,7 +53,9 @@ const InstrumentModesPanel: React.FC<InstrumentModesPanelProps> = ({
   onRequestRoutingPick,
   routeCalc,
   onComputeRoute,
-  gribCalc
+  gribCalc,
+  onModeChange,
+  hideActivePanel = false
 }) => {
   const [mode, setMode] = useState<UiMode>(initialMode);
   const [autoSwitch, setAutoSwitch] = useState<boolean>(() => readAutoSwitch());
@@ -80,6 +88,12 @@ const InstrumentModesPanel: React.FC<InstrumentModesPanelProps> = ({
     setAutoNotice('Depth alarm — switched to COASTAL');
   }, [depthAlarm, autoSwitch]);
 
+  // #170 : App a besoin du mode actif pour piloter la carte
+  // (masquée en HELM/COASTAL, bandeau tuiles au-dessus en OVERVIEW).
+  useEffect(() => {
+    onModeChange?.(mode);
+  }, [mode, onModeChange]);
+
   return (
     <div className="instrument-modes-panel">
       <div className="instrument-modes-switch" role="tablist" aria-label="Instruments mode">
@@ -111,10 +125,10 @@ const InstrumentModesPanel: React.FC<InstrumentModesPanelProps> = ({
           {autoNotice}
         </p>
       )}
-      {mode === 'helm' && <HelmPanel data={data} />}
-      {mode === 'coastal' && <CoastalPanel data={data} />}
-      {mode === 'overview' && <OverviewPanel data={data} />}
-      {mode === 'prep' && (routing && onRequestRoutingPick ? (
+      {!hideActivePanel && mode === 'helm' && <HelmPanel data={data} />}
+      {!hideActivePanel && mode === 'coastal' && <CoastalPanel data={data} />}
+      {!hideActivePanel && mode === 'overview' && <OverviewPanel data={data} />}
+      {!hideActivePanel && mode === 'prep' && (routing && onRequestRoutingPick ? (
         <PrepRoutingPanel
           routing={routing}
           pickTarget={routingPickTarget}

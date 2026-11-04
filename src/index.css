@@ -1189,3 +1189,80 @@ html, body {
   font-size: 10px;
   font-weight: 600;
 }
+
+/* ===== Layout instruments #170 : OVERVIEW en tuiles au-dessus de la carte,
+   HELM/COASTAL sans carte (règle design revue 2) ===== */
+/* OverviewPanel : tuiles (cadres + grandes valeurs) au lieu de lignes.
+   .overview-row (lignes du résumé PREP) reste inchangé. */
+.overview-panel {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr)) 1.7fr;
+  gap: 0.6rem;
+  background: transparent;
+  border: none;
+  border-radius: 0;
+  padding: 0;
+}
+
+.overview-tile {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  gap: 0.2rem;
+  min-width: 0;
+  background: linear-gradient(145deg, rgba(25, 50, 66, 0.96), rgba(12, 29, 42, 0.98));
+  border: 1px solid rgba(115, 179, 199, 0.2);
+  border-radius: 10px;
+  padding: 0.65rem 0.5rem;
+}
+
+.overview-tile-label {
+  font-size: 0.6rem;
+  letter-spacing: 0.14em;
+  color: var(--text-secondary);
+  font-weight: 700;
+}
+
+.overview-tile-value {
+  font-size: 1.15rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  color: var(--text-primary);
+  text-align: center;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 100%;
+}
+
+.overview-tile-coords {
+  font-size: 0.8rem;
+  letter-spacing: 0.02em;
+}
+
+/* Bandeau OVERVIEW : tuiles au-dessus de la carte dans le conteneur carte */
+.overview-strip {
+  flex: 0 0 auto;
+  padding: 0.6rem 1rem 0;
+}
+
+.overview-strip .overview-panel {
+  padding: 0;
+}
+
+/* HELM/COASTAL : pas de carte — les instruments occupent toute la place */
+.main-layout-no-map .instruments-sidebar {
+  flex: 1 1 auto;
+  overflow-y: auto;
+}
+
+@media (max-width: 900px) {
+  .overview-panel {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .overview-tile-position {
+    grid-column: span 2;
+  }
+}

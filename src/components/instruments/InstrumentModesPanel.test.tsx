@@ -115,4 +115,27 @@ describe('InstrumentModesPanel', () => {
     fireEvent.click(screen.getByRole('tab', { name: 'OVERVIEW' }));
     expect(window.localStorage.getItem('mynav:ui-mode')).toBe('overview');
   });
+
+  it('#170 : onModeChange remonte le mode actif (init puis commutation)', () => {
+    const seen: string[] = [];
+    render(
+      <InstrumentModesPanel
+        data={data}
+        initialMode="helm"
+        onModeChange={(mode) => seen.push(mode)}
+      />
+    );
+    expect(seen).toContain('helm');
+    fireEvent.click(screen.getByRole('tab', { name: 'COASTAL' }));
+    expect(seen[seen.length - 1]).toBe('coastal');
+  });
+
+  it('#170 : hideActivePanel masque le corps du panneau actif', () => {
+    render(
+      <InstrumentModesPanel data={data} initialMode="overview" hideActivePanel />
+    );
+    // l'onglet reste présent et sélectionné, le corps est rendu par App ailleurs
+    expect(screen.getByRole('tab', { name: 'OVERVIEW' }).getAttribute('aria-selected')).toBe('true');
+    expect(screen.queryByTestId('overview-wind')).toBeNull();
+  });
 });
