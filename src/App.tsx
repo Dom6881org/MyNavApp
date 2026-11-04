@@ -2,7 +2,9 @@ import React from 'react';
 import { useAISSettings, useNavigationData, useDashboardLayout, useTrackRecorder, useRoutingInput, useRoutingPolar, useRoutingRoute, useGrib } from './hooks';
 import { InstrumentPanel, MotionPanel, InstrumentModesPanel } from './components';
 import BottomInstrumentsPanel from './components/instruments/BottomInstrumentsPanel';
+import OverviewPanel from './components/instruments/OverviewPanel';
 import { getUiMode } from './utils/instrumentMode';
+import type { UiMode } from './utils/instrumentMode';
 import { Position } from './types';
 import MapView from './components/MapView';
 import { isMapProfilingEnabled, reportMapPerformance } from './utils/mapPerformance';
@@ -112,6 +114,13 @@ const App: React.FC = () => {
   // rendu legacy inchangé.
   const uiMode = getUiMode();
 
+  // #170 : mode actif remonté par InstrumentModesPanel — la carte n'apparaît
+  // que sur OVERVIEW (tuiles au-dessus) et PREP ; HELM/COASTAL = écrans
+  // d'instruments purs, sans carte.
+  const [activeMode, setActiveMode] = React.useState<UiMode | null>(uiMode);
+  const showMap = activeMode === null || activeMode === 'overview' || activeMode === 'prep';
+  const layoutClass = uiMode && !showMap ? ' main-layout-no-map' : '';
+
   const renderInstrumentCards = (types: string[], row: 'top' | 'bottom') => layout.instruments    .filter(instrument => types.includes(instrument.type) && instrument.visible)
     .map(instrument => (
       <div
@@ -174,7 +183,7 @@ const App: React.FC = () => {
     <div className="app">
       {/* Main content - primary instruments, chart, then secondary instruments */}
       <main className="app-main">
-        <div className="main-layout main-layout-instruments-top">
+        <div className={`main-layout main-layout-instruments-top${layoutClass}`}>
           <aside className="instruments-sidebar">
             {uiMode ? (
               <InstrumentModesPanel
@@ -186,6 +195,8 @@ const App: React.FC = () => {
                 routeCalc={routingRoute}
                 onComputeRoute={handleComputeRoute}
                 gribCalc={grib}
+                onModeChange={setActiveMode}
+                hideActivePanel={activeMode === 'overview'}
               />
             ) : (
               <div className="instruments-container instrument-grid instrument-grid-top">
@@ -196,9 +207,17 @@ const App: React.FC = () => {
             <MotionPanel />
           </aside>
           
-          <div className="map-container">
-            {profiledMapView}
-          </div>
+          {showMap && (
+            <div className="map-container">
+              {/* #170 : OVERVIEW — instruments en tuiles AU-DESSUS de la carte */}
+              {activeMode === 'overview' && (
+                <div className="overview-strip">
+                  <OverviewPanel data={navigationData} />
+                </div>
+              )}
+              {profiledMapView}
+            </div>
+          )}
 
           {layout.instruments.some(instrument =>
             (instrument.type === 'depth' || instrument.type === 'wind') && instrument.visible
