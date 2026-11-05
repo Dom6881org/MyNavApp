@@ -1,5 +1,5 @@
 import React from 'react';
-import { normalizeDeg, polarToXY, tickMarks } from '../../utils/instrumentPrimitives';
+import { describeArc, normalizeDeg, polarToXY, tickMarks } from '../../utils/instrumentPrimitives';
 
 /** Cadran de vent façon Raymarine (#176 ; reprise HELM design-centered
  * #180, retour n°6 : la vue VENT doit être à la hauteur du nouveau compas).
@@ -30,10 +30,12 @@ const WindDial: React.FC<WindDialProps> = ({ twdDeg, twsKts, size = 170 }) => {
   const marks = tickMarks(0, 360, 90, 30);
   const twd = twdDeg === null ? null : normalizeDeg(twdDeg);
 
-  // Arcs façon Raymarine : rouge à bâbord (moitié gauche du cadran),
-  // vert à tribord (moitié droite) — le bateau pointe vers le haut.
-  const arcPort = `M ${CX - R} ${CY} A ${R} ${R} 0 0 1 ${CX} ${CY - R}`;
-  const arcStarboard = `M ${CX} ${CY - R} A ${R} ${R} 0 0 1 ${CX + R} ${CY}`;
+  // Arcs façon Raymarine (retour terrain n°8 #180) : ils s'arrêtent à
+  // 35° de l'axe du bateau au lieu de descendre à l'horizontale (90°) —
+  // rouge à bâbord, vert à tribord, symétriques autour de la proue.
+  const ARC_HALF_DEG = 35;
+  const arcPort = describeArc(CX, CY, R, -ARC_HALF_DEG, 0);
+  const arcStarboard = describeArc(CX, CY, R, 0, ARC_HALF_DEG);
 
   // Aiguille fine façon Raymarine (retour terrain n°7 #180) : tête
   // étroite à la pointe, tige courte qui S'ARRÊTE au bord du bateau —
