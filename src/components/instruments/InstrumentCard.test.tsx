@@ -1,6 +1,7 @@
 import { fireEvent, render, screen } from '@testing-library/react';
 import { beforeEach, describe, expect, it } from 'vitest';
 import InstrumentCard from './InstrumentCard';
+import type { InstrumentMode } from '../../utils/instrumentPrimitives';
 
 // Persistance par instrument (#160) : isolement des tests.
 beforeEach(() => {
@@ -65,7 +66,7 @@ describe('InstrumentCard', () => {
   });
 
   it('#184 : mode CONTROLE — le bouton reflète le mode du parent, le clic remonte', () => {
-    let current = 'dial';
+    let current: InstrumentMode = 'dial';
     const { rerender } = render(
       <InstrumentCard title="HELM-CENTRAL" mode={current} onModeChange={(m) => { current = m; }}>
         <p>contenu</p>
