@@ -35,13 +35,15 @@ const WindDial: React.FC<WindDialProps> = ({ twdDeg, twsKts, size = 170 }) => {
   const arcPort = `M ${CX - R} ${CY} A ${R} ${R} 0 0 1 ${CX} ${CY - R}`;
   const arcStarboard = `M ${CX} ${CY - R} A ${R} ${R} 0 0 1 ${CX + R} ${CY}`;
 
-  // Aiguille à la provenance du vent, comme la maquette : pointe fine
-  // rouge à l'extrémité, tige traversant le centre vers l'arrière.
+  // Aiguille fine façon Raymarine (retour terrain n°7 #180) : tête
+  // étroite à la pointe, tige courte qui S'ARRÊTE au bord du bateau —
+  // l'aiguille ne traverse plus la silhouette.
   const needleAngle = twd ?? 0;
-  const headTip = polarToXY(CX, CY, R - 14, needleAngle);
-  const headA = polarToXY(CX, CY, R - 26, needleAngle + 90);
-  const headB = polarToXY(CX, CY, R - 26, needleAngle - 90);
-  const stern = polarToXY(CX, CY, 30, needleAngle + 180);
+  const tip = polarToXY(CX, CY, R - 14, needleAngle);
+  const headBaseA = polarToXY(CX, CY, R - 30, needleAngle + 4);
+  const headBaseB = polarToXY(CX, CY, R - 30, needleAngle - 4);
+  const shaftStart = polarToXY(CX, CY, 34, needleAngle);
+  const shaftEnd = polarToXY(CX, CY, R - 28, needleAngle);
 
   return (
     <svg
@@ -95,12 +97,12 @@ const WindDial: React.FC<WindDialProps> = ({ twdDeg, twsKts, size = 170 }) => {
         );
       })}
 
-      {/* Aiguille : pointe à la provenance du vent */}
+      {/* Aiguille : pointe à la provenance du vent — fine, hors du bateau */}
       {twd !== null && (
         <g className="wind-needle" data-testid="wind-arrow">
-          <line x1={headTip.x} y1={headTip.y} x2={stern.x} y2={stern.y} />
+          <line x1={shaftStart.x} y1={shaftStart.y} x2={shaftEnd.x} y2={shaftEnd.y} />
           <polygon
-            points={`${headTip.x},${headTip.y} ${headA.x},${headA.y} ${headB.x},${headB.y}`}
+            points={`${tip.x},${tip.y} ${headBaseA.x},${headBaseA.y} ${headBaseB.x},${headBaseB.y}`}
           />
         </g>
       )}
