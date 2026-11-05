@@ -38,8 +38,8 @@ describe('WindDial façon Raymarine (#176, reprise HELM #180)', () => {
   it('fill : le SVG occupe 100% du conteneur (retour n°9 #180)', () => {
     const { container } = render(<WindDial twdDeg={45} twsKts={10} fill />);
     const svg = container.querySelector('svg.wind-dial');
-    expect(svg.getAttribute('width')).toBe('100%');
-    expect(svg.getAttribute('height')).toBe('100%');
+    expect(svg?.getAttribute('width')).toBe('100%');
+    expect(svg?.getAttribute('height')).toBe('100%');
   });
 
   it('TWD normalisée : 370° affiché 10°', () => {
