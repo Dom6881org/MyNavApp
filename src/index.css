@@ -695,8 +695,10 @@ html, body {
   display: flex;
   flex-direction: column;
   gap: 0.3rem;
-  flex: 1 1 auto;
+  /* #182 : instrument central sur 2/3, colonne droite sur 1/3 */
+  flex: 2 1 0;
   min-width: 0;
+  min-height: 0;
 }
 
 .helm-central-switch {
@@ -751,18 +753,22 @@ html, body {
 }
 
 .helm-compact {
-  /* HELM design-centered : colonne de compacts fixes (SOG/TWS/DEPTH)
-     à droite du central — 170 px comme la maquette */
+  /* #182 (retour n°12) : colonne droite mise en valeur — 1/3 de la largeur,
+     tuiles DIGITALES cliquables (permutation avec le central).
+     Retour n°13 : les tuiles OCCUPENT TOUT l'espace (vertical/horizontal),
+     sans agrandir la fenêtre — flex 1 chacune, contenu centré. */
   display: flex;
   flex-direction: column;
-  justify-content: center;
-  gap: 0.5rem;
-  flex: 0 0 10rem;
+  justify-content: stretch;
+  gap: 0.4rem;
+  flex: 1 1 0;
+  min-width: 0;
+  min-height: 0;
   padding-left: 0.75rem;
   border-left: 1px solid var(--border-color);
 }
 
-/* Sidebar étroite : les compacts repassent sous le central (téléphone) */
+/* Sidebar étroite : les tuiles repassent sous le central (téléphone) */
 @media (max-width: 480px) {
   .helm-panel {
     flex-direction: column;
@@ -774,28 +780,99 @@ html, body {
   }
 }
 
-.helm-compact-row {
+/* #182 : tuile digitale — label, GRANDE valeur, jumelage. Toutes
+   cliquables (retour n°13 : profondeur, heure, position incluses) :
+   survol = accent, la tuile passe au centre au clic. La tuile s'étire
+   pour occuper la colonne (flex 1), contenu centré horizontalement. */
+.helm-tile {
   display: grid;
-  grid-template-columns: 2.2rem 1fr auto;
-  align-items: baseline;
-  gap: 0.4rem;
-  font-size: 0.7rem;
+  justify-items: center;
+  align-content: center;
+  gap: 0.15rem;
+  padding: 0.5rem 0.6rem;
+  background: var(--bg-tertiary);
+  border: 1px solid var(--border-color);
+  border-radius: 9px;
   color: var(--text-secondary);
+  font: inherit;
+  text-align: center;
+  width: 100%;
+  flex: 1 1 0;
+  min-height: 0;
+  overflow: hidden;
 }
 
-.helm-compact-row span {
-  letter-spacing: 0.06em;
-  font-size: 0.62rem;
+button.helm-tile {
+  cursor: pointer;
 }
 
-.helm-compact-row strong {
+button.helm-tile:hover,
+button.helm-tile:focus-visible {
+  border-color: var(--accent-color);
   color: var(--text-primary);
-  font-size: 1.25rem;
+}
+
+.helm-tile-lbl {
+  letter-spacing: 0.12em;
+  font-size: 0.62rem;
+  font-weight: 700;
+}
+
+.helm-tile-val {
+  color: var(--text-primary);
+  font-size: 1.9rem;
+  font-weight: 700;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+}
+
+.helm-tile-sub {
+  font-size: 0.7rem;
   font-variant-numeric: tabular-nums;
 }
 
 .helm-hdg {
   color: var(--warning-color);
+}
+
+/* #182 retour n°13 : les QUATRE valeurs du vent en digital sous le
+   cadran central — TWS, AWS, TWA, AWA. (Le compas garde ses valeurs
+   DANS le cadran — retour n°16.) */
+.helm-wind-readouts {
+  display: flex;
+  justify-content: center;
+  gap: 1.25rem;
+  margin-top: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.helm-readout {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.15rem;
+}
+
+.helm-readout-lbl {
+  font-size: 0.62rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  color: var(--text-secondary);
+}
+
+.helm-readout strong {
+  font-size: 1.4rem;
+  font-weight: 700;
+  line-height: 1;
+  color: var(--text-primary);
+  font-variant-numeric: tabular-nums;
+}
+
+/* Position centrale : deux lignes lat/lon, police un cran sous la
+   grande valeur pour rester dans le panneau en 1100×600. */
+.helm-position-line {
+  font-size: 2.2rem;
+  line-height: 1.15;
 }
 
 /* Compas COURSE-UP façon maquette (HELM design-centered) — couleurs
@@ -832,13 +909,21 @@ html, body {
   stroke-width: 2;
 }
 
-.compass-courseup .compass-cardinal {
+/* #182 retour n°15 : classe RENOMMÉE .compass-point (PAS
+   .compass-cardinal) — index.css garde une règle legacy
+   .compass-cardinal { position: absolute; top: 15%; left: 50%;
+   transform: translateX(-50%) } qui arrachait les lettres de leurs
+   coordonnées SVG et tuait la contre-rotation (empilement en griffe
+   au centre depuis #180). Le CSS transform écrase l'attribut
+   transform SVG : jamais de CSS transform sur du texte SVG qui
+   porte déjà un rotate(). */
+.compass-courseup .compass-point {
   fill: #8fa3b0;
   font-size: 13px;
   font-weight: 700;
 }
 
-.compass-courseup .compass-cardinal-n {
+.compass-courseup .compass-point-n {
   fill: #e8f1f5;
 }
 
@@ -852,23 +937,140 @@ html, body {
   fill: #ff3b30;
 }
 
+/* #182 retour n°20 (Dom, maquette validée) : DEUX lignes explicites
+   dans le cadran — « COG : XXX » 22px puis « HDG : XXX° » 14px ambre.
+   L'ancien label « COG °TRUE » disparaît (plus de .compass-cog-label). */
 .compass-courseup .compass-cog {
   fill: #e8f1f5;
-  font-size: 38px;
+  font-size: 22px;
   font-weight: 700;
   font-variant-numeric: tabular-nums;
 }
 
-.compass-courseup .compass-cog-label {
-  fill: #8fa3b0;
-  font-size: 11px;
-  font-weight: 600;
-}
-
 .compass-courseup .compass-hdg {
   fill: #ffb020;
-  font-size: 15px;
+  font-size: 14px;
   font-weight: 700;
+}
+
+/* ===== #182 retour n°20 : cadrans compas + vent DANS LE THÈME LIGHT =====
+   Les cadrans avaient des couleurs marines FIXES (fond #0d141c) : en thème
+   light, ils restaient sombres sur une page claire. Surcharges .theme-light
+   (posé sur <html> par App.tsx) : fond clair, texte foncé, arcs
+   bâbord/tribord et aiguille rouges/verts conservés (visibles sur clair).
+   Dark et night ne changent pas. */
+.theme-light .compass-courseup .compass-outer-ring {
+  fill: #eef3f7;
+  stroke: #8fa3b0;
+}
+
+.theme-light .compass-courseup .compass-rose-ring {
+  stroke: #7d93a6;
+}
+
+.theme-light .compass-courseup .compass-tick {
+  stroke: #7d93a6;
+}
+
+.theme-light .compass-courseup .compass-tick-major {
+  stroke: #52697c;
+}
+
+.theme-light .compass-courseup .compass-point {
+  fill: #52697c;
+}
+
+.theme-light .compass-courseup .compass-point-n {
+  fill: #1a2530;
+}
+
+.theme-light .compass-courseup .compass-deg {
+  fill: #7d93a6;
+}
+
+.theme-light .compass-courseup .compass-cog {
+  fill: #1a2530;
+}
+
+.theme-light .compass-courseup .compass-hdg {
+  fill: #b26a00;
+}
+
+.theme-light .compass-courseup .compass-lubber {
+  stroke: #d63026;
+}
+
+.theme-light .compass-courseup .compass-boat {
+  fill: #d63026;
+}
+
+.theme-light .wind-dial .wind-dial-virole {
+  fill: #eef3f7;
+  stroke: #8fa3b0;
+}
+
+.theme-light .wind-dial .wind-tick {
+  stroke: #7d93a6;
+}
+
+.theme-light .wind-dial .wind-tick-major {
+  stroke: #52697c;
+}
+
+.theme-light .wind-dial .wind-cardinal {
+  fill: #52697c;
+}
+
+.theme-light .wind-dial .wind-cardinal-n {
+  fill: #1a2530;
+}
+
+.theme-light .wind-dial .wind-no-data {
+  fill: #52697c;
+}
+
+.theme-light .wind-boat {
+  fill: #52697c;
+}
+
+.theme-light .wind-needle {
+  stroke: #d64545;
+}
+
+.theme-light .wind-needle polygon {
+  fill: #d64545;
+}
+
+.theme-light .wind-arc-port {
+  stroke: #d64545;
+}
+
+.theme-light .wind-arc-starboard {
+  stroke: #1e9860;
+}
+
+.theme-light .wind-dial-box {
+  fill: #f7fafc;
+  stroke: #8fa3b0;
+}
+
+.theme-light .wind-dial .wind-dial-tws {
+  fill: #1a2530;
+}
+
+.theme-light .wind-dial-twd {
+  fill: #52697c;
+}
+
+/* #182 retour n°16 : degrés tous les 30° sur la rose (sauf cardinaux),
+   contre-rotés, plus discrets que les cardinaux.
+   Retours n°17/18 (Dom) : trop gros au premier essai (10px) —
+   7px, hiérarchie claire cardinaux (13px) ≫ degrés (7px). */
+.compass-courseup .compass-deg {
+  fill: #5d7590;
+  font-size: 7px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
 }
 
 /* ===== Refonte instruments — Phase 2 : COASTAL / OVERVIEW + persistance (#160) ===== */
@@ -1442,6 +1644,27 @@ html, body {
 
 .ui-stage-helm .helm-wind-stage .wind-dial {
   /* Hauteur = espace restant ; largeur par ratio intrinsèque (carré),
+     plafonnée à la largeur du conteneur — jamais de débordement. */
+  height: 100%;
+  width: auto;
+  max-width: 100%;
+}
+
+/* #182 retour n°14 : le compas central reçoit le même traitement que le
+   vent — cadran pur OCCUPANT l'espace disponible, valeurs COG/HDG en
+   digital dessous. Mêmes règles d'occupation, jamais de fenêtre
+   agrandie ni de rognage. */
+.ui-stage-helm .helm-compass-stage {
+  flex: 1 1 auto;
+  width: 100%;
+  min-height: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.ui-stage-helm .helm-compass-stage .compass-courseup {
+  /* Hauteur = espace restant ; largeur par ratio intrinsèque (220:232),
      plafonnée à la largeur du conteneur — jamais de débordement. */
   height: 100%;
   width: auto;

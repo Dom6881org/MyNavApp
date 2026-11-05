@@ -12,24 +12,37 @@ import {
  * Le design revue 2 remplace l'ancienne aiguille sur rose fixe (illisible :
  * « il indique 82 mais on face à l'ouest ») : la ROSE tourne de -COG, le
  * cap du bateau reste TOUJOURS en haut sous le lubber fixe, la proue est
- * fixe. COG en grand, HDG en ambre.
+ * fixe.
  *
  * Reprise HELM : fidélité à la maquette — double cercle (virole + rose),
- * cardinaux CONTRE-ROTÉS (toujours à l'endroit sous les yeux), proue et
- * lubber ROUGES, COG en grand sans unité + label « COG °TRUE », HDG ambre
- * sous le cadran. Couleurs d'affichage marines fixes (comme WindDial).
+ * cardinaux CONTRE-ROTÉS au POURTOUR de la rose (rayon ~97), proue et
+ * lubber ROUGES, les DEUX valeurs « COG : XXX » / « HDG : XXX° »
+ * explicites DANS le cadran (retour n°20, maquette validée).
+ * Couleurs d'affichage marines par défaut ; le thème LIGHT les
+ * passe en fond clair (surcharges .theme-light dans index.css).
  *
- * ⚠️ Classe .compass-courseup (PAS .compass-dial) : App.css garde une
- * règle legacy .compass-dial { height: 96px; width: min(100%, 210px) }
- * qui écrasait ce cadran à ~96 px — c'est ainsi que le compas central
- * HELM restait minuscule depuis la Phase 1 (#180). */
+ * #182 retour n°16 (Dom) : les degrés sur la rose (tous les 30°, sauf aux
+ * cardinaux) + les deux valeurs COG/HDG À L'INTÉRIEUR du cadran (les
+ * readouts digitaux externes du n°14 sont retirés — retour à la
+ * maquette).
+ *
+ * ⚠️ Classe .compass-point (PAS .compass-cardinal) pour les cardinaux :
+ * index.css garde une règle legacy .compass-cardinal { position: absolute;
+ * top: 15%; left: 50%; transform: translateX(-50%) } qui ARRACHAIT les
+ * lettres de leurs coordonnées SVG et tuait la contre-rotation — depuis
+ * #180 les 4 lettres s'empilaient en une griffe illisible au centre du
+ * cadran (bug invisible sur captures, la vision hallucinait les lettres —
+ * tranché par comptage de pixels, retour n°15). */
 
 interface CompassDialProps {
   /** Cap sur le fond (COG) — pilote la rotation de la rose. */
   cog: number | null;
-  /** Cap compas (HDG) — affiché en ambre, ne fait pas tourner la rose. */
+  /** Cap compas (HDG) — affiché en ambre sous le cadran. */
   heading?: number | null;
   size?: number;
+  /** Comme WindDial : le cadran occupe tout l'espace disponible de son
+   * conteneur (width/height 100%) au lieu d'une taille fixe. */
+  fill?: boolean;
 }
 
 const CX = 110;
@@ -37,14 +50,21 @@ const CY = 120;
 const R_OUTER = 104;
 const R_ROSE = 88;
 
-const CompassDial: React.FC<CompassDialProps> = ({ cog, heading = null, size = 220 }) => {
+const CompassDial: React.FC<CompassDialProps> = ({
+  cog,
+  heading = null,
+  size = 220,
+  fill = false
+}) => {
   const roseRotation = cog === null ? 0 : roseRotationDeg(cog);
   const marks = tickMarks(0, 360, 30, 10);
 
   /** Cardinal tournant (positionné dans la rose) mais contre-roté sur
-   * lui-même : les lettres restent droites quelle que soit la rose. */
+   * lui-même : les lettres restent droites quelle que soit la rose.
+   * #182 retour n°15 : POURTOUR de la rose (rayon ~97, entre rose 88 et
+   * virole 104) — façon maquette. */
   const cardinal = (angle: number, label: string, highlight: boolean) => {
-    const p = polarToXY(CX, CY, R_ROSE - 28, angle);
+    const p = polarToXY(CX, CY, 97, angle);
     return (
       <text
         key={label}
@@ -52,9 +72,31 @@ const CompassDial: React.FC<CompassDialProps> = ({ cog, heading = null, size = 2
         y={p.y + 4}
         textAnchor="middle"
         transform={`rotate(${-roseRotation} ${p.x} ${p.y})`}
-        className={highlight ? 'compass-cardinal compass-cardinal-n' : 'compass-cardinal'}
+        className={highlight ? 'compass-point compass-point-n' : 'compass-point'}
       >
         {label}
+      </text>
+    );
+  };
+
+  /** Degrés tous les 30° sur la rose (retour n°16), sauf aux cardinaux —
+   * contre-rotés comme les lettres pour rester lisibles.
+   * #182 retours n°17/18 (Dom) : nettement plus petits que le premier
+   * essai — rayon 76 (COLLÉS contre les graduations, façon Raymarine)
+   * et police 7px : hiérarchie claire (cardinaux 13px ≫ degrés 7px),
+   * ils ne dépassent plus sur le cadran. */
+  const degLabel = (angle: number) => {
+    const p = polarToXY(CX, CY, R_ROSE - 12, angle);
+    return (
+      <text
+        key={`deg-${angle}`}
+        x={p.x}
+        y={p.y + 3}
+        textAnchor="middle"
+        transform={`rotate(${-roseRotation} ${p.x} ${p.y})`}
+        className="compass-deg"
+      >
+        {angle}
       </text>
     );
   };
@@ -62,11 +104,13 @@ const CompassDial: React.FC<CompassDialProps> = ({ cog, heading = null, size = 2
   return (
     <svg
       className="compass-courseup"
-      viewBox="0 0 220 240"
-      width={size}
-      height={(size * 240) / 220}
+      viewBox="0 0 220 232"
+      width={fill ? '100%' : size}
+      height={fill ? '100%' : (size * 232) / 220}
       role="img"
-      aria-label={`Compass course up${cog === null ? '' : `, COG ${Math.round(cog)} degrees`}`}
+      aria-label={`Compass course up${cog === null ? '' : `, COG ${Math.round(cog)} degrees`}${
+        heading === null ? '' : `, heading ${Math.round(heading)} degrees`
+      }`}
     >
       {/* Virole extérieure fixe */}
       <circle cx={CX} cy={CY} r={R_OUTER} className="compass-outer-ring" />
@@ -91,6 +135,14 @@ const CompassDial: React.FC<CompassDialProps> = ({ cog, heading = null, size = 2
         {cardinal(90, 'E', false)}
         {cardinal(180, 'S', false)}
         {cardinal(270, 'W', false)}
+        {degLabel(30)}
+        {degLabel(60)}
+        {degLabel(120)}
+        {degLabel(150)}
+        {degLabel(210)}
+        {degLabel(240)}
+        {degLabel(300)}
+        {degLabel(330)}
       </g>
 
       {/* Proue fixe + lubber rouge : le cap est TOUJOURS ici */}
@@ -100,15 +152,16 @@ const CompassDial: React.FC<CompassDialProps> = ({ cog, heading = null, size = 2
         className="compass-boat"
       />
 
-      {/* Readouts : COG en grand + label, HDG ambre sous le cadran */}
-      <text x={CX} y={CY + 52} textAnchor="middle" className="compass-cog">
-        {cog === null ? '--' : `${Math.round(normalizeDeg(cog))}`}
+      {/* #182 retour n°20 (Dom, maquette validée AVANT livraison) :
+          DEUX lignes explicites à l'intérieur du cadran —
+          « COG : 137 » (22px) puis « HDG : 132° » (14px ambre),
+          sans toucher les lignes du cadran en bas :
+          bas HDG = CY+62 + ~14 = 196 < rose ring 208 < virole 224 ✓. */}
+      <text x={CX} y={CY + 34} textAnchor="middle" className="compass-cog">
+        {cog === null ? 'COG : --' : `COG : ${Math.round(normalizeDeg(cog))}`}
       </text>
-      <text x={CX} y={CY + 74} textAnchor="middle" className="compass-cog-label">
-        COG °TRUE
-      </text>
-      <text x={CX} y={230} textAnchor="middle" className="compass-hdg">
-        {heading === null ? 'HDG --' : `HDG ${Math.round(normalizeDeg(heading))}°`}
+      <text x={CX} y={CY + 62} textAnchor="middle" className="compass-hdg">
+        {heading === null ? 'HDG : --' : `HDG : ${Math.round(normalizeDeg(heading))}°`}
       </text>
     </svg>
   );

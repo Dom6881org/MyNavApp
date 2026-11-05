@@ -38,7 +38,12 @@ jobs:
       - run: pip install -r requirements.txt -r requirements-routing.txt
 
       # Playwright : installé hors du lockfile (CI uniquement).
-      - run: npm i --no-save playwright && npx playwright install --with-deps chromium
+      # ÉPINGLÉ (1.64.1) : le 05/11 à 18:28, la sortie de 1.65.0 a cassé
+      # `playwright install --with-deps chromium` sur les runners (2 échecs
+      # consécutifs à la seconde près de la publication, alors que 1.64.x
+      # passait 20 min avant). On suit les maj délibérément, pas au fil de
+      # l'eau. `npm ls` vérifie l'absence de conflit avec le lockfile.
+      - run: npm i --no-save playwright@1.64.1 && npx playwright install --with-deps chromium
 
       - name: Démarrer serveur + flux NMEA mock
         run: |
