@@ -2,7 +2,7 @@
  * Captures d'écran de la CI visuelle (#178).
  *
  * Ouvre l'app servie par le serveur Python (dist/ + flux NMEA UDP) et prend
- * une capture par vue (helm/coastal/overview/prep/legacy) x thème
+ * une capture par vue (helm/helm-wind/coastal/overview/prep/legacy) x thème
  * (dark/light) — 1440x900, ~8 s d'attente pour laisser arriver les données
  * NMEA et Leaflet s'initialiser.
  *
@@ -18,8 +18,18 @@ const BASE = process.env.BASE_URL ?? 'http://127.0.0.1:3001';
 const WAIT_MS = Number(process.env.WAIT_MS ?? 8000);
 const OUT = 'shots';
 
-const VIEWS = ['helm', 'coastal', 'overview', 'prep', 'legacy'];
+const VIEWS = ['helm', 'helm-wind', 'coastal', 'overview', 'prep', 'legacy'];
 const THEMES = ['dark', 'light'];
+
+// Vues dérivées : capture d'un état interactif de la vue HELM.
+// 'helm-wind' = onglet VENT du central (reprise HELM #180, retour n°6 :
+// Dom valide la vue VENT sur captures, pas seulement le compas).
+const DERIVED = {
+  'helm-wind': async (page) => {
+    await page.getByRole('tab', { name: 'VENT' }).click();
+    await page.waitForTimeout(500);
+  },
+};
 
 // Layout minimal pour injecter le thème (useDashboardLayout fusionne avec
 // les défauts ; instruments vide = les vues refondues n'utilisent pas ce
@@ -43,8 +53,12 @@ async function main() {
       await page.addInitScript((layout) => {
         try { window.localStorage.setItem('dashboardLayout', layout); } catch { /* noop */ }
       }, layoutFor(theme));
-      await page.goto(BASE + '/?ui=' + view, { waitUntil: 'load' });
+      const derived = DERIVED[view];
+      await page.goto(BASE + '/?ui=' + (derived ? 'helm' : view), { waitUntil: 'load' });
       await page.waitForTimeout(WAIT_MS);
+      if (derived) {
+        await derived(page);
+      }
       const file = OUT + '/' + view + '-' + theme + '.png';
       await page.screenshot({ path: file });
       console.log('capture: ' + file);

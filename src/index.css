@@ -888,6 +888,11 @@ html, body {
   max-width: 100%;
 }
 
+.wind-dial .wind-dial-tws {
+  fill: #e8f1f5;
+  font-weight: 700;
+}
+
 .wind-dial-tws {
   font-size: 22px;
 }
@@ -1176,7 +1181,43 @@ html, body {
   background: rgba(200, 40, 40, 0.12);
 }
 
-/* ===== WindDial façon Raymarine (#168) ===== */
+/* ===== WindDial façon Raymarine (#168 ; reprise HELM #180 : classes
+   PROPRES .wind-* — .compass-tick/.compass-cardinal sont désormais
+   scopés sous .compass-courseup, les ticks du cadran vent étaient
+   devenus invisibles) ===== */
+.wind-dial .wind-dial-virole {
+  fill: #0d141c;
+  stroke: #263444;
+  stroke-width: 2;
+}
+
+.wind-dial .wind-tick {
+  stroke: #5d7590;
+  stroke-width: 1;
+}
+
+.wind-dial .wind-tick-major {
+  stroke: #4a5f74;
+  stroke-width: 2;
+}
+
+.wind-dial .wind-cardinal {
+  fill: #8fa3b0;
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.wind-dial .wind-cardinal-n {
+  fill: #e8f1f5;
+  font-weight: 700;
+}
+
+.wind-dial .wind-no-data {
+  fill: #8fa3b0;
+  font-size: 11px;
+  font-weight: 600;
+}
+
 .wind-arc-port {
   fill: none;
   stroke: #c33a3a;
