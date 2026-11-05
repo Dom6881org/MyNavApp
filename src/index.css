@@ -670,6 +670,10 @@ html, body {
   color: var(--bg-primary);
 }
 
+/* #184 retour n°21-quater : le central n'utilise plus le bouton 123/◉
+   (hideToggle) — il rend son propre switch segmenté via headerPrefix.
+   L'ancien style :disabled du retour n°21 v1 est retiré avec la prop. */
+
 .instrument-card-body {
   flex: 1;
   display: flex;
@@ -746,10 +750,27 @@ html, body {
   margin-top: 0.3rem;
 }
 
-.helm-vmg {
-  font-size: 0.75rem;
-  color: var(--accent-secondary);
-  white-space: nowrap;
+/* #184 retour n°21-quater : VMG retiré du header du central (maquette
+   validée) — les infos de route suivie (ETA, next waypoint…) arriveront
+   plus tard dans cette vue. */
+
+/* ===== #184 retour n°21-quater : switch SEGMENTÉ du header central =====
+   À gauche du titre (maquette) : 3 segments CADRAN / 1/2 CADRAN /
+   NUMÉRIQUE pour le compas, 2 pour vitesse et vent, AUCUN pour
+   profondeur/heure/position (pas rendu du tout). Réutilise les
+   .helm-switch-btn du design (fond bg-tertiary, actif accent). */
+.helm-mode-switch {
+  display: flex;
+  gap: 0.3rem;
+  align-items: center;
+  flex: 0 0 auto;
+}
+
+/* Dans le header, les segments ne s'étirent pas (le .helm-switch-btn
+   de base porte flex: 1 pour l'ancienne rangée de switchs). */
+.instrument-card-header .helm-switch-btn {
+  flex: 0 0 auto;
+  padding: 0.3rem 0.55rem;
 }
 
 .helm-compact {
@@ -812,6 +833,35 @@ button.helm-tile:focus-visible {
   color: var(--text-primary);
 }
 
+/* #184 retour n°21 : la tuile de l'instrument AFFICHÉ AU CENTRE reste
+   visible et est SURLIGNÉE — cadre accent + pastille (maquette validée).
+   Une tuile disabled (aucune aujourd'hui) ne prendrait pas le survol. */
+.helm-tile.active {
+  position: relative;
+  border-color: var(--accent-color);
+  color: var(--text-primary);
+}
+
+.helm-tile.active .helm-tile-lbl {
+  color: var(--text-primary);
+}
+
+.helm-tile.active::after {
+  content: '';
+  position: absolute;
+  top: 0.45rem;
+  right: 0.45rem;
+  width: 0.4rem;
+  height: 0.4rem;
+  border-radius: 50%;
+  background: var(--accent-color);
+}
+
+button.helm-tile.active:hover,
+button.helm-tile.active:focus-visible {
+  border-color: var(--accent-color);
+}
+
 .helm-tile-lbl {
   letter-spacing: 0.12em;
   font-size: 0.62rem;
@@ -833,6 +883,55 @@ button.helm-tile:focus-visible {
 
 .helm-hdg {
   color: var(--warning-color);
+}
+
+/* #184 : HDG ambre — palette light dédiée (même rôle que le compas
+   #183 : pas un simple éclaircissement, l'ambre #ffaa00 est pâle sur
+   fond clair). */
+.theme-light .helm-hdg {
+  color: #b26a00;
+}
+
+/* #184 retour n°21 : vue DIGITALE du central (switch 123/◉) — la
+   donnée principale en TRÈS GROS chiffres (clamp : occupe l'espace
+   sans jamais l'agrandir), jumelage dessous (HDG ambre pour le cap,
+   AWS/TWA/AWA pour le vent). */
+.helm-central-digital {
+  justify-content: center;
+  gap: 0.2rem;
+}
+
+.helm-digital-label {
+  font-size: 0.8rem;
+  font-weight: 700;
+  letter-spacing: 0.25em;
+  color: var(--text-secondary);
+}
+
+.helm-digital-value {
+  font-size: clamp(4rem, 15vh, 9rem);
+  font-weight: 700;
+  line-height: 1;
+  color: var(--text-primary);
+  font-variant-numeric: tabular-nums;
+}
+
+.helm-digital-sub {
+  font-size: 1.6rem;
+  font-weight: 700;
+  line-height: 1;
+  color: var(--text-primary);
+  font-variant-numeric: tabular-nums;
+}
+
+/* HDG ambre de la vue digitale : la couleur doit gagner sur
+   .helm-digital-sub (même spécificité, ordre) — règle dédiée. */
+.helm-digital-sub.helm-hdg {
+  color: var(--warning-color);
+}
+
+.theme-light .helm-digital-sub.helm-hdg {
+  color: #b26a00;
 }
 
 /* #182 retour n°13 : les QUATRE valeurs du vent en digital sous le
@@ -873,6 +972,291 @@ button.helm-tile:focus-visible {
 .helm-position-line {
   font-size: 2.2rem;
   line-height: 1.15;
+}
+
+/* ===== #184 retour n°21-quater : vues numériques CADRÉES (maquette) =====
+   Même philosophie pour tout le central : cadre intérieur, lignes
+   réparties, label à GAUCHE (code couleur legacy), valeur alignée à
+   DROITE, séparateurs discrets. container-type: size → les valeurs
+   en unités cq suivent la taille du cadre sans jamais l'agrandir
+   (même règle d'occupation que les cadrans : jamais de rognage). */
+.helm-frame {
+  flex: 1 1 auto;
+  width: 100%;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  background: rgba(15, 52, 96, 0.35);
+  border: 1px solid #263444;
+  border-radius: 6px;
+  padding: 0.35rem 0.9rem;
+  container-type: size;
+}
+
+.helm-frame-row {
+  flex: 1 1 0;
+  min-height: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.helm-frame-row + .helm-frame-row {
+  border-top: 1px solid #263444;
+}
+
+/* Ligne secondaire (MAX, TEMP, GPS) : police plus petite */
+.helm-frame-row.secondary .helm-frame-val {
+  font-size: min(13cqh, 11cqw);
+}
+
+.helm-frame-lbl {
+  font-size: min(5.5cqh, 3.4cqw);
+  font-weight: 700;
+  letter-spacing: 0.18em;
+  color: #9ab0bb;
+  white-space: nowrap;
+}
+
+.helm-frame-val {
+  font-size: min(24cqh, 20cqw);
+  font-weight: 600;
+  line-height: 1;
+  color: #e8f3f6;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  display: flex;
+  align-items: baseline;
+  gap: 0.35rem;
+}
+
+.helm-frame-val small {
+  font-size: 0.38em;
+  color: #9ab0bb;
+  font-weight: 400;
+}
+
+/* Code couleur legacy des labels (comme .instrument-digital-*) */
+.helm-frame-lbl.lbl-cog,
+.helm-frame-lbl.lbl-sog {
+  color: #36c7d0;
+}
+
+.helm-frame-lbl.lbl-hdg,
+.helm-frame-lbl.lbl-stw {
+  color: #ffb454;
+}
+
+.helm-frame-lbl.lbl-max {
+  color: #ff4d4f;
+}
+
+.helm-frame-lbl.lbl-depth,
+.helm-frame-lbl.lbl-gps {
+  color: #35d98f;
+}
+
+/* Ligne GPS : la valeur est aussi verte (qualité du signal) */
+.helm-frame-row.gps .helm-frame-val {
+  color: #35d98f;
+}
+
+/* Bouton RESET de la ligne MAX — réutilise .speed-max-reset (App.css),
+   redimensionné en cq pour le central. */
+.helm-frame .speed-max-reset {
+  font-size: min(3.5cqh, 2.4cqw);
+  padding: 0.15rem 0.6rem;
+  align-self: center;
+}
+
+/* ===== Thème LIGHT : vues cadrées ===== */
+.theme-light .helm-frame {
+  background: rgba(48, 93, 109, 0.10);
+  border-color: #b6c6ce;
+}
+
+.theme-light .helm-frame-row + .helm-frame-row {
+  border-top-color: #b6c6ce;
+}
+
+.theme-light .helm-frame-lbl {
+  color: #587783;
+}
+
+.theme-light .helm-frame-val {
+  color: #183847;
+}
+
+.theme-light .helm-frame-val small {
+  color: #587783;
+}
+
+/* Palette legacy light (celles des .instrument-digital-* d'App.css) */
+.theme-light .helm-frame-lbl.lbl-cog,
+.theme-light .helm-frame-lbl.lbl-sog {
+  color: #087985;
+}
+
+.theme-light .helm-frame-lbl.lbl-hdg,
+.theme-light .helm-frame-lbl.lbl-stw {
+  color: #9a5200;
+}
+
+.theme-light .helm-frame-lbl.lbl-max {
+  color: #c53030;
+}
+
+.theme-light .helm-frame-lbl.lbl-depth,
+.theme-light .helm-frame-lbl.lbl-gps {
+  color: #12804d;
+}
+
+.theme-light .helm-frame-row.gps .helm-frame-val {
+  color: #12804d;
+}
+
+/* ===== #184 retour n°21-quater : demi-cadran compas LEGACY =====
+   Extraction du dial de Compass.tsx, classes DÉDIÉES .compass-half-*
+   (jamais .compass-dial ni .compass-cardinal — règles legacy App.css
+   qui cassent le rendu, leçons Phase 1 / #180). Couleurs marines
+   fixes : lisible dans les trois thèmes, comme CompassDial/WindDial. */
+.compass-half {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 100%;
+  min-height: 0;
+  flex: 1 1 auto;
+}
+
+.compass-half-stage {
+  position: relative;
+  flex: 1 1 auto;
+  width: 100%;
+  min-height: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  container-type: size;
+}
+
+.compass-half-svg {
+  display: block;
+  height: 100%;
+  width: auto;
+  max-width: 100%;
+}
+
+.compass-half-ring {
+  fill: rgba(5, 19, 28, 0.35);
+  stroke: rgba(122, 172, 190, 0.25);
+  stroke-width: 1;
+}
+
+.compass-half-tick {
+  stroke: rgba(149, 180, 193, 0.48);
+  stroke-width: 1;
+}
+
+.compass-half-tick-major {
+  stroke: #aac4ce;
+  stroke-width: 1.8;
+}
+
+.compass-half-cardinal {
+  fill: #89a9b7;
+  font-size: 8px;
+  font-weight: 700;
+  text-anchor: middle;
+}
+
+.compass-half-needle {
+  fill: #40d3d6;
+}
+
+/* Valeur du cap superposée au cadran (comme .compass-heading-value) */
+.compass-half-value {
+  position: absolute;
+  top: 62%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  color: #f3fbfd;
+  font-weight: 700;
+  font-size: min(20cqh, 7.5cqw);
+  font-variant-numeric: tabular-nums;
+}
+
+/* Lectures secondaires HDG/COG dessous */
+.compass-half-readings {
+  display: flex;
+  justify-content: center;
+  gap: 2.5rem;
+  width: 100%;
+  flex: 0 0 auto;
+  padding-top: 0.5rem;
+}
+
+.compass-half-readings > div {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.1rem;
+}
+
+.compass-half-readings span {
+  font-size: 0.62rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  color: #829eac;
+}
+
+.compass-half-readings strong {
+  font-size: 1.3rem;
+  font-weight: 600;
+  color: #dcecf1;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Thème LIGHT du demi-cadran (palette legacy light d'App.css) */
+.theme-light .compass-half-value {
+  color: #183847;
+}
+
+.theme-light .compass-half-readings span {
+  color: #587783;
+}
+
+.theme-light .compass-half-readings strong {
+  color: #183847;
+}
+
+/* ===== Stage du demi-cadran et de la jauge au central (#184) ===== */
+.ui-stage-helm .helm-compass-half-stage {
+  flex: 1 1 auto;
+  width: 100%;
+  min-height: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.ui-stage-helm .helm-speed-stage {
+  flex: 1 1 auto;
+  width: 100%;
+  min-height: 0;
+  display: flex;
+  align-items: stretch;
+  justify-content: center;
+}
+
+/* La jauge occupe l'espace sans l'agrandir : chaîne flex min-height: 0
+   (leçon #182 retour n°11), largeur plafonnée pour rester lisible. */
+.ui-stage-helm .helm-speed-stage .speed-instrument {
+  flex: 1 1 auto;
+  min-width: 0;
+  min-height: 0;
+  max-width: 640px;
 }
 
 /* Compas COURSE-UP façon maquette (HELM design-centered) — couleurs

@@ -55,6 +55,31 @@ describe('InstrumentCard', () => {
     expect(screen.getByLabelText('VMG display mode').getAttribute('data-mode')).toBe('numeric');
   });
 
+  it('#184 retour n°21-quater : headerPrefix rendu AVANT le titre', () => {
+    render(
+      <InstrumentCard
+        title="COMPASS"
+        hideToggle
+        headerPrefix={
+          <div className="helm-mode-switch" data-testid="helm-mode-switch">
+            <button type="button">CADRAN</button>
+          </div>
+        }
+      >
+        <p>137°</p>
+      </InstrumentCard>
+    );
+    const header = screen
+      .getByTestId('instrument-COMPASS')
+      .querySelector('.instrument-card-header');
+    const children = header ? Array.from(header.children) : [];
+    // le switch vient en tête, AVANT le titre
+    expect(children[0].getAttribute('data-testid')).toBe('helm-mode-switch');
+    expect(children[1].textContent).toBe('COMPASS');
+    // hideToggle : pas de bouton 123/◉
+    expect(screen.queryByRole('button', { name: 'COMPASS display mode' })).toBeNull();
+  });
+
   it('zone info optionnelle rendue si fournie', () => {
     render(
       <InstrumentCard title="WIND" info={<span role="status">GRIB</span>}>
@@ -63,6 +88,10 @@ describe('InstrumentCard', () => {
     );
     expect(screen.getByText('GRIB')).toBeTruthy();
   });
+
+  /* #184 retour n°21-quater : les tests du mode contrôlé et du bouton
+     désactivé sont retirés avec les props mode/onModeChange/toggleDisabled
+     — remplacés par headerPrefix (switch segmenté du central HELM). */
 });
 
 describe('InstrumentCard — persistance du mode (Phase 2 #160)', () => {
