@@ -18,7 +18,7 @@ const BASE = process.env.BASE_URL ?? 'http://127.0.0.1:3001';
 const WAIT_MS = Number(process.env.WAIT_MS ?? 8000);
 const OUT = 'shots';
 
-const VIEWS = ['helm', 'helm-wind', 'helm-wind-small', 'coastal', 'overview', 'prep', 'legacy'];
+const VIEWS = ['helm', 'helm-digital', 'helm-wind', 'helm-wind-small', 'coastal', 'overview', 'prep', 'legacy'];
 const THEMES = ['dark', 'light'];
 
 // Vues dérivées : capture d'un état interactif de la vue HELM.
@@ -29,6 +29,12 @@ const DERIVED = {
   // cliquant la tuile digitale TWS de la colonne droite.
   'helm-wind': async (page) => {
     await page.getByTestId('helm-compact-wind').click();
+    await page.waitForTimeout(500);
+  },
+  // #184 (retour n°21) : vue DIGITALE du central — clic sur le switch
+  // 123/◉ de la carte compas (central par défaut) -> COG énorme + HDG.
+  'helm-digital': async (page) => {
+    await page.getByRole('button', { name: 'COMPASS display mode' }).click();
     await page.waitForTimeout(500);
   },
   // #180 retour n°11 : fenêtre réduite (écran du bord) — le cadran doit

@@ -670,6 +670,18 @@ html, body {
   color: var(--bg-primary);
 }
 
+/* #184 retour n°21 : switch du central VISIBLE mais DÉSACTIVÉ pour les
+   instruments sans cadran (vitesse/profondeur/heure/position) — grisé,
+   pas cliquable. Spécificité (0,3,0) : gagne sur les règles legacy
+   .instrument-mode-toggle (:hover) d'App.css qui chargent après. */
+.instrument-card .instrument-mode-toggle:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+  color: var(--text-secondary);
+  border-color: var(--border-color);
+  background: var(--bg-tertiary);
+}
+
 .instrument-card-body {
   flex: 1;
   display: flex;
@@ -812,6 +824,35 @@ button.helm-tile:focus-visible {
   color: var(--text-primary);
 }
 
+/* #184 retour n°21 : la tuile de l'instrument AFFICHÉ AU CENTRE reste
+   visible et est SURLIGNÉE — cadre accent + pastille (maquette validée).
+   Une tuile disabled (aucune aujourd'hui) ne prendrait pas le survol. */
+.helm-tile.active {
+  position: relative;
+  border-color: var(--accent-color);
+  color: var(--text-primary);
+}
+
+.helm-tile.active .helm-tile-lbl {
+  color: var(--text-primary);
+}
+
+.helm-tile.active::after {
+  content: '';
+  position: absolute;
+  top: 0.45rem;
+  right: 0.45rem;
+  width: 0.4rem;
+  height: 0.4rem;
+  border-radius: 50%;
+  background: var(--accent-color);
+}
+
+button.helm-tile.active:hover,
+button.helm-tile.active:focus-visible {
+  border-color: var(--accent-color);
+}
+
 .helm-tile-lbl {
   letter-spacing: 0.12em;
   font-size: 0.62rem;
@@ -833,6 +874,45 @@ button.helm-tile:focus-visible {
 
 .helm-hdg {
   color: var(--warning-color);
+}
+
+/* #184 : HDG ambre — palette light dédiée (même rôle que le compas
+   #183 : pas un simple éclaircissement, l'ambre #ffaa00 est pâle sur
+   fond clair). */
+.theme-light .helm-hdg {
+  color: #b26a00;
+}
+
+/* #184 retour n°21 : vue DIGITALE du central (switch 123/◉) — la
+   donnée principale en TRÈS GROS chiffres (clamp : occupe l'espace
+   sans jamais l'agrandir), jumelage dessous (HDG ambre pour le cap,
+   AWS/TWA/AWA pour le vent). */
+.helm-central-digital {
+  justify-content: center;
+  gap: 0.2rem;
+}
+
+.helm-digital-label {
+  font-size: 0.8rem;
+  font-weight: 700;
+  letter-spacing: 0.25em;
+  color: var(--text-secondary);
+}
+
+.helm-digital-value {
+  font-size: clamp(4rem, 15vh, 9rem);
+  font-weight: 700;
+  line-height: 1;
+  color: var(--text-primary);
+  font-variant-numeric: tabular-nums;
+}
+
+.helm-digital-sub {
+  font-size: 1.6rem;
+  font-weight: 700;
+  line-height: 1;
+  color: var(--text-primary);
+  font-variant-numeric: tabular-nums;
 }
 
 /* #182 retour n°13 : les QUATRE valeurs du vent en digital sous le

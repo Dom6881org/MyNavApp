@@ -19,6 +19,14 @@ interface InstrumentCardProps {
   /** Cache le bouton 123/◉ : pour un instrument sans cadran possible
    * (ex. DEPTH — finalisation #166). */
   hideToggle?: boolean;
+  /** Mode CONTRÔLÉ (#184) : quand fourni, le bouton reflète ce mode et
+   * le clic remonte au parent via onModeChange (pas de state interne,
+   * pas de persistance — le central HELM pilote tout son affichage). */
+  mode?: InstrumentMode;
+  onModeChange?: (mode: InstrumentMode) => void;
+  /** Bouton 123/◉ visible mais DÉSACTIVÉ (#184) : instrument dont le
+   * cadran n'existe pas encore (TIME/POSITION/SOG/DEPTH en central). */
+  toggleDisabled?: boolean;
 }
 
 const InstrumentCard: React.FC<InstrumentCardProps> = ({
@@ -26,20 +34,29 @@ const InstrumentCard: React.FC<InstrumentCardProps> = ({
   children,
   defaultMode = 'dial',
   info = null,
-  hideToggle = false
+  hideToggle = false,
+  mode,
+  onModeChange,
+  toggleDisabled = false
 }) => {
-  const [mode, setMode] = useState<InstrumentMode>(() =>
+  const [internalMode, setInternalMode] = useState<InstrumentMode>(() =>
     // Persistance par instrument (Phase 2 #160) : la préférence 123/◉ de
     // chaque carte survit aux rechargements ; defaultMode = repli.
     readInstrumentMode(title, defaultMode)
   );
+  // #184 : mode contrôlé (ex. central HELM) — le parent est la source
+  // de vérité, le bouton ne fait que remonter l'intention.
+  const controlled = mode !== undefined;
+  const currentMode = controlled ? mode : internalMode;
 
   const toggleMode = () => {
-    setMode((m) => {
-      const next: InstrumentMode = m === 'dial' ? 'numeric' : 'dial';
-      writeInstrumentMode(title, next);
-      return next;
-    });
+    const next: InstrumentMode = currentMode === 'dial' ? 'numeric' : 'dial';
+    if (controlled) {
+      onModeChange?.(next);
+      return;
+    }
+    setInternalMode(next);
+    writeInstrumentMode(title, next);
   };
 
   return (
@@ -52,10 +69,11 @@ const InstrumentCard: React.FC<InstrumentCardProps> = ({
             type="button"
             className="instrument-mode-toggle"
             aria-label={`${title} display mode`}
-            data-mode={mode}
+            data-mode={currentMode}
+            disabled={toggleDisabled}
             onClick={toggleMode}
           >
-            {mode === 'dial' ? '123' : '◉'}
+            {currentMode === 'dial' ? '123' : '◉'}
           </button>
         )}
       </div>

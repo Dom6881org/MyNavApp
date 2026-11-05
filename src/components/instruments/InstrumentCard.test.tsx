@@ -63,6 +63,35 @@ describe('InstrumentCard', () => {
     );
     expect(screen.getByText('GRIB')).toBeTruthy();
   });
+
+  it('#184 : mode CONTROLE — le bouton reflète le mode du parent, le clic remonte', () => {
+    let current = 'dial';
+    const { rerender } = render(
+      <InstrumentCard title="HELM-CENTRAL" mode={current} onModeChange={(m) => { current = m; }}>
+        <p>contenu</p>
+      </InstrumentCard>
+    );
+    const toggle = screen.getByLabelText('HELM-CENTRAL display mode');
+    expect(toggle.getAttribute('data-mode')).toBe('dial');
+    fireEvent.click(toggle);
+    expect(current).toBe('numeric');
+    // le parent est la source de vérité : re-render avec le nouveau mode
+    rerender(
+      <InstrumentCard title="HELM-CENTRAL" mode={current} onModeChange={() => {}}>
+        <p>contenu</p>
+      </InstrumentCard>
+    );
+    expect(screen.getByLabelText('HELM-CENTRAL display mode').getAttribute('data-mode')).toBe('numeric');
+    // mode contrôlé : pas de persistance localStorage
+    expect(window.localStorage.getItem('mynav:instrument-mode:helm-central')).toBeNull();
+  });
+
+  it('#184 : toggleDisabled — switch visible mais désactivé, clic sans effet', () => {
+    render(<InstrumentCard title="TIME" mode="dial" toggleDisabled><p>12:00</p></InstrumentCard>);
+    const toggle = screen.getByLabelText('TIME display mode');
+    expect(toggle.hasAttribute('disabled')).toBe(true);
+    expect((toggle as HTMLButtonElement).disabled).toBe(true);
+  });
 });
 
 describe('InstrumentCard — persistance du mode (Phase 2 #160)', () => {

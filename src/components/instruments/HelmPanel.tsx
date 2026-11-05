@@ -1,5 +1,6 @@
 import React, { useMemo, useState } from 'react';
 import type { NavigationData } from '../../types';
+import type { InstrumentMode } from '../../utils/instrumentPrimitives';
 import { normalizeDeg, vmgToWind } from '../../utils/instrumentPrimitives';
 import { formatCoordinate } from '../../utils/formatCoordinate';
 import CompassDial from './CompassDial';
@@ -21,7 +22,16 @@ import InstrumentCard from './InstrumentCard';
  * colonne, verticalement et horizontalement. Affichages centraux :
  * vitesse = SOG + STW (0.0 affiché tel quel si donnée réelle, '--' sinon) ;
  * cap = COG + HDG ; vent = cadran + TWS/AWS/TWA/AWA en digital ;
- * profondeur/heure/position = gros affichages numériques. */
+ * profondeur/heure/position = gros affichages numériques.
+ *
+ * #184 (retour n°21 de Dom) : (1) SWITCH 123/◉ de la carte centrale —
+ * vues digitale et cadran du legacy ; actif pour COMPAS et VENT,
+ * visible mais désactivé (grisé) pour les instruments sans cadran
+ * (vitesse/profondeur/heure/position — cadrans à créer plus tard) ;
+ * (2) colonne droite : ordre HEURE, POSITION, VITESSE, VENT, CAP,
+ * PROFONDEUR ; les SIX tuiles restent TOUJOURS visibles ; (3) le clic
+ * affiche l'information EN GRAND au centre, la tuile RESTE à droite
+ * (fin de la permutation) et l'active est SURLIGNÉE (cadre accent). */
 
 type CentralInstrument = 'wind' | 'compass' | 'speed' | 'depth' | 'time' | 'position';
 
@@ -31,6 +41,14 @@ interface HelmPanelProps {
 
 const HelmPanel: React.FC<HelmPanelProps> = ({ data }) => {
   const [central, setCentral] = useState<CentralInstrument>('compass');
+  // #184 : format d'affichage du panneau central — 'dial' = cadran,
+  // 'numeric' = vue digitale (COG énorme + HDG ambre, TWS énorme +
+  // AWS/TWA/AWA). Un seul état pour tout le central (préférence de
+  // format, pas de données) ; pas de persistance pour l'instant.
+  const [centralMode, setCentralMode] = useState<InstrumentMode>('dial');
+  // Instruments dont le cadran existe ; pour les autres le switch est
+  // visible mais désactivé (retour n°21 : cadrans créés plus tard).
+  const centralHasDial = central === 'compass' || central === 'wind';
 
   const cog = data.compass?.cog ?? null;
   const hdg = data.compass?.heading ?? null;
@@ -133,12 +151,57 @@ const HelmPanel: React.FC<HelmPanelProps> = ({ data }) => {
       </div>
     );
 
-  // #182 retour n°13 : SIX instruments — la colonne droite montre TOUS les
-  // non-centraux. Ordre fixe : vent, vitesse, cap, profondeur, heure,
-  // position (les non-centraux, le central exclu).
-  const tileOrder: CentralInstrument[] = (
-    ['wind', 'speed', 'compass', 'depth', 'time', 'position'] as CentralInstrument[]
-  ).filter((type) => type !== central);
+  // #184 : vue DIGITALE du central (retour n°21) — jumelages en très
+  // gros chiffres, façon legacy. Compas : COG énorme + HDG ambre
+  // dessous ; vent : TWS énorme + AWS/TWA/AWA dessous. Les instruments
+  // sans cadran (vitesse/profondeur/heure/position) gardent leur
+  // affichage numérique existant dans les deux modes.
+  const centralDigitalContent =
+    central === 'compass' ? (
+      <div className="helm-central-value helm-central-digital" data-testid="helm-central-digital">
+        <span className="helm-digital-label">COG</span>
+        <span className="helm-digital-value">
+          {cog === null ? '--' : `${Math.round(normalizeDeg(cog))}°`}
+        </span>
+        <span className="helm-digital-sub helm-hdg">
+          {hdg === null ? 'HDG --' : `HDG ${Math.round(normalizeDeg(hdg))}°`}
+        </span>
+        <span className="helm-unit">°TRUE</span>
+      </div>
+    ) : (
+      <div className="helm-central-value helm-central-digital" data-testid="helm-central-digital">
+        <span className="helm-digital-label">TWS</span>
+        <span className="helm-digital-value">{tws === null ? '--' : tws.toFixed(0)}</span>
+        <span className="helm-unit">kt</span>
+        <div className="helm-wind-readouts">
+          <span className="helm-readout">
+            <span className="helm-readout-lbl">AWS</span>
+            <strong>{fmt(aws, 0, 'kt')}</strong>
+          </span>
+          <span className="helm-readout">
+            <span className="helm-readout-lbl">TWA</span>
+            <strong>{twa === null ? '--' : `${Math.round(Math.abs(twa))}°`}</strong>
+          </span>
+          <span className="helm-readout">
+            <span className="helm-readout-lbl">AWA</span>
+            <strong>{awa === null ? '--' : `${Math.round(Math.abs(awa))}°`}</strong>
+          </span>
+        </div>
+      </div>
+    );
+
+  // #184 retour n°21 : ordre demandé par Dom — HEURE en haut, POSITION
+  // en 2e, puis VITESSE, VENT, CAP, PROFONDEUR. Les SIX tuiles restent
+  // TOUJOURS visibles (plus de permutation : l'info passe en grand au
+  // centre, la tuile reste en petit à droite).
+  const tileOrder: CentralInstrument[] = [
+    'time',
+    'position',
+    'speed',
+    'wind',
+    'compass',
+    'depth'
+  ];
 
   // Contenu digital d'une tuile par instrument (jumelages conservés).
   const tileData = (type: CentralInstrument) => {
@@ -207,25 +270,31 @@ const HelmPanel: React.FC<HelmPanelProps> = ({ data }) => {
               VMG {vmg === null ? '--' : `${vmg.toFixed(1)} kt`}
             </span>
           }
+          mode={centralMode}
+          onModeChange={setCentralMode}
+          toggleDisabled={!centralHasDial}
         >
-          {centralContent}
+          {centralHasDial && centralMode === 'numeric' ? centralDigitalContent : centralContent}
         </InstrumentCard>
       </div>
 
-      {/* Colonne droite : 1/3, VUE DIGITALE, TOUS les instruments non
-          centraux (retour n°13 : profondeur, heure et position inclus).
-          Chaque tuile est CLIQUABLE et OCCUPE tout l'espace disponible
-          (flex 1, verticalement et horizontalement). */}
+      {/* Colonne droite : 1/3, VUE DIGITALE, les SIX instruments TOUJOURS
+          visibles (retour n°21 #184) — ordre HEURE, POSITION, VITESSE,
+          VENT, CAP, PROFONDEUR. Chaque tuile est CLIQUABLE et OCCUPE tout
+          l'espace disponible ; la tuile de l'instrument AU CENTRE reste
+          affichée et est SURLIGNÉE (cadre accent + pastille). */}
       <div className="helm-compact" role="group" aria-label="Instruments numériques">
         {tileOrder.map((type) => {
           const tile = tileData(type);
+          const active = type === central;
           return (
             <button
               key={type}
               type="button"
-              className="helm-tile"
+              className={`helm-tile${active ? ' active' : ''}`}
               data-testid={tile.testid}
               aria-label={`Afficher ${tile.name} au centre`}
+              aria-current={active ? 'true' : undefined}
               onClick={() => setCentral(type)}
             >
               <span className="helm-tile-lbl">{tile.label}</span>
