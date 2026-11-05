@@ -17,7 +17,12 @@ import {
  * Reprise HELM : fidélité à la maquette — double cercle (virole + rose),
  * cardinaux CONTRE-ROTÉS (toujours à l'endroit sous les yeux), proue et
  * lubber ROUGES, COG en grand sans unité + label « COG °TRUE », HDG ambre
- * sous le cadran. Couleurs d'affichage marines fixes (comme WindDial). */
+ * sous le cadran. Couleurs d'affichage marines fixes (comme WindDial).
+ *
+ * ⚠️ Classe .compass-courseup (PAS .compass-dial) : App.css garde une
+ * règle legacy .compass-dial { height: 96px; width: min(100%, 210px) }
+ * qui écrasait ce cadran à ~96 px — c'est ainsi que le compas central
+ * HELM restait minuscule depuis la Phase 1 (#180). */
 
 interface CompassDialProps {
   /** Cap sur le fond (COG) — pilote la rotation de la rose. */
@@ -56,7 +61,7 @@ const CompassDial: React.FC<CompassDialProps> = ({ cog, heading = null, size = 2
 
   return (
     <svg
-      className="compass-dial"
+      className="compass-courseup"
       viewBox="0 0 220 240"
       width={size}
       height={(size * 240) / 220}

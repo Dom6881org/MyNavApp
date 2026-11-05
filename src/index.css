@@ -800,67 +800,72 @@ html, body {
 
 /* Compas COURSE-UP façon maquette (HELM design-centered) — couleurs
    d'affichage marines fixes, comme WindDial : le cadran reste lisible
-   dans les trois thèmes. */
-.compass-dial {
+   dans les trois thèmes.
+   ⚠️ Le SVG porte la classe .compass-courseup (PAS .compass-dial) :
+   App.css garde une règle legacy .compass-dial { height: 96px } qui
+   écrasait le cadran à ~96 px depuis la Phase 1. Les couleurs des
+   enfants sont scopées sous .compass-courseup : App.css charge après
+   index.css, ses .compass-tick/.compass-cardinal legacy perdraient sinon. */
+.compass-courseup {
   max-width: 100%;
 }
 
-.compass-outer-ring {
+.compass-courseup .compass-outer-ring {
   fill: #0d141c;
   stroke: #263444;
   stroke-width: 2;
 }
 
-.compass-rose-ring {
+.compass-courseup .compass-rose-ring {
   fill: none;
   stroke: #33475c;
   stroke-width: 1.5;
 }
 
-.compass-tick {
+.compass-courseup .compass-tick {
   stroke: #5d7590;
   stroke-width: 1;
 }
 
-.compass-tick-major {
+.compass-courseup .compass-tick-major {
   stroke: #4a5f74;
   stroke-width: 2;
 }
 
-.compass-cardinal {
+.compass-courseup .compass-cardinal {
   fill: #8fa3b0;
   font-size: 13px;
   font-weight: 700;
 }
 
-.compass-cardinal-n {
+.compass-courseup .compass-cardinal-n {
   fill: #e8f1f5;
 }
 
 /* Proue et lubber rouges : le cap est TOUJOURS ici, en haut */
-.compass-lubber {
+.compass-courseup .compass-lubber {
   stroke: #ff3b30;
   stroke-width: 3;
 }
 
-.compass-boat {
+.compass-courseup .compass-boat {
   fill: #ff3b30;
 }
 
-.compass-cog {
+.compass-courseup .compass-cog {
   fill: #e8f1f5;
   font-size: 38px;
   font-weight: 700;
   font-variant-numeric: tabular-nums;
 }
 
-.compass-cog-label {
+.compass-courseup .compass-cog-label {
   fill: #8fa3b0;
   font-size: 11px;
   font-weight: 600;
 }
 
-.compass-hdg {
+.compass-courseup .compass-hdg {
   fill: #ffb020;
   font-size: 15px;
   font-weight: 700;
