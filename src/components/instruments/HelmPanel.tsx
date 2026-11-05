@@ -46,7 +46,7 @@ const HelmPanel: React.FC<HelmPanelProps> = ({ data }) => {
 
   const centralContent =
     central === 'compass' ? (
-      <CompassDial cog={cog} heading={hdg} />
+      <CompassDial cog={cog} heading={hdg} size={300} />
     ) : central === 'speed' ? (
       <div className="helm-central-value">
         <span className="helm-big-value">{sog === null ? '--' : sog.toFixed(1)}</span>
