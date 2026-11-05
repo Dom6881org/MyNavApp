@@ -1,24 +1,29 @@
 import React, { useMemo, useState } from 'react';
 import type { NavigationData } from '../../types';
-import { vmgToWind } from '../../utils/instrumentPrimitives';
+import { normalizeDeg, vmgToWind } from '../../utils/instrumentPrimitives';
+import { formatCoordinate } from '../../utils/formatCoordinate';
 import CompassDial from './CompassDial';
 import WindDial from './WindDial';
 import InstrumentCard from './InstrumentCard';
 
 /** Panneau HELM (refonte instruments, Phase 1 — #158) : instrument central
- * commutable VENT / COMPAS / VITESSE en grand, VMG toujours visible
- * (SOG × cos(TWA) au vent). Les cartes réutilisent InstrumentCard (#157) :
- * bascule cadran ⇄ numérique par instrument.
+ * commutable en grand, VMG toujours visible (SOG × cos(TWA) au vent).
+ * Les cartes réutilisent InstrumentCard (#157) : bascule cadran ⇄ numérique.
  *
- * #176 : le central VENT est le grand cadran Raymarine (WindDial — arcs
- * bâbord/tribord, aiguille à la provenance, TWS + TWD en digital) avec la
- * ligne TWA/AWA, fidèle à la maquette.
+ * #182 (retour n°12) : central sur 2/3, colonne droite sur 1/3 en VUE
+ * DIGITALE — tuiles des instruments NON centraux, PERMUTATION par clic
+ * (la tuile passe au centre, l'ancien central reprend sa place à droite).
  *
- * Reprise HELM design-centered : compacts FIXES à droite, comme la
- * maquette — SOG (jumelé STW), TWS (jumelé TWA), DEPTH — indépendants
- * de l'instrument central affiché. */
+ * #182 (retour n°13 de Dom) : la colonne droite s'élargit à SIX
+ * instruments (vent, cap, vitesse, PROFONDEUR, HEURE, POSITION — la bande
+ * d'état est retirée de HELM, ces deux tuiles la remplacent) et TOUTES
+ * les tuiles sont cliquables. Les tuiles OCCUPENT TOUT l'espace de la
+ * colonne, verticalement et horizontalement. Affichages centraux :
+ * vitesse = SOG + STW (0.0 affiché tel quel si donnée réelle, '--' sinon) ;
+ * cap = COG + HDG ; vent = cadran + TWS/AWS/TWA/AWA en digital ;
+ * profondeur/heure/position = gros affichages numériques. */
 
-type CentralInstrument = 'wind' | 'compass' | 'speed';
+type CentralInstrument = 'wind' | 'compass' | 'speed' | 'depth' | 'time' | 'position';
 
 interface HelmPanelProps {
   data: NavigationData;
@@ -32,21 +37,46 @@ const HelmPanel: React.FC<HelmPanelProps> = ({ data }) => {
   const sog = data.speed?.sog ?? null;
   const tws = data.trueWind?.speedKnots ?? null;
   const twa = data.trueWind?.angleDegrees ?? null;
-  // Jumelage design revue 2 : SOG+STW ensemble partout — STW reste `--`
-  // tant que la phrase VHW (loch) n'est pas reçue (chantier serveur séparé).
+  // Jumelage design revue 2 : SOG+STW ensemble partout. 0.0 = donnée
+  // réelle, affichée telle quelle ; '--' seulement sans donnée (VHW absent).
   const stw = data.speed?.stw ?? null;
   const vmg = useMemo(() => vmgToWind(sog, twa), [sog, twa]);
   // #176 : sources du cadran vent (mêmes que COASTAL — vent du point)
   const twd = data.wind?.direction ?? null;
+  const aws = data.apparentWind?.speedKnots ?? null;
   const awa = data.apparentWind?.angleDegrees ?? null;
-  // Compacts fixes (reprise HELM) : DEPTH rejoint SOG et TWS à droite.
   const depth = data.depth?.depth ?? null;
+  // #182 retour n°13 : heure + position remplacent la bande d'état en HELM
+  const localTime = data.gpsTime?.localTime ?? null;
+  const localDate = data.gpsTime?.date ?? null;
+  const position = data.position;
 
-  const centralTitle = central === 'compass' ? 'COMPASS' : central === 'speed' ? 'SOG' : 'WIND';
+  const fmt = (value: number | null, digits: number, unit: string) =>
+    value === null ? '--' : `${value.toFixed(digits)} ${unit}`;
+
+  const centralTitle =
+    central === 'compass'
+      ? 'COMPASS'
+      : central === 'speed'
+        ? 'SOG'
+        : central === 'depth'
+          ? 'DEPTH'
+          : central === 'time'
+            ? 'TIME'
+            : central === 'position'
+              ? 'POSITION'
+              : 'WIND';
 
   const centralContent =
     central === 'compass' ? (
-      <CompassDial cog={cog} heading={hdg} size={300} />
+      /* #182 retours n°14/15 puis n°16 : cadran OCCUPANT l'espace
+         disponible ; les degrés sur la rose et COG/HDG sont À
+         L'INTÉRIEUR du cadran (maquette), plus de readouts externes. */
+      <div className="helm-central-value">
+        <div className="helm-compass-stage">
+          <CompassDial cog={cog} heading={hdg} fill />
+        </div>
+      </div>
     ) : central === 'speed' ? (
       <div className="helm-central-value">
         <span className="helm-big-value">{sog === null ? '--' : sog.toFixed(1)}</span>
@@ -54,26 +84,121 @@ const HelmPanel: React.FC<HelmPanelProps> = ({ data }) => {
           kn SOG · STW {stw === null ? '--' : stw.toFixed(1)}
         </span>
       </div>
+    ) : central === 'depth' ? (
+      <div className="helm-central-value">
+        <span className="helm-big-value">{depth === null ? '--' : depth.toFixed(1)}</span>
+        <span className="helm-unit">m</span>
+      </div>
+    ) : central === 'time' ? (
+      <div className="helm-central-value">
+        <span className="helm-big-value">{localTime ?? '--'}</span>
+        <span className="helm-unit">{localDate ?? 'local'}</span>
+      </div>
+    ) : central === 'position' ? (
+      <div className="helm-central-value">
+        <span className="helm-big-value helm-position-line">
+          {position === null ? '--' : formatCoordinate(position.latitude, true)}
+        </span>
+        <span className="helm-big-value helm-position-line">
+          {position === null ? '--' : formatCoordinate(position.longitude, false)}
+        </span>
+        <span className="helm-unit">WGS 84</span>
+      </div>
     ) : (
       <div className="helm-central-value">
-        {/* #176 : grand cadran Raymarine au central VENT, comme la maquette.
-            #180 retour n°6 : sans vent, le cadran affiche « no wind data »
-            en son centre — pas de doublon dans la ligne du bas. */}
-        {/* #180 retour n°9 : le cadran vent OCCUPE L'ESPACE DISPONIBLE —
-            plus de taille fixe, il grandit avec la carte centrale. */}
+        {/* Cadran Raymarine occupant l'espace disponible (#180 retour n°9) */}
         <div className="helm-wind-stage">
           <WindDial twdDeg={twd} twsKts={tws} fill />
         </div>
-        {twa !== null && (
-          <span className="helm-unit" data-testid="helm-wind-line">
-            {`TWA ${Math.round(twa)}°${awa === null ? '' : ` · AWA ${Math.round(Math.abs(awa))}°`}`}
+        {/* #182 retour n°13 : les QUATRE valeurs du vent en digital sous
+            le cadran — TWS, AWS, TWA, AWA. */}
+        <div className="helm-wind-readouts" data-testid="helm-wind-readouts">
+          <span className="helm-readout">
+            <span className="helm-readout-lbl">TWS</span>
+            <strong>{fmt(tws, 0, 'kt')}</strong>
           </span>
-        )}
+          <span className="helm-readout">
+            <span className="helm-readout-lbl">AWS</span>
+            <strong>{fmt(aws, 0, 'kt')}</strong>
+          </span>
+          <span className="helm-readout">
+            <span className="helm-readout-lbl">TWA</span>
+            <strong>{twa === null ? '--' : `${Math.round(Math.abs(twa))}°`}</strong>
+          </span>
+          <span className="helm-readout">
+            <span className="helm-readout-lbl">AWA</span>
+            <strong>{awa === null ? '--' : `${Math.round(Math.abs(awa))}°`}</strong>
+          </span>
+        </div>
       </div>
     );
 
+  // #182 retour n°13 : SIX instruments — la colonne droite montre TOUS les
+  // non-centraux. Ordre fixe : vent, vitesse, cap, profondeur, heure,
+  // position (les non-centraux, le central exclu).
+  const tileOrder: CentralInstrument[] = (
+    ['wind', 'speed', 'compass', 'depth', 'time', 'position'] as CentralInstrument[]
+  ).filter((type) => type !== central);
+
+  // Contenu digital d'une tuile par instrument (jumelages conservés).
+  const tileData = (type: CentralInstrument) => {
+    if (type === 'wind') {
+      return {
+        label: 'TWS',
+        value: tws === null ? '--' : tws.toFixed(0),
+        sub: twa === null ? 'no wind' : `kt · TWA ${Math.round(Math.abs(twa))}°`,
+        testid: 'helm-compact-wind',
+        name: 'VENT'
+      };
+    }
+    if (type === 'speed') {
+      return {
+        label: 'SOG',
+        value: sog === null ? '--' : sog.toFixed(1),
+        sub: stw === null ? 'kn · STW --' : `kn · STW ${stw.toFixed(1)}`,
+        testid: 'helm-compact-sog',
+        name: 'VITESSE'
+      };
+    }
+    if (type === 'compass') {
+      return {
+        label: 'COG',
+        value: cog === null ? '--' : `${Math.round(normalizeDeg(cog))}°`,
+        sub: hdg === null ? 'HDG --' : `HDG ${Math.round(normalizeDeg(hdg))}°`,
+        testid: 'helm-compact-compass',
+        name: 'CAP'
+      };
+    }
+    if (type === 'depth') {
+      return {
+        label: 'DEPTH',
+        value: depth === null ? '--' : depth.toFixed(1),
+        sub: 'm',
+        testid: 'helm-compact-depth',
+        name: 'PROFONDEUR'
+      };
+    }
+    if (type === 'time') {
+      return {
+        label: 'TIME',
+        value: localTime ?? '--',
+        sub: 'local',
+        testid: 'helm-compact-time',
+        name: 'HEURE'
+      };
+    }
+    return {
+      label: 'POSITION',
+      value: position === null ? '--' : formatCoordinate(position.latitude, true),
+      sub: position === null ? 'WGS 84' : formatCoordinate(position.longitude, false),
+      testid: 'helm-compact-position',
+      name: 'POSITION'
+    };
+  };
+
   return (
     <div className="helm-panel" role="group" aria-label="Helm instruments">
+      {/* Instrument central : 2/3 de la largeur (#182) */}
       <div className="helm-central">
         <InstrumentCard
           title={centralTitle}
@@ -85,40 +210,32 @@ const HelmPanel: React.FC<HelmPanelProps> = ({ data }) => {
         >
           {centralContent}
         </InstrumentCard>
-        <div className="helm-central-switch" role="tablist" aria-label="Helm central instrument">
-          {(['wind', 'compass', 'speed'] as CentralInstrument[]).map((type) => (
+      </div>
+
+      {/* Colonne droite : 1/3, VUE DIGITALE, TOUS les instruments non
+          centraux (retour n°13 : profondeur, heure et position inclus).
+          Chaque tuile est CLIQUABLE et OCCUPE tout l'espace disponible
+          (flex 1, verticalement et horizontalement). */}
+      <div className="helm-compact" role="group" aria-label="Instruments numériques">
+        {tileOrder.map((type) => {
+          const tile = tileData(type);
+          return (
             <button
               key={type}
               type="button"
-              role="tab"
-              aria-selected={central === type}
-              className={central === type ? 'helm-switch-btn active' : 'helm-switch-btn'}
+              className="helm-tile"
+              data-testid={tile.testid}
+              aria-label={`Afficher ${tile.name} au centre`}
               onClick={() => setCentral(type)}
             >
-              {type === 'wind' ? 'VENT' : type === 'compass' ? 'COMPAS' : 'VITESSE'}
+              <span className="helm-tile-lbl">{tile.label}</span>
+              <strong className="helm-tile-val">{tile.value}</strong>
+              <small className={type === 'compass' ? 'helm-tile-sub helm-hdg' : 'helm-tile-sub'}>
+                {tile.sub}
+              </small>
             </button>
-          ))}
-        </div>
-      </div>
-
-      {/* Compacts fixes façon maquette : SOG+STW, TWS+TWA, DEPTH —
-          la colonne ne change jamais avec l'instrument central. */}
-      <div className="helm-compact">
-        <div className="helm-compact-row" data-testid="helm-compact-sog">
-          <span>SOG</span>
-          <strong>{sog === null ? '--' : sog.toFixed(1)}</strong>
-          <small>{stw === null ? 'kn · STW --' : `kn · STW ${stw.toFixed(1)}`}</small>
-        </div>
-        <div className="helm-compact-row" data-testid="helm-compact-wind">
-          <span>TWS</span>
-          <strong>{tws === null ? '--' : tws.toFixed(0)}</strong>
-          <small>{twa === null ? 'no wind' : `kt · TWA ${Math.round(twa)}°`}</small>
-        </div>
-        <div className="helm-compact-row" data-testid="helm-compact-depth">
-          <span>DEPTH</span>
-          <strong>{depth === null ? '--' : depth.toFixed(1)}</strong>
-          <small>m</small>
-        </div>
+          );
+        })}
       </div>
     </div>
   );

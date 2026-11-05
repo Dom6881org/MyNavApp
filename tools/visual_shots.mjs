@@ -25,13 +25,15 @@ const THEMES = ['dark', 'light'];
 // 'helm-wind' = onglet VENT du central (reprise HELM #180, retour n°6 :
 // Dom valide la vue VENT sur captures, pas seulement le compas).
 const DERIVED = {
+  // #182 : plus d'onglets sous le central — la vue VENT s'obtient en
+  // cliquant la tuile digitale TWS de la colonne droite.
   'helm-wind': async (page) => {
-    await page.getByRole('tab', { name: 'VENT' }).click();
+    await page.getByTestId('helm-compact-wind').click();
     await page.waitForTimeout(500);
   },
   // #180 retour n°11 : fenêtre réduite (écran du bord) — le cadran doit
   // se réduire pour rester ENTIER (pas de rognage, pas d'onglets perdus).
-  'helm-wind-small': { viewport: { width: 1100, height: 600 }, click: 'VENT' },
+  'helm-wind-small': { viewport: { width: 1100, height: 600 }, click: 'helm-compact-wind' },
 };
 
 // Derivées simples : { viewport, click } — capture d'une vue HELM dans un
@@ -71,7 +73,7 @@ async function main() {
       if (typeof derived === 'function') {
         await derived(page);
       } else if (simple?.click) {
-        await page.getByRole('tab', { name: simple.click }).click();
+        await page.getByTestId(simple.click).click();
         await page.waitForTimeout(500);
       }
       const file = OUT + '/' + view + '-' + theme + '.png';
