@@ -236,7 +236,7 @@ const App: React.FC = () => {
                 le vent et la profondeur déjà dans les compacts HELM (#180). */}
             {activeMode === 'helm' && (
               <div className="ui-stage-panels ui-stage-helm">
-                <HelmPanel data={navigationData} />
+                <HelmPanel data={navigationData} onResetMaxSpeed={resetMaxSpeed} />
               </div>
             )}
             {/* COASTAL : les instruments remplissent l'écran —

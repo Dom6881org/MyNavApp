@@ -18,7 +18,7 @@ const BASE = process.env.BASE_URL ?? 'http://127.0.0.1:3001';
 const WAIT_MS = Number(process.env.WAIT_MS ?? 8000);
 const OUT = 'shots';
 
-const VIEWS = ['helm', 'helm-digital', 'helm-wind', 'helm-wind-small', 'coastal', 'overview', 'prep', 'legacy'];
+const VIEWS = ['helm', 'helm-half', 'helm-numeric', 'helm-wind', 'helm-wind-small', 'helm-speed', 'helm-speed-numeric', 'helm-time', 'helm-depth', 'helm-position', 'coastal', 'overview', 'prep', 'legacy'];
 const THEMES = ['dark', 'light'];
 
 // Vues dérivées : capture d'un état interactif de la vue HELM.
@@ -31,10 +31,57 @@ const DERIVED = {
     await page.getByTestId('helm-compact-wind').click();
     await page.waitForTimeout(500);
   },
-  // #184 (retour n°21) : vue DIGITALE du central — clic sur le switch
-  // 123/◉ de la carte compas (central par défaut) -> COG énorme + HDG.
-  'helm-digital': async (page) => {
-    await page.getByRole('button', { name: 'COMPASS display mode' }).click();
+  // #184 retour n°21-quater : segment 1/2 CADRAN du switch compas ->
+  // demi-cadran legacy en grand au central.
+  'helm-half': async (page) => {
+    await page
+      .getByTestId('helm-mode-switch')
+      .getByRole('button', { name: '1/2 CADRAN' })
+      .click();
+    await page.waitForTimeout(500);
+  },
+  // #184 retour n°21-quater : segment NUMÉRIQUE du switch compas ->
+  // vue cadrée COG/HDG (lignes label/valeur).
+  'helm-numeric': async (page) => {
+    await page
+      .getByTestId('helm-mode-switch')
+      .getByRole('button', { name: 'NUMÉRIQUE' })
+      .click();
+    await page.waitForTimeout(500);
+  },
+  // #184 retour n°21-quater : vitesse au central en jauge legacy
+  // (aiguilles STW/SOG, marque MAX, readouts + RESET).
+  'helm-speed': async (page) => {
+    await page.getByTestId('helm-compact-sog').click();
+    await page.waitForTimeout(500);
+  },
+  // #184 retour n°21-quater : vitesse au central en vue cadrée
+  // STW/SOG/MAX + RESET.
+  'helm-speed-numeric': async (page) => {
+    await page.getByTestId('helm-compact-sog').click();
+    await page.waitForTimeout(300);
+    await page
+      .getByTestId('helm-mode-switch')
+      .getByRole('button', { name: 'NUMÉRIQUE' })
+      .click();
+    await page.waitForTimeout(500);
+  },
+  // #184 retour n°21-quater : heure au central — lignes cadrées
+  // LOCAL / TU (pas de switch).
+  'helm-time': async (page) => {
+    await page.getByTestId('helm-compact-time').click();
+    await page.waitForTimeout(500);
+  },
+  // #184 retour n°21-quater : profondeur au central — lignes cadrées
+  // DEPTH / TEMP (pas de switch).
+  'helm-depth': async (page) => {
+    await page.getByTestId('helm-compact-depth').click();
+    await page.waitForTimeout(500);
+  },
+  // #184 retour n°21-quater : position au central — lignes cadrées
+  // LAT / LON / GPS (qualité du signal, pas de switch).
+  'helm-position': async (page) => {
+    await page.getByTestId('helm-compact-position').click();
     await page.waitForTimeout(500);
   },
   // #180 retour n°11 : fenêtre réduite (écran du bord) — le cadran doit

@@ -1,7 +1,6 @@
 import { fireEvent, render, screen } from '@testing-library/react';
 import { beforeEach, describe, expect, it } from 'vitest';
 import InstrumentCard from './InstrumentCard';
-import type { InstrumentMode } from '../../utils/instrumentPrimitives';
 
 // Persistance par instrument (#160) : isolement des tests.
 beforeEach(() => {
@@ -56,6 +55,31 @@ describe('InstrumentCard', () => {
     expect(screen.getByLabelText('VMG display mode').getAttribute('data-mode')).toBe('numeric');
   });
 
+  it('#184 retour n°21-quater : headerPrefix rendu AVANT le titre', () => {
+    render(
+      <InstrumentCard
+        title="COMPASS"
+        hideToggle
+        headerPrefix={
+          <div className="helm-mode-switch" data-testid="helm-mode-switch">
+            <button type="button">CADRAN</button>
+          </div>
+        }
+      >
+        <p>137°</p>
+      </InstrumentCard>
+    );
+    const header = screen
+      .getByTestId('instrument-COMPASS')
+      .querySelector('.instrument-card-header');
+    const children = header ? Array.from(header.children) : [];
+    // le switch vient en tête, AVANT le titre
+    expect(children[0].getAttribute('data-testid')).toBe('helm-mode-switch');
+    expect(children[1].textContent).toBe('COMPASS');
+    // hideToggle : pas de bouton 123/◉
+    expect(screen.queryByRole('button', { name: 'COMPASS display mode' })).toBeNull();
+  });
+
   it('zone info optionnelle rendue si fournie', () => {
     render(
       <InstrumentCard title="WIND" info={<span role="status">GRIB</span>}>
@@ -65,34 +89,9 @@ describe('InstrumentCard', () => {
     expect(screen.getByText('GRIB')).toBeTruthy();
   });
 
-  it('#184 : mode CONTROLE — le bouton reflète le mode du parent, le clic remonte', () => {
-    let current: InstrumentMode = 'dial';
-    const { rerender } = render(
-      <InstrumentCard title="HELM-CENTRAL" mode={current} onModeChange={(m) => { current = m; }}>
-        <p>contenu</p>
-      </InstrumentCard>
-    );
-    const toggle = screen.getByLabelText('HELM-CENTRAL display mode');
-    expect(toggle.getAttribute('data-mode')).toBe('dial');
-    fireEvent.click(toggle);
-    expect(current).toBe('numeric');
-    // le parent est la source de vérité : re-render avec le nouveau mode
-    rerender(
-      <InstrumentCard title="HELM-CENTRAL" mode={current} onModeChange={() => {}}>
-        <p>contenu</p>
-      </InstrumentCard>
-    );
-    expect(screen.getByLabelText('HELM-CENTRAL display mode').getAttribute('data-mode')).toBe('numeric');
-    // mode contrôlé : pas de persistance localStorage
-    expect(window.localStorage.getItem('mynav:instrument-mode:helm-central')).toBeNull();
-  });
-
-  it('#184 : toggleDisabled — switch visible mais désactivé, clic sans effet', () => {
-    render(<InstrumentCard title="TIME" mode="dial" toggleDisabled><p>12:00</p></InstrumentCard>);
-    const toggle = screen.getByLabelText('TIME display mode');
-    expect(toggle.hasAttribute('disabled')).toBe(true);
-    expect((toggle as HTMLButtonElement).disabled).toBe(true);
-  });
+  /* #184 retour n°21-quater : les tests du mode contrôlé et du bouton
+     désactivé sont retirés avec les props mode/onModeChange/toggleDisabled
+     — remplacés par headerPrefix (switch segmenté du central HELM). */
 });
 
 describe('InstrumentCard — persistance du mode (Phase 2 #160)', () => {
