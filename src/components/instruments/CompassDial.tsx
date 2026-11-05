@@ -54,9 +54,12 @@ const CompassDial: React.FC<CompassDialProps> = ({
   const marks = tickMarks(0, 360, 30, 10);
 
   /** Cardinal tournant (positionné dans la rose) mais contre-roté sur
-   * lui-même : les lettres restent droites quelle que soit la rose. */
+   * lui-même : les lettres restent droites quelle que soit la rose.
+   * #182 retour n°15 : fidélité à la maquette — les cardinaux sont
+   * POURTOUT de la rose (rayon ~97, entre rose 88 et virole 104),
+   * pas au centre du cadran. */
   const cardinal = (angle: number, label: string, highlight: boolean) => {
-    const p = polarToXY(CX, CY, R_ROSE - 28, angle);
+    const p = polarToXY(CX, CY, 97, angle);
     return (
       <text
         key={label}

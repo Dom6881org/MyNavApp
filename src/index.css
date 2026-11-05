@@ -847,6 +847,21 @@ button.helm-tile:focus-visible {
   flex-wrap: wrap;
 }
 
+/* #182 retour n°15 : COG/HDG PLUS VISIBLES et PLUS ÉCARTÉS — grandes
+   valeurs (2.4rem) et espacement large, comme l'exige Dom. */
+.helm-compass-readouts {
+  gap: 5rem;
+  margin-top: 1rem;
+}
+
+.helm-compass-readouts .helm-readout-lbl {
+  font-size: 0.75rem;
+}
+
+.helm-compass-readouts .helm-readout strong {
+  font-size: 2.4rem;
+}
+
 .helm-readout {
   display: flex;
   flex-direction: column;
