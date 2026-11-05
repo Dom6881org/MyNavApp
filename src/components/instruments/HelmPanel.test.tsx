@@ -20,11 +20,22 @@ const data = (overrides: Partial<NavigationData> = {}): NavigationData => ({
 });
 
 describe('HelmPanel', () => {
-  it('compas central par defaut : cadran COURSE-UP avec COG/HDG', () => {
+  it('#182 n°14 : compas central = cadran pur + readouts COG/HDG dessous (comme le vent)', () => {
     render(<HelmPanel data={data()} />);
     expect(screen.getByText('COMPASS')).toBeTruthy();
-    expect(screen.getByText('137')).toBeTruthy();
-    expect(screen.getByText('HDG 132°')).toBeTruthy();
+    const readouts = screen.getByTestId('helm-compass-readouts').textContent ?? '';
+    expect(readouts).toContain('COG');
+    expect(readouts).toContain('137°');
+    expect(readouts).toContain('HDG');
+    expect(readouts).toContain('132°');
+  });
+
+  it('#182 n°14 : COG/HDG sans donnee -> double tiret dans les readouts', () => {
+    render(<HelmPanel data={data({ compass: null })} />);
+    const readouts = screen.getByTestId('helm-compass-readouts').textContent ?? '';
+    expect(readouts).toContain('COG');
+    expect(readouts).toContain('HDG');
+    expect(readouts).toContain('--');
   });
 
   it('#182 : plus de menu d\'onglets sous l\'instrument central', () => {

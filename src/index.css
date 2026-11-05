@@ -836,8 +836,10 @@ button.helm-tile:focus-visible {
 }
 
 /* #182 retour n°13 : les QUATRE valeurs du vent en digital sous le
-   cadran central — TWS, AWS, TWA, AWA. */
-.helm-wind-readouts {
+   cadran central — TWS, AWS, TWA, AWA. Retour n°14 : le compas reçoit
+   le même traitement (COG/HDG sous le cadran, `.helm-compass-readouts`). */
+.helm-wind-readouts,
+.helm-compass-readouts {
   display: flex;
   justify-content: center;
   gap: 1.25rem;
@@ -865,6 +867,11 @@ button.helm-tile:focus-visible {
   line-height: 1;
   color: var(--text-primary);
   font-variant-numeric: tabular-nums;
+}
+
+/* HDG en ambre, comme le jumelage des tuiles (design maquette). */
+.helm-readout-hdg strong {
+  color: var(--warning-color);
 }
 
 /* Position centrale : deux lignes lat/lon, police un cran sous la
@@ -928,24 +935,8 @@ button.helm-tile:focus-visible {
   fill: #ff3b30;
 }
 
-.compass-courseup .compass-cog {
-  fill: #e8f1f5;
-  font-size: 38px;
-  font-weight: 700;
-  font-variant-numeric: tabular-nums;
-}
-
-.compass-courseup .compass-cog-label {
-  fill: #8fa3b0;
-  font-size: 11px;
-  font-weight: 600;
-}
-
-.compass-courseup .compass-hdg {
-  fill: #ffb020;
-  font-size: 15px;
-  font-weight: 700;
-}
+/* #182 retour n°14 : COG/HDG ne sont plus dans le SVG (cadran pur) —
+   les readouts digitaux vivent dans HelmPanel (.helm-readout). */
 
 /* ===== Refonte instruments — Phase 2 : COASTAL / OVERVIEW + persistance (#160) ===== */
 
@@ -1518,6 +1509,27 @@ button.helm-tile:focus-visible {
 
 .ui-stage-helm .helm-wind-stage .wind-dial {
   /* Hauteur = espace restant ; largeur par ratio intrinsèque (carré),
+     plafonnée à la largeur du conteneur — jamais de débordement. */
+  height: 100%;
+  width: auto;
+  max-width: 100%;
+}
+
+/* #182 retour n°14 : le compas central reçoit le même traitement que le
+   vent — cadran pur OCCUPANT l'espace disponible, valeurs COG/HDG en
+   digital dessous. Mêmes règles d'occupation, jamais de fenêtre
+   agrandie ni de rognage. */
+.ui-stage-helm .helm-compass-stage {
+  flex: 1 1 auto;
+  width: 100%;
+  min-height: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.ui-stage-helm .helm-compass-stage .compass-courseup {
+  /* Hauteur = espace restant ; largeur par ratio intrinsèque (220:232),
      plafonnée à la largeur du conteneur — jamais de débordement. */
   height: 100%;
   width: auto;

@@ -17,20 +17,22 @@ describe('CompassDial (COURSE-UP)', () => {
     ).toContain('rotate(0');
   });
 
-  it('COG en grand sans unite + label COG TRUE, HDG en ambre', () => {
-    render(<CompassDial cog={137.4} heading={132} />);
-    expect(screen.getByText('137')).toBeTruthy();
-    expect(screen.getByText('COG °TRUE')).toBeTruthy();
-    expect(screen.getByText('HDG 132°')).toBeTruthy();
+  it('#182 n°14 : cadran pur — COG/HDG ne sont plus embarques dans le SVG', () => {
+    const { container } = render(<CompassDial cog={137.4} heading={132} />);
+    expect(container.querySelector('.compass-cog')).toBeNull();
+    expect(container.querySelector('.compass-cog-label')).toBeNull();
+    expect(container.querySelector('.compass-hdg')).toBeNull();
+    expect(screen.queryByText('137')).toBeNull();
+    expect(screen.queryByText('COG °TRUE')).toBeNull();
+    expect(screen.queryByText('HDG 132°')).toBeNull();
   });
 
-  it('COG null : rose non tournee et double tiret', () => {
+  it('COG null : rose non tournee, pas de faux texte dans le cadran', () => {
     const { container } = render(<CompassDial cog={null} />);
     expect(
       container.querySelector('[data-testid="compass-rose"]')!.getAttribute('transform')
     ).toContain('rotate(0');
-    expect(screen.getByText('--')).toBeTruthy();
-    expect(screen.getByText('HDG --')).toBeTruthy();
+    expect(screen.queryByText('--')).toBeNull();
   });
 
   it('graduations et cardinaux rendus (36 marques, N/E/S/W)', () => {
