@@ -1271,10 +1271,11 @@ html, body {
   letter-spacing: 0.02em;
 }
 
-/* Bandeau OVERVIEW : tuiles au-dessus de la carte dans le conteneur carte */
+/* Bandeau d'état persistant (retour terrain Dom #180) : tuiles OVERVIEW
+   en haut de TOUTES les vues (shell), pas seulement au-dessus de la carte */
 .overview-strip {
   flex: 0 0 auto;
-  padding: 0.6rem 1rem 0;
+  padding: 0.25rem 1rem 0;
 }
 
 .overview-strip .overview-panel {
@@ -1402,11 +1403,6 @@ html, body {
 
 .ui-stage-map .map-container {
   padding: 0;
-}
-
-.ui-stage-map .overview-strip {
-  flex: 0 0 auto;
-  padding: 0.6rem 1rem 0;
 }
 
 .routing-cartouche {
