@@ -915,6 +915,16 @@ button.helm-tile.active:focus-visible {
   font-variant-numeric: tabular-nums;
 }
 
+/* HDG ambre de la vue digitale : la couleur doit gagner sur
+   .helm-digital-sub (même spécificité, ordre) — règle dédiée. */
+.helm-digital-sub.helm-hdg {
+  color: var(--warning-color);
+}
+
+.theme-light .helm-digital-sub.helm-hdg {
+  color: #b26a00;
+}
+
 /* #182 retour n°13 : les QUATRE valeurs du vent en digital sous le
    cadran central — TWS, AWS, TWA, AWA. (Le compas garde ses valeurs
    DANS le cadran — retour n°16.) */
