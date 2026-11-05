@@ -16,8 +16,10 @@ import {
  *
  * Reprise HELM : fidélité à la maquette — double cercle (virole + rose),
  * cardinaux CONTRE-ROTÉS au POURTOUR de la rose (rayon ~97), proue et
- * lubber ROUGES, COG en grand sans unité + label « COG °TRUE », HDG ambre
- * sous le cadran. Couleurs d'affichage marines fixes (comme WindDial).
+ * lubber ROUGES, les DEUX valeurs « COG : XXX » / « HDG : XXX° »
+ * explicites DANS le cadran (retour n°20, maquette validée).
+ * Couleurs d'affichage marines par défaut ; le thème LIGHT les
+ * passe en fond clair (surcharges .theme-light dans index.css).
  *
  * #182 retour n°16 (Dom) : les degrés sur la rose (tous les 30°, sauf aux
  * cardinaux) + les deux valeurs COG/HDG À L'INTÉRIEUR du cadran (les
@@ -150,19 +152,16 @@ const CompassDial: React.FC<CompassDialProps> = ({
         className="compass-boat"
       />
 
-      {/* #182 retour n°19 (Dom) : les DEUX valeurs COG et HDG À
-          L'INTÉRIEUR du cercle, en PLUS PETIT — tout tient dans le
-          cadran, rien ne pend sous la virole (bas = CY+104 = 224) :
-          COG 26px à y=CY+40, label « COG °TRUE » 10px à y=CY+60,
-          HDG ambre 13px à y=CY+80 (top 187, bas ~203 < 224 ✓). */}
-      <text x={CX} y={CY + 40} textAnchor="middle" className="compass-cog">
-        {cog === null ? '--' : `${Math.round(normalizeDeg(cog))}`}
+      {/* #182 retour n°20 (Dom, maquette validée AVANT livraison) :
+          DEUX lignes explicites à l'intérieur du cadran —
+          « COG : 137 » (22px) puis « HDG : 132° » (14px ambre),
+          sans toucher les lignes du cadran en bas :
+          bas HDG = CY+62 + ~14 = 196 < rose ring 208 < virole 224 ✓. */}
+      <text x={CX} y={CY + 34} textAnchor="middle" className="compass-cog">
+        {cog === null ? 'COG : --' : `COG : ${Math.round(normalizeDeg(cog))}`}
       </text>
-      <text x={CX} y={CY + 60} textAnchor="middle" className="compass-cog-label">
-        COG °TRUE
-      </text>
-      <text x={CX} y={CY + 80} textAnchor="middle" className="compass-hdg">
-        {heading === null ? 'HDG --' : `HDG ${Math.round(normalizeDeg(heading))}°`}
+      <text x={CX} y={CY + 62} textAnchor="middle" className="compass-hdg">
+        {heading === null ? 'HDG : --' : `HDG : ${Math.round(normalizeDeg(heading))}°`}
       </text>
     </svg>
   );

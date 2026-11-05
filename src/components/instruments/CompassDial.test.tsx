@@ -17,11 +17,12 @@ describe('CompassDial (COURSE-UP)', () => {
     ).toContain('rotate(0');
   });
 
-  it('#182 n°16 : COG en grand sans unite + label COG TRUE, HDG en ambre DANS le cadran', () => {
+  it('#182 n°20 : DEUX lignes explicites — « COG : 137 » puis « HDG : 132° », plus de label COG °TRUE', () => {
     render(<CompassDial cog={137.4} heading={132} />);
-    expect(screen.getByText('137')).toBeTruthy();
-    expect(screen.getByText('COG °TRUE')).toBeTruthy();
-    expect(screen.getByText('HDG 132°')).toBeTruthy();
+    expect(screen.getByText('COG : 137')).toBeTruthy();
+    expect(screen.getByText('HDG : 132°')).toBeTruthy();
+    expect(screen.queryByText('COG °TRUE')).toBeNull();
+    expect(screen.queryByText('137')).toBeNull();
   });
 
   it('#182 n°16 : les degres sur la rose — 8 valeurs tous les 30°, pas aux cardinaux', () => {
@@ -44,11 +45,15 @@ describe('CompassDial (COURSE-UP)', () => {
     }
   });
 
-  it('#182 n°19 : HDG DANS le cercle, en plus petit (avec COG)', () => {
-    // Bas de la virole = CY + R_OUTER = 224 ; le HDG doit rester au-dessus.
+  it('#182 n°20 : HDG dans le cercle, SANS toucher les lignes du cadran en bas', () => {
+    // Bas du bloc HDG (baseline y + ~14) doit rester au-dessus de la rose
+    // ring (CY+88=208) et de la virole (CY+104=224) — retour n°20.
     const { container } = render(<CompassDial cog={137} heading={132} />);
     const hdg = container.querySelector('.compass-hdg')!;
-    expect(Number(hdg.getAttribute('y')) + 13).toBeLessThan(224);
+    expect(Number(hdg.getAttribute('y')) + 14).toBeLessThan(208);
+    const cog = container.querySelector('.compass-cog')!;
+    expect(container.querySelectorAll('.compass-cog-label').length).toBe(0);
+    expect(Number(cog.getAttribute('y'))).toBeLessThan(Number(hdg.getAttribute('y')));
   });
 
   it('COG null : rose non tournee et double tiret', () => {
@@ -56,8 +61,8 @@ describe('CompassDial (COURSE-UP)', () => {
     expect(
       container.querySelector('[data-testid="compass-rose"]')!.getAttribute('transform')
     ).toContain('rotate(0');
-    expect(screen.getByText('--')).toBeTruthy();
-    expect(screen.getByText('HDG --')).toBeTruthy();
+    expect(screen.getByText('COG : --')).toBeTruthy();
+    expect(screen.getByText('HDG : --')).toBeTruthy();
   });
 
   it('graduations et cardinaux rendus (36 marques, N/E/S/W)', () => {

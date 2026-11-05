@@ -937,25 +937,129 @@ button.helm-tile:focus-visible {
   fill: #ff3b30;
 }
 
-/* #182 retours n°16→19 : COG et HDG TOUS DEUX à l'intérieur du cadran,
-   en plus petit qu'avant (38→26px) pour ne pas déborder sur la rosace. */
+/* #182 retour n°20 (Dom, maquette validée) : DEUX lignes explicites
+   dans le cadran — « COG : XXX » 22px puis « HDG : XXX° » 14px ambre.
+   L'ancien label « COG °TRUE » disparaît (plus de .compass-cog-label). */
 .compass-courseup .compass-cog {
   fill: #e8f1f5;
-  font-size: 26px;
+  font-size: 22px;
   font-weight: 700;
   font-variant-numeric: tabular-nums;
 }
 
-.compass-courseup .compass-cog-label {
-  fill: #8fa3b0;
-  font-size: 10px;
-  font-weight: 600;
-}
-
 .compass-courseup .compass-hdg {
   fill: #ffb020;
-  font-size: 13px;
+  font-size: 14px;
   font-weight: 700;
+}
+
+/* ===== #182 retour n°20 : cadrans compas + vent DANS LE THÈME LIGHT =====
+   Les cadrans avaient des couleurs marines FIXES (fond #0d141c) : en thème
+   light, ils restaient sombres sur une page claire. Surcharges .theme-light
+   (posé sur <html> par App.tsx) : fond clair, texte foncé, arcs
+   bâbord/tribord et aiguille rouges/verts conservés (visibles sur clair).
+   Dark et night ne changent pas. */
+.theme-light .compass-courseup .compass-outer-ring {
+  fill: #eef3f7;
+  stroke: #8fa3b0;
+}
+
+.theme-light .compass-courseup .compass-rose-ring {
+  stroke: #7d93a6;
+}
+
+.theme-light .compass-courseup .compass-tick {
+  stroke: #7d93a6;
+}
+
+.theme-light .compass-courseup .compass-tick-major {
+  stroke: #52697c;
+}
+
+.theme-light .compass-courseup .compass-point {
+  fill: #52697c;
+}
+
+.theme-light .compass-courseup .compass-point-n {
+  fill: #1a2530;
+}
+
+.theme-light .compass-courseup .compass-deg {
+  fill: #7d93a6;
+}
+
+.theme-light .compass-courseup .compass-cog {
+  fill: #1a2530;
+}
+
+.theme-light .compass-courseup .compass-hdg {
+  fill: #b26a00;
+}
+
+.theme-light .compass-courseup .compass-lubber {
+  stroke: #d63026;
+}
+
+.theme-light .compass-courseup .compass-boat {
+  fill: #d63026;
+}
+
+.theme-light .wind-dial .wind-dial-virole {
+  fill: #eef3f7;
+  stroke: #8fa3b0;
+}
+
+.theme-light .wind-dial .wind-tick {
+  stroke: #7d93a6;
+}
+
+.theme-light .wind-dial .wind-tick-major {
+  stroke: #52697c;
+}
+
+.theme-light .wind-dial .wind-cardinal {
+  fill: #52697c;
+}
+
+.theme-light .wind-dial .wind-cardinal-n {
+  fill: #1a2530;
+}
+
+.theme-light .wind-dial .wind-no-data {
+  fill: #52697c;
+}
+
+.theme-light .wind-boat {
+  fill: #52697c;
+}
+
+.theme-light .wind-needle {
+  stroke: #d64545;
+}
+
+.theme-light .wind-needle polygon {
+  fill: #d64545;
+}
+
+.theme-light .wind-arc-port {
+  stroke: #d64545;
+}
+
+.theme-light .wind-arc-starboard {
+  stroke: #1e9860;
+}
+
+.theme-light .wind-dial-box {
+  fill: #f7fafc;
+  stroke: #8fa3b0;
+}
+
+.theme-light .wind-dial .wind-dial-tws {
+  fill: #1a2530;
+}
+
+.theme-light .wind-dial-twd {
+  fill: #52697c;
 }
 
 /* #182 retour n°16 : degrés tous les 30° sur la rose (sauf cardinaux),

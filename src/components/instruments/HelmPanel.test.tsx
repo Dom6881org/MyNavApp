@@ -24,16 +24,15 @@ describe('HelmPanel', () => {
     render(<HelmPanel data={data()} />);
     expect(screen.getByText('COMPASS')).toBeTruthy();
     // valeurs embarquées dans le cadran (maquette), plus de readouts externes
-    expect(screen.getByText('137')).toBeTruthy();
-    expect(screen.getByText('COG °TRUE')).toBeTruthy();
-    expect(screen.getByText('HDG 132°')).toBeTruthy();
+    expect(screen.getByText('COG : 137')).toBeTruthy();
+    expect(screen.getByText('HDG : 132°')).toBeTruthy();
     expect(screen.queryByTestId('helm-compass-readouts')).toBeNull();
   });
 
-  it('#182 n°16 : COG/HDG sans donnee -> double tiret dans le cadran', () => {
+  it('#182 n°20 : COG/HDG sans donnee -> double tiret dans le cadran', () => {
     const { container } = render(<HelmPanel data={data({ compass: null })} />);
-    expect(screen.getByText('HDG --')).toBeTruthy();
-    expect(container.querySelectorAll('.compass-cog')[0].textContent).toBe('--');
+    expect(screen.getByText('HDG : --')).toBeTruthy();
+    expect(container.querySelectorAll('.compass-cog')[0].textContent).toBe('COG : --');
   });
 
   it('#182 : plus de menu d\'onglets sous l\'instrument central', () => {
