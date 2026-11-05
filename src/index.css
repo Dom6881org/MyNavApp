@@ -1403,11 +1403,24 @@ html, body {
   justify-content: center;
 }
 
-/* HELM vue VENT (retour terrain n°9 #180) : le cadran OCCUPE L'ESPACE
-   DISPONIBLE de la carte centrale — conteneur flexible, SVG 100 % du
-   conteneur ; preserveAspectRatio (xMidYMid meet) garde le cadran
-   circulaire, juste PLUS GRAND qu'une taille fixe. */
+/* HELM vue VENT (retours terrain n°9 + n°10 #180) : le cadran occupe
+   l'espace DISPONIBLE de la carte centrale SANS jamais agrandir la
+   fenêtre — chaîne flex complète avec min-height: 0 à chaque étage
+   (stage > carte > body > central-value > wind-stage) pour que le SVG
+   se cale sur l'espace restant au lieu de l'étendre. preserveAspectRatio
+   (xMidYMid meet) garde le cadran circulaire quelle que soit la boîte.
+   Régle design system : OCCUPER le conteneur ≠ changer la taille de la
+   fenêtre — jamais de barres de défilement en HELM plein écran. */
+.ui-stage-panels.ui-stage-helm {
+  overflow: hidden;
+}
+
+.ui-stage-helm .instrument-card-body {
+  min-height: 0;
+}
+
 .ui-stage-helm .helm-central-value {
+  flex: 1 1 auto;
   width: 100%;
   min-height: 0;
 }
@@ -1422,8 +1435,11 @@ html, body {
 }
 
 .ui-stage-helm .helm-wind-stage .wind-dial {
-  width: 100%;
+  /* Hauteur = espace restant ; largeur par ratio intrinsèque (carré),
+     plafonnée à la largeur du conteneur — jamais de débordement. */
   height: 100%;
+  width: auto;
+  max-width: 100%;
 }
 
 .ui-stage-bottom {
