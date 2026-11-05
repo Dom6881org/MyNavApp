@@ -20,22 +20,20 @@ const data = (overrides: Partial<NavigationData> = {}): NavigationData => ({
 });
 
 describe('HelmPanel', () => {
-  it('#182 n°14 : compas central = cadran pur + readouts COG/HDG dessous (comme le vent)', () => {
+  it('#182 n°16 : compas central — COG/HDG DANS le cadran, degres sur la rose', () => {
     render(<HelmPanel data={data()} />);
     expect(screen.getByText('COMPASS')).toBeTruthy();
-    const readouts = screen.getByTestId('helm-compass-readouts').textContent ?? '';
-    expect(readouts).toContain('COG');
-    expect(readouts).toContain('137°');
-    expect(readouts).toContain('HDG');
-    expect(readouts).toContain('132°');
+    // valeurs embarquées dans le cadran (maquette), plus de readouts externes
+    expect(screen.getByText('137')).toBeTruthy();
+    expect(screen.getByText('COG °TRUE')).toBeTruthy();
+    expect(screen.getByText('HDG 132°')).toBeTruthy();
+    expect(screen.queryByTestId('helm-compass-readouts')).toBeNull();
   });
 
-  it('#182 n°14 : COG/HDG sans donnee -> double tiret dans les readouts', () => {
-    render(<HelmPanel data={data({ compass: null })} />);
-    const readouts = screen.getByTestId('helm-compass-readouts').textContent ?? '';
-    expect(readouts).toContain('COG');
-    expect(readouts).toContain('HDG');
-    expect(readouts).toContain('--');
+  it('#182 n°16 : COG/HDG sans donnee -> double tiret dans le cadran', () => {
+    const { container } = render(<HelmPanel data={data({ compass: null })} />);
+    expect(screen.getByText('HDG --')).toBeTruthy();
+    expect(container.querySelectorAll('.compass-cog')[0].textContent).toBe('--');
   });
 
   it('#182 : plus de menu d\'onglets sous l\'instrument central', () => {

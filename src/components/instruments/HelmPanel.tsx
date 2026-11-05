@@ -69,21 +69,12 @@ const HelmPanel: React.FC<HelmPanelProps> = ({ data }) => {
 
   const centralContent =
     central === 'compass' ? (
-      /* #182 retour n°14 : même traitement que le vent — cadran pur en
-         haut (occupe l'espace disponible), valeurs digitales dessous. */
+      /* #182 retours n°14/15 puis n°16 : cadran OCCUPANT l'espace
+         disponible ; les degrés sur la rose et COG/HDG sont À
+         L'INTÉRIEUR du cadran (maquette), plus de readouts externes. */
       <div className="helm-central-value">
         <div className="helm-compass-stage">
           <CompassDial cog={cog} heading={hdg} fill />
-        </div>
-        <div className="helm-compass-readouts" data-testid="helm-compass-readouts">
-          <span className="helm-readout">
-            <span className="helm-readout-lbl">COG</span>
-            <strong>{cog === null ? '--' : `${Math.round(normalizeDeg(cog))}°`}</strong>
-          </span>
-          <span className="helm-readout helm-readout-hdg">
-            <span className="helm-readout-lbl">HDG</span>
-            <strong>{hdg === null ? '--' : `${Math.round(normalizeDeg(hdg))}°`}</strong>
-          </span>
         </div>
       </div>
     ) : central === 'speed' ? (

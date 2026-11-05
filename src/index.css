@@ -836,30 +836,14 @@ button.helm-tile:focus-visible {
 }
 
 /* #182 retour n°13 : les QUATRE valeurs du vent en digital sous le
-   cadran central — TWS, AWS, TWA, AWA. Retour n°14 : le compas reçoit
-   le même traitement (COG/HDG sous le cadran, `.helm-compass-readouts`). */
-.helm-wind-readouts,
-.helm-compass-readouts {
+   cadran central — TWS, AWS, TWA, AWA. (Le compas garde ses valeurs
+   DANS le cadran — retour n°16.) */
+.helm-wind-readouts {
   display: flex;
   justify-content: center;
   gap: 1.25rem;
   margin-top: 0.75rem;
   flex-wrap: wrap;
-}
-
-/* #182 retour n°15 : COG/HDG PLUS VISIBLES et PLUS ÉCARTÉS — grandes
-   valeurs (2.4rem) et espacement large, comme l'exige Dom. */
-.helm-compass-readouts {
-  gap: 5rem;
-  margin-top: 1rem;
-}
-
-.helm-compass-readouts .helm-readout-lbl {
-  font-size: 0.75rem;
-}
-
-.helm-compass-readouts .helm-readout strong {
-  font-size: 2.4rem;
 }
 
 .helm-readout {
@@ -882,11 +866,6 @@ button.helm-tile:focus-visible {
   line-height: 1;
   color: var(--text-primary);
   font-variant-numeric: tabular-nums;
-}
-
-/* HDG en ambre, comme le jumelage des tuiles (design maquette). */
-.helm-readout-hdg strong {
-  color: var(--warning-color);
 }
 
 /* Position centrale : deux lignes lat/lon, police un cran sous la
@@ -958,8 +937,35 @@ button.helm-tile:focus-visible {
   fill: #ff3b30;
 }
 
-/* #182 retour n°14 : COG/HDG ne sont plus dans le SVG (cadran pur) —
-   les readouts digitaux vivent dans HelmPanel (.helm-readout). */
+/* #182 retour n°16 : valeurs À L'INTÉRIEUR du cadran (maquette) — COG en
+   grand sans unité + label « COG °TRUE », HDG ambre sous le cadran. */
+.compass-courseup .compass-cog {
+  fill: #e8f1f5;
+  font-size: 38px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.compass-courseup .compass-cog-label {
+  fill: #8fa3b0;
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.compass-courseup .compass-hdg {
+  fill: #ffb020;
+  font-size: 15px;
+  font-weight: 700;
+}
+
+/* #182 retour n°16 : degrés tous les 30° sur la rose (sauf cardinaux),
+   contre-rotés, plus discrets que les cardinaux. */
+.compass-courseup .compass-deg {
+  fill: #5d7590;
+  font-size: 10px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
 
 /* ===== Refonte instruments — Phase 2 : COASTAL / OVERVIEW + persistance (#160) ===== */
 
