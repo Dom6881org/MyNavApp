@@ -718,9 +718,10 @@ html, body {
 }
 
 .helm-switch-btn.active {
-  color: var(--text-primary);
+  color: #fff;
   border-color: var(--accent-color);
-  background: var(--bg-secondary);
+  background: var(--accent-color);
+  font-weight: 700;
 }
 
 .helm-central-value {
@@ -750,14 +751,14 @@ html, body {
 }
 
 .helm-compact {
-  /* Maquette revue 2 : colonne de compacts à droite de l'instrument central */
+  /* HELM design-centered : colonne de compacts fixes (SOG/TWS/DEPTH)
+     à droite du central — 170 px comme la maquette */
   display: flex;
   flex-direction: column;
   justify-content: center;
-  gap: 0.2rem;
-  flex: 0 0 auto;
-  min-width: 5.6rem;
-  padding-left: 0.4rem;
+  gap: 0.5rem;
+  flex: 0 0 10rem;
+  padding-left: 0.75rem;
   border-left: 1px solid var(--border-color);
 }
 
@@ -789,7 +790,7 @@ html, body {
 
 .helm-compact-row strong {
   color: var(--text-primary);
-  font-size: 0.95rem;
+  font-size: 1.25rem;
   font-variant-numeric: tabular-nums;
 }
 
@@ -797,56 +798,77 @@ html, body {
   color: var(--warning-color);
 }
 
-/* Compas COURSE-UP */
-.compass-dial {
+/* Compas COURSE-UP façon maquette (HELM design-centered) — couleurs
+   d'affichage marines fixes, comme WindDial : le cadran reste lisible
+   dans les trois thèmes.
+   ⚠️ Le SVG porte la classe .compass-courseup (PAS .compass-dial) :
+   App.css garde une règle legacy .compass-dial { height: 96px } qui
+   écrasait le cadran à ~96 px depuis la Phase 1. Les couleurs des
+   enfants sont scopées sous .compass-courseup : App.css charge après
+   index.css, ses .compass-tick/.compass-cardinal legacy perdraient sinon. */
+.compass-courseup {
   max-width: 100%;
 }
 
-.compass-rose-ring {
+.compass-courseup .compass-outer-ring {
+  fill: #0d141c;
+  stroke: #263444;
+  stroke-width: 2;
+}
+
+.compass-courseup .compass-rose-ring {
   fill: none;
-  stroke: var(--border-color);
+  stroke: #33475c;
   stroke-width: 1.5;
 }
 
-.compass-tick {
-  stroke: var(--text-secondary);
+.compass-courseup .compass-tick {
+  stroke: #5d7590;
   stroke-width: 1;
 }
 
-.compass-tick-major {
-  stroke: var(--text-primary);
-  stroke-width: 1.5;
+.compass-courseup .compass-tick-major {
+  stroke: #4a5f74;
+  stroke-width: 2;
 }
 
-.compass-cardinal {
-  fill: var(--text-secondary);
-  font-size: 11px;
-}
-
-.compass-cardinal-n {
-  fill: var(--accent-color);
+.compass-courseup .compass-cardinal {
+  fill: #8fa3b0;
+  font-size: 13px;
   font-weight: 700;
 }
 
-.compass-lubber {
-  stroke: var(--accent-color);
+.compass-courseup .compass-cardinal-n {
+  fill: #e8f1f5;
+}
+
+/* Proue et lubber rouges : le cap est TOUJOURS ici, en haut */
+.compass-courseup .compass-lubber {
+  stroke: #ff3b30;
   stroke-width: 3;
 }
 
-.compass-boat {
-  fill: var(--text-primary);
+.compass-courseup .compass-boat {
+  fill: #ff3b30;
 }
 
-.compass-cog {
-  fill: var(--text-primary);
-  font-size: 26px;
+.compass-courseup .compass-cog {
+  fill: #e8f1f5;
+  font-size: 38px;
   font-weight: 700;
   font-variant-numeric: tabular-nums;
 }
 
-.compass-hdg {
-  fill: var(--warning-color);
+.compass-courseup .compass-cog-label {
+  fill: #8fa3b0;
   font-size: 11px;
+  font-weight: 600;
+}
+
+.compass-courseup .compass-hdg {
+  fill: #ffb020;
+  font-size: 15px;
+  font-weight: 700;
 }
 
 /* ===== Refonte instruments — Phase 2 : COASTAL / OVERVIEW + persistance (#160) ===== */
@@ -864,6 +886,11 @@ html, body {
 
 .wind-dial {
   max-width: 100%;
+}
+
+.wind-dial .wind-dial-tws {
+  fill: #e8f1f5;
+  font-weight: 700;
 }
 
 .wind-dial-tws {
@@ -1154,7 +1181,43 @@ html, body {
   background: rgba(200, 40, 40, 0.12);
 }
 
-/* ===== WindDial façon Raymarine (#168) ===== */
+/* ===== WindDial façon Raymarine (#168 ; reprise HELM #180 : classes
+   PROPRES .wind-* — .compass-tick/.compass-cardinal sont désormais
+   scopés sous .compass-courseup, les ticks du cadran vent étaient
+   devenus invisibles) ===== */
+.wind-dial .wind-dial-virole {
+  fill: #0d141c;
+  stroke: #263444;
+  stroke-width: 2;
+}
+
+.wind-dial .wind-tick {
+  stroke: #5d7590;
+  stroke-width: 1;
+}
+
+.wind-dial .wind-tick-major {
+  stroke: #4a5f74;
+  stroke-width: 2;
+}
+
+.wind-dial .wind-cardinal {
+  fill: #8fa3b0;
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.wind-dial .wind-cardinal-n {
+  fill: #e8f1f5;
+  font-weight: 700;
+}
+
+.wind-dial .wind-no-data {
+  fill: #8fa3b0;
+  font-size: 11px;
+  font-weight: 600;
+}
+
 .wind-arc-port {
   fill: none;
   stroke: #c33a3a;
@@ -1249,10 +1312,11 @@ html, body {
   letter-spacing: 0.02em;
 }
 
-/* Bandeau OVERVIEW : tuiles au-dessus de la carte dans le conteneur carte */
+/* Bandeau d'état persistant (retour terrain Dom #180) : tuiles OVERVIEW
+   en haut de TOUTES les vues (shell), pas seulement au-dessus de la carte */
 .overview-strip {
   flex: 0 0 auto;
-  padding: 0.6rem 1rem 0;
+  padding: 0.25rem 1rem 0;
 }
 
 .overview-strip .overview-panel {
@@ -1292,14 +1356,16 @@ html, body {
 
 /* HELM / COASTAL : les instruments remplissent l'écran — l'emplacement
    de la carte ne reste jamais vide */
+/* Règle design system (retour terrain Dom) : pas de grandes marges —
+   les panneaux remplissent l'espace disponible, espacements resserrés. */
 .ui-stage-panels {
   flex: 1;
   min-height: 0;
   overflow-y: auto;
   display: flex;
   flex-direction: column;
-  gap: 0.75rem;
-  padding: 0.75rem 1rem;
+  gap: 0.5rem;
+  padding: 0.5rem 0.75rem;
 }
 
 .ui-stage-panels .helm-panel,
@@ -1312,6 +1378,74 @@ html, body {
 
 .ui-stage-panels .instrument-modes-panel {
   display: none;
+}
+
+/* HELM plein écran (#180, retours terrain Dom) : MOTION et rangée basse
+   retirés (doublons WIND/DEPTH) ; le panneau PREND TOUT L'ESPACE
+   DISPONIBLE — pas de centrage, pas de max-width, la carte centrale
+   s'étire et son contenu se centre dans l'espace gagné. */
+.ui-stage-helm .helm-panel {
+  flex: 1 1 auto;
+  max-width: none;
+}
+
+.ui-stage-helm .instrument-card {
+  flex: 1 1 auto;
+  display: flex;
+  flex-direction: column;
+}
+
+.ui-stage-helm .instrument-card-body {
+  flex: 1 1 auto;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+
+/* HELM vue VENT (retours terrain n°9 + n°10 + n°11 #180) : le cadran
+   occupe l'espace DISPONIBLE de la carte centrale SANS jamais agrandir
+   la fenêtre — chaîne flex complète avec min-height: 0 à TOUS les
+   étages (stage > panel > central > carte > body > central-value >
+   wind-stage). Sans min-height: 0, un item flex ne rétrécit pas sous
+   la taille de son contenu : le contenu déborde et l'overflow: hidden
+   le rogne (cadran coupé, onglets invisibles — retour n°11).
+   preserveAspectRatio (xMidYMid meet) garde le cadran circulaire
+   quelle que soit la boîte.
+   Régle design system : OCCUPER le conteneur ≠ changer la taille de
+   la fenêtre — jamais de barres de défilement NI de rognage en HELM. */
+.ui-stage-panels.ui-stage-helm {
+  overflow: hidden;
+}
+
+.ui-stage-helm .helm-panel,
+.ui-stage-helm .helm-central,
+.ui-stage-helm .instrument-card,
+.ui-stage-helm .instrument-card-body {
+  min-height: 0;
+}
+
+.ui-stage-helm .helm-central-value {
+  flex: 1 1 auto;
+  width: 100%;
+  min-height: 0;
+}
+
+.ui-stage-helm .helm-wind-stage {
+  flex: 1 1 auto;
+  width: 100%;
+  min-height: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.ui-stage-helm .helm-wind-stage .wind-dial {
+  /* Hauteur = espace restant ; largeur par ratio intrinsèque (carré),
+     plafonnée à la largeur du conteneur — jamais de débordement. */
+  height: 100%;
+  width: auto;
+  max-width: 100%;
 }
 
 .ui-stage-bottom {
@@ -1355,11 +1489,6 @@ html, body {
 
 .ui-stage-map .map-container {
   padding: 0;
-}
-
-.ui-stage-map .overview-strip {
-  flex: 0 0 auto;
-  padding: 0.6rem 1rem 0;
 }
 
 .routing-cartouche {

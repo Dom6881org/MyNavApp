@@ -1,8 +1,7 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import type { NavigationData } from '../../types';
 import { setUiMode } from '../../utils/instrumentMode';
 import type { UiMode } from '../../utils/instrumentMode';
-import { decideAutoMode, readAutoSwitch, writeAutoSwitch } from '../../utils/autoMode';
 
 /** Commutateur des modes d'instruments (refonte instruments, Phase 2 — #160,
  * Phase 3 — #162) : HELM / COASTAL / OVERVIEW / PREP ROUTING en onglets,
@@ -10,9 +9,10 @@ import { decideAutoMode, readAutoSwitch, writeAutoSwitch } from '../../utils/aut
  * props de routage alimentent l'onglet PREP (optionnelles : sans routage,
  * l'onglet affiche une invite).
  *
- * Phase 4 — #164 : auto-switch vers COASTAL à l'activation de l'alarme
- * profondeur, opt-in « AUTO » persisté (mynav:ui-auto, désactivé par
- * défaut), pas de retour arrière automatique.
+ * Phase 4 — #164 : le toggle « AUTO » (auto-switch vers COASTAL sur alarme
+ * profondeur) a été RETIRÉ de la barre à la demande de Dom (retour terrain
+ * #180) — il sera peut-être réajouté plus tard ; l'utilitaire autoMode.ts
+ * et son comportement restent en place et testés.
  *
  * Mise en page v3 (#172) : BARRE DE MODES pleine largeur en haut de
  * l'écran — plus de corps ici : App rend le panneau du mode (HELM /
@@ -32,41 +32,19 @@ const MODES: { id: UiMode; label: string }[] = [
   { id: 'prep', label: 'ROUTING' }
 ];
 
+// `data` reste dans l'interface (l'auto-switch profondeur le réutilisera
+// s'il revient) mais n'est plus déstructuré : ESLint échoue la CI sur une
+// prop non lue.
 const InstrumentModesPanel: React.FC<InstrumentModesPanelProps> = ({
-  data,
   initialMode,
   onModeChange
 }) => {
   const [mode, setMode] = useState<UiMode>(initialMode);
-  const [autoSwitch, setAutoSwitch] = useState<boolean>(() => readAutoSwitch());
-  const [autoNotice, setAutoNotice] = useState<string | null>(null);
 
   const selectMode = (next: UiMode) => {
     setMode(next);
-    setAutoNotice(null); // reprise en main : l'avis auto se retire
     setUiMode(next); // persistance entre sessions
   };
-
-  const toggleAutoSwitch = () => {
-    setAutoSwitch(value => {
-      const next = !value;
-      writeAutoSwitch(next); // persistance entre sessions
-      return next;
-    });
-  };
-
-  // Phase 4 (#164) : alarme profondeur -> COASTAL, sans ping-pong (uniquement
-  // a l'activation, jamais de retour arriere automatique).
-  const depthAlarm = data.depth?.alarm ?? false;
-  const modeRef = useRef(mode);
-  modeRef.current = mode;
-  useEffect(() => {
-    const forced = decideAutoMode(modeRef.current, depthAlarm, autoSwitch);
-    if (forced === null) return;
-    setMode(forced);
-    setUiMode(forced);
-    setAutoNotice('Depth alarm — switched to COASTAL');
-  }, [depthAlarm, autoSwitch]);
 
   // #170 : App a besoin du mode actif pour piloter la carte
   // (masquée en HELM/COASTAL, bandeau tuiles au-dessus en OVERVIEW).
@@ -89,22 +67,7 @@ const InstrumentModesPanel: React.FC<InstrumentModesPanelProps> = ({
             {m.label}
           </button>
         ))}
-        <button
-          type="button"
-          className={`helm-switch-btn auto ${autoSwitch ? 'active' : ''}`}
-          aria-pressed={autoSwitch}
-          aria-label="Auto switch to coastal on depth alarm"
-          title="Auto switch to COASTAL on depth alarm"
-          onClick={toggleAutoSwitch}
-        >
-          AUTO
-        </button>
       </div>
-      {autoNotice && (
-        <p className="instrument-auto-notice" role="status" data-testid="instrument-auto-notice">
-          {autoNotice}
-        </p>
-      )}
       {/* #172 : plus de corps ici — App rend le panneau du mode actif
           (HELM/COASTAL plein écran, OVERVIEW/ROUTING tuiles + carte). */}
     </div>

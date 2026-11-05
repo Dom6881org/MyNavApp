@@ -121,7 +121,6 @@ const App: React.FC = () => {
   // OVERVIEW/ROUTING = tuiles au-dessus de la carte (+ cartouche routing).
   const [activeMode, setActiveMode] = React.useState<UiMode | null>(uiMode);
   const showMap = activeMode === null || activeMode === 'overview' || activeMode === 'prep';
-  const showStrip = activeMode === 'overview' || activeMode === 'prep';
   // Menu routing de la carte masqué en OVERVIEW/ROUTING : tout le routing
   // vit dans le cartouche (#172). En legacy il reste sur la carte.
   const hideRoutingTool = activeMode === 'overview' || activeMode === 'prep';
@@ -223,26 +222,35 @@ const App: React.FC = () => {
                 onModeChange={setActiveMode}
               />
             </div>
-            {/* HELM / COASTAL : les instruments remplissent l'écran —
+            {/* Barre d'état persistante (retour terrain Dom #180) : la bande
+                OVERVIEW (SOG·COG, WIND, DEPTH, TIME, POSITION) est en haut de
+                TOUTES les vues — plus seulement au-dessus de la carte. */}
+            <div className="overview-strip">
+              <OverviewPanel data={navigationData} />
+            </div>
+            {/* HELM : panneau seul, plein écran — retour terrain Dom :
+                MOTION et rangée basse (WIND/DEPTH) retirés, ils dupliquent
+                le vent et la profondeur déjà dans les compacts HELM (#180). */}
+            {activeMode === 'helm' && (
+              <div className="ui-stage-panels ui-stage-helm">
+                <HelmPanel data={navigationData} />
+              </div>
+            )}
+            {/* COASTAL : les instruments remplissent l'écran —
                 l'emplacement de la carte ne reste jamais vide (#172) */}
-            {(activeMode === 'helm' || activeMode === 'coastal') && (
+            {activeMode === 'coastal' && (
               <div className="ui-stage-panels">
-                {activeMode === 'helm' && <HelmPanel data={navigationData} />}
-                {activeMode === 'coastal' && <CoastalPanel data={navigationData} />}
+                <CoastalPanel data={navigationData} />
                 <MotionPanel />
                 <div className="ui-stage-bottom">
                   <BottomInstrumentsPanel data={navigationData} />
                 </div>
               </div>
             )}
-            {/* OVERVIEW / ROUTING : indicateurs en tuiles au-dessus de la carte */}
+            {/* OVERVIEW / ROUTING : la carte occupe tout l'espace libre
+                (bande d'état déplacée en haut du shell — voir plus haut) */}
             {(showMap && (activeMode === 'overview' || activeMode === 'prep')) && (
               <div className="ui-stage-map">
-                {showStrip && (
-                  <div className="overview-strip">
-                    <OverviewPanel data={navigationData} />
-                  </div>
-                )}
                 {/* Carte + cartouche : la carte occupe tout l'espace libre (#174) */}
                 <div className="ui-stage-map-body">
                 <div className="map-container">
