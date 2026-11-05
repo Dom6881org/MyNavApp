@@ -33,6 +33,24 @@ describe('CompassDial (COURSE-UP)', () => {
     });
   });
 
+  it('#182 n°18 : degrés collés contre les graduations (rayon 76, hors rosace centrale)', () => {
+    const { container } = render(<CompassDial cog={0} />);
+    const degs = Array.from(container.querySelectorAll('.compass-deg'));
+    expect(degs.length).toBe(8);
+    for (const d of degs) {
+      const x = Number(d.getAttribute('x'));
+      const y = Number(d.getAttribute('y')) - 3; // offset baseline
+      expect(Math.hypot(x - 110, y - 120)).toBeCloseTo(76, 0);
+    }
+  });
+
+  it('#182 n°18 : HDG NETTEMENT sous le cercle, plus sur la rosace', () => {
+    // Bas de la virole = CY + R_OUTER = 224 ; le HDG doit démarrer après.
+    const { container } = render(<CompassDial cog={137} heading={132} />);
+    const hdg = container.querySelector('.compass-hdg')!;
+    expect(Number(hdg.getAttribute('y')) - 15).toBeGreaterThan(224);
+  });
+
   it('COG null : rose non tournee et double tiret', () => {
     const { container } = render(<CompassDial cog={null} />);
     expect(

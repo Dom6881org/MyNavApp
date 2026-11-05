@@ -79,12 +79,12 @@ const CompassDial: React.FC<CompassDialProps> = ({
 
   /** Degrés tous les 30° sur la rose (retour n°16), sauf aux cardinaux —
    * contre-rotés comme les lettres pour rester lisibles.
-   * #182 retour n°17 (Dom) : DISCRETS — rayon 74 (collés SOUS les
-   * graduations, façon Raymarine) et police 8px : ils ne dépassent plus
-   * sur le cadran (ni la proue/lubber en haut — lubber finit à CY-72,
-   * un chiffre en haut atteint au plus CY-70), ni le centre. */
+   * #182 retours n°17/18 (Dom) : nettement plus petits que le premier
+   * essai — rayon 76 (COLLÉS contre les graduations, façon Raymarine)
+   * et police 7px : hiérarchie claire (cardinaux 13px ≫ degrés 7px),
+   * ils ne dépassent plus sur le cadran. */
   const degLabel = (angle: number) => {
-    const p = polarToXY(CX, CY, R_ROSE - 14, angle);
+    const p = polarToXY(CX, CY, R_ROSE - 12, angle);
     return (
       <text
         key={`deg-${angle}`}
@@ -102,9 +102,9 @@ const CompassDial: React.FC<CompassDialProps> = ({
   return (
     <svg
       className="compass-courseup"
-      viewBox="0 0 220 240"
+      viewBox="0 0 220 248"
       width={fill ? '100%' : size}
-      height={fill ? '100%' : (size * 240) / 220}
+      height={fill ? '100%' : (size * 248) / 220}
       role="img"
       aria-label={`Compass course up${cog === null ? '' : `, COG ${Math.round(cog)} degrees`}${
         heading === null ? '' : `, heading ${Math.round(heading)} degrees`
@@ -158,7 +158,11 @@ const CompassDial: React.FC<CompassDialProps> = ({
       <text x={CX} y={CY + 74} textAnchor="middle" className="compass-cog-label">
         COG °TRUE
       </text>
-      <text x={CX} y={230} textAnchor="middle" className="compass-hdg">
+      {/* #182 retour n°18 (Dom) : HDG NETTEMENT SOUS le cercle — à y=230
+          il chevauchait le bas de la virole (cercle = CY+104 = 224) et
+          empiétait sur la rosace. Baseline 242 : le texte (top ~231)
+          flotte sous le cercle, plus rien ne touche la rosace. */}
+      <text x={CX} y={242} textAnchor="middle" className="compass-hdg">
         {heading === null ? 'HDG --' : `HDG ${Math.round(normalizeDeg(heading))}°`}
       </text>
     </svg>
