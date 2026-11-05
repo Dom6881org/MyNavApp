@@ -2,7 +2,7 @@
  * Captures d'écran de la CI visuelle (#178).
  *
  * Ouvre l'app servie par le serveur Python (dist/ + flux NMEA UDP) et prend
- * une capture par vue (helm/helm-wind/coastal/overview/prep/legacy) x thème
+ * une capture par vue (helm/helm-wind/helm-wind-small/coastal/overview/prep/legacy) x thème
  * (dark/light) — 1440x900, ~8 s d'attente pour laisser arriver les données
  * NMEA et Leaflet s'initialiser.
  *
@@ -18,7 +18,7 @@ const BASE = process.env.BASE_URL ?? 'http://127.0.0.1:3001';
 const WAIT_MS = Number(process.env.WAIT_MS ?? 8000);
 const OUT = 'shots';
 
-const VIEWS = ['helm', 'helm-wind', 'coastal', 'overview', 'prep', 'legacy'];
+const VIEWS = ['helm', 'helm-wind', 'helm-wind-small', 'coastal', 'overview', 'prep', 'legacy'];
 const THEMES = ['dark', 'light'];
 
 // Vues dérivées : capture d'un état interactif de la vue HELM.
@@ -29,7 +29,18 @@ const DERIVED = {
     await page.getByRole('tab', { name: 'VENT' }).click();
     await page.waitForTimeout(500);
   },
+  // #180 retour n°11 : fenêtre réduite (écran du bord) — le cadran doit
+  // se réduire pour rester ENTIER (pas de rognage, pas d'onglets perdus).
+  'helm-wind-small': { viewport: { width: 1100, height: 600 }, click: 'VENT' },
 };
+
+// Derivées simples : { viewport, click } — capture d'une vue HELM dans un
+// viewport donné après clic sur un onglet du central.
+const SIMPLE_DERIVED = Object.fromEntries(
+  Object.entries(DERIVED)
+    .filter(([, v]) => typeof v === 'object')
+    .map(([k, v]) => [k, v])
+);
 
 // Layout minimal pour injecter le thème (useDashboardLayout fusionne avec
 // les défauts ; instruments vide = les vues refondues n'utilisent pas ce
@@ -46,8 +57,9 @@ async function main() {
 
   for (const view of VIEWS) {
     for (const theme of THEMES) {
+      const simple = SIMPLE_DERIVED[view];
       const context = await browser.newContext({
-        viewport: { width: 1440, height: 900 },
+        viewport: simple?.viewport ?? { width: 1440, height: 900 },
       });
       const page = await context.newPage();
       await page.addInitScript((layout) => {
@@ -56,8 +68,11 @@ async function main() {
       const derived = DERIVED[view];
       await page.goto(BASE + '/?ui=' + (derived ? 'helm' : view), { waitUntil: 'load' });
       await page.waitForTimeout(WAIT_MS);
-      if (derived) {
+      if (typeof derived === 'function') {
         await derived(page);
+      } else if (simple?.click) {
+        await page.getByRole('tab', { name: simple.click }).click();
+        await page.waitForTimeout(500);
       }
       const file = OUT + '/' + view + '-' + theme + '.png';
       await page.screenshot({ path: file });

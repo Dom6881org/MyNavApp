@@ -1403,18 +1403,24 @@ html, body {
   justify-content: center;
 }
 
-/* HELM vue VENT (retours terrain n°9 + n°10 #180) : le cadran occupe
-   l'espace DISPONIBLE de la carte centrale SANS jamais agrandir la
-   fenêtre — chaîne flex complète avec min-height: 0 à chaque étage
-   (stage > carte > body > central-value > wind-stage) pour que le SVG
-   se cale sur l'espace restant au lieu de l'étendre. preserveAspectRatio
-   (xMidYMid meet) garde le cadran circulaire quelle que soit la boîte.
-   Régle design system : OCCUPER le conteneur ≠ changer la taille de la
-   fenêtre — jamais de barres de défilement en HELM plein écran. */
+/* HELM vue VENT (retours terrain n°9 + n°10 + n°11 #180) : le cadran
+   occupe l'espace DISPONIBLE de la carte centrale SANS jamais agrandir
+   la fenêtre — chaîne flex complète avec min-height: 0 à TOUS les
+   étages (stage > panel > central > carte > body > central-value >
+   wind-stage). Sans min-height: 0, un item flex ne rétrécit pas sous
+   la taille de son contenu : le contenu déborde et l'overflow: hidden
+   le rogne (cadran coupé, onglets invisibles — retour n°11).
+   preserveAspectRatio (xMidYMid meet) garde le cadran circulaire
+   quelle que soit la boîte.
+   Régle design system : OCCUPER le conteneur ≠ changer la taille de
+   la fenêtre — jamais de barres de défilement NI de rognage en HELM. */
 .ui-stage-panels.ui-stage-helm {
   overflow: hidden;
 }
 
+.ui-stage-helm .helm-panel,
+.ui-stage-helm .helm-central,
+.ui-stage-helm .instrument-card,
 .ui-stage-helm .instrument-card-body {
   min-height: 0;
 }
