@@ -78,9 +78,13 @@ const CompassDial: React.FC<CompassDialProps> = ({
   };
 
   /** Degrés tous les 30° sur la rose (retour n°16), sauf aux cardinaux —
-   * contre-rotés comme les lettres pour rester lisibles. */
+   * contre-rotés comme les lettres pour rester lisibles.
+   * #182 retour n°17 (Dom) : DISCRETS — rayon 74 (collés SOUS les
+   * graduations, façon Raymarine) et police 8px : ils ne dépassent plus
+   * sur le cadran (ni la proue/lubber en haut — lubber finit à CY-72,
+   * un chiffre en haut atteint au plus CY-70), ni le centre. */
   const degLabel = (angle: number) => {
-    const p = polarToXY(CX, CY, R_ROSE - 20, angle);
+    const p = polarToXY(CX, CY, R_ROSE - 14, angle);
     return (
       <text
         key={`deg-${angle}`}

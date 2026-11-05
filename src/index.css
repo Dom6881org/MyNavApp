@@ -959,10 +959,13 @@ button.helm-tile:focus-visible {
 }
 
 /* #182 retour n°16 : degrés tous les 30° sur la rose (sauf cardinaux),
-   contre-rotés, plus discrets que les cardinaux. */
+   contre-rotés, plus discrets que les cardinaux.
+   Retour n°17 (Dom) : plus gros = ils dépassaient sur le cadran —
+   police 8px, taille discrète qui ne concurrence ni les cardinaux
+   (13px) ni le COG central. */
 .compass-courseup .compass-deg {
   fill: #5d7590;
-  font-size: 10px;
+  font-size: 8px;
   font-weight: 600;
   font-variant-numeric: tabular-nums;
 }
