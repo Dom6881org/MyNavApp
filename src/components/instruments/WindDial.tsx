@@ -20,13 +20,16 @@ interface WindDialProps {
   /** Force du vent vrai (nœuds). */
   twsKts: number | null;
   size?: number;
+  /** #180 retour n°9 : le cadran occupe tout l'espace disponible de son
+   * conteneur (width/height 100%) au lieu d'une taille fixe. */
+  fill?: boolean;
 }
 
 const R = 88;
 const CX = 100;
 const CY = 100;
 
-const WindDial: React.FC<WindDialProps> = ({ twdDeg, twsKts, size = 170 }) => {
+const WindDial: React.FC<WindDialProps> = ({ twdDeg, twsKts, size = 170, fill = false }) => {
   const marks = tickMarks(0, 360, 90, 30);
   const twd = twdDeg === null ? null : normalizeDeg(twdDeg);
 
@@ -51,8 +54,8 @@ const WindDial: React.FC<WindDialProps> = ({ twdDeg, twsKts, size = 170 }) => {
     <svg
       className="wind-dial"
       viewBox="0 0 200 200"
-      width={size}
-      height={size}
+      width={fill ? '100%' : size}
+      height={fill ? '100%' : size}
       role="img"
       aria-label={
         twd === null

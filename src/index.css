@@ -1403,6 +1403,29 @@ html, body {
   justify-content: center;
 }
 
+/* HELM vue VENT (retour terrain n°9 #180) : le cadran OCCUPE L'ESPACE
+   DISPONIBLE de la carte centrale — conteneur flexible, SVG 100 % du
+   conteneur ; preserveAspectRatio (xMidYMid meet) garde le cadran
+   circulaire, juste PLUS GRAND qu'une taille fixe. */
+.ui-stage-helm .helm-central-value {
+  width: 100%;
+  min-height: 0;
+}
+
+.ui-stage-helm .helm-wind-stage {
+  flex: 1 1 auto;
+  width: 100%;
+  min-height: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.ui-stage-helm .helm-wind-stage .wind-dial {
+  width: 100%;
+  height: 100%;
+}
+
 .ui-stage-bottom {
   flex: 0 0 auto;
   width: 100%;

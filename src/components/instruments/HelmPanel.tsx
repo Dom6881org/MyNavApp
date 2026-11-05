@@ -59,7 +59,11 @@ const HelmPanel: React.FC<HelmPanelProps> = ({ data }) => {
         {/* #176 : grand cadran Raymarine au central VENT, comme la maquette.
             #180 retour n°6 : sans vent, le cadran affiche « no wind data »
             en son centre — pas de doublon dans la ligne du bas. */}
-        <WindDial twdDeg={twd} twsKts={tws} size={300} />
+        {/* #180 retour n°9 : le cadran vent OCCUPE L'ESPACE DISPONIBLE —
+            plus de taille fixe, il grandit avec la carte centrale. */}
+        <div className="helm-wind-stage">
+          <WindDial twdDeg={twd} twsKts={tws} fill />
+        </div>
         {twa !== null && (
           <span className="helm-unit" data-testid="helm-wind-line">
             {`TWA ${Math.round(twa)}°${awa === null ? '' : ` · AWA ${Math.round(Math.abs(awa))}°`}`}
