@@ -937,24 +937,24 @@ button.helm-tile:focus-visible {
   fill: #ff3b30;
 }
 
-/* #182 retour n°16 : valeurs À L'INTÉRIEUR du cadran (maquette) — COG en
-   grand sans unité + label « COG °TRUE », HDG ambre sous le cadran. */
+/* #182 retours n°16→19 : COG et HDG TOUS DEUX à l'intérieur du cadran,
+   en plus petit qu'avant (38→26px) pour ne pas déborder sur la rosace. */
 .compass-courseup .compass-cog {
   fill: #e8f1f5;
-  font-size: 38px;
+  font-size: 26px;
   font-weight: 700;
   font-variant-numeric: tabular-nums;
 }
 
 .compass-courseup .compass-cog-label {
   fill: #8fa3b0;
-  font-size: 11px;
+  font-size: 10px;
   font-weight: 600;
 }
 
 .compass-courseup .compass-hdg {
   fill: #ffb020;
-  font-size: 15px;
+  font-size: 13px;
   font-weight: 700;
 }
 

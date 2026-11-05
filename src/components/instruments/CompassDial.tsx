@@ -102,9 +102,9 @@ const CompassDial: React.FC<CompassDialProps> = ({
   return (
     <svg
       className="compass-courseup"
-      viewBox="0 0 220 248"
+      viewBox="0 0 220 232"
       width={fill ? '100%' : size}
-      height={fill ? '100%' : (size * 248) / 220}
+      height={fill ? '100%' : (size * 232) / 220}
       role="img"
       aria-label={`Compass course up${cog === null ? '' : `, COG ${Math.round(cog)} degrees`}${
         heading === null ? '' : `, heading ${Math.round(heading)} degrees`
@@ -150,19 +150,18 @@ const CompassDial: React.FC<CompassDialProps> = ({
         className="compass-boat"
       />
 
-      {/* #182 retour n°16 : valeurs À L'INTÉRIEUR du cadran (maquette) —
-          COG en grand sans unité, label « COG °TRUE », HDG ambre dessous. */}
-      <text x={CX} y={CY + 52} textAnchor="middle" className="compass-cog">
+      {/* #182 retour n°19 (Dom) : les DEUX valeurs COG et HDG À
+          L'INTÉRIEUR du cercle, en PLUS PETIT — tout tient dans le
+          cadran, rien ne pend sous la virole (bas = CY+104 = 224) :
+          COG 26px à y=CY+40, label « COG °TRUE » 10px à y=CY+60,
+          HDG ambre 13px à y=CY+80 (top 187, bas ~203 < 224 ✓). */}
+      <text x={CX} y={CY + 40} textAnchor="middle" className="compass-cog">
         {cog === null ? '--' : `${Math.round(normalizeDeg(cog))}`}
       </text>
-      <text x={CX} y={CY + 74} textAnchor="middle" className="compass-cog-label">
+      <text x={CX} y={CY + 60} textAnchor="middle" className="compass-cog-label">
         COG °TRUE
       </text>
-      {/* #182 retour n°18 (Dom) : HDG NETTEMENT SOUS le cercle — à y=230
-          il chevauchait le bas de la virole (cercle = CY+104 = 224) et
-          empiétait sur la rosace. Baseline 242 : le texte (top ~231)
-          flotte sous le cercle, plus rien ne touche la rosace. */}
-      <text x={CX} y={242} textAnchor="middle" className="compass-hdg">
+      <text x={CX} y={CY + 80} textAnchor="middle" className="compass-hdg">
         {heading === null ? 'HDG --' : `HDG ${Math.round(normalizeDeg(heading))}°`}
       </text>
     </svg>

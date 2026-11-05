@@ -44,11 +44,11 @@ describe('CompassDial (COURSE-UP)', () => {
     }
   });
 
-  it('#182 n°18 : HDG NETTEMENT sous le cercle, plus sur la rosace', () => {
-    // Bas de la virole = CY + R_OUTER = 224 ; le HDG doit démarrer après.
+  it('#182 n°19 : HDG DANS le cercle, en plus petit (avec COG)', () => {
+    // Bas de la virole = CY + R_OUTER = 224 ; le HDG doit rester au-dessus.
     const { container } = render(<CompassDial cog={137} heading={132} />);
     const hdg = container.querySelector('.compass-hdg')!;
-    expect(Number(hdg.getAttribute('y')) - 15).toBeGreaterThan(224);
+    expect(Number(hdg.getAttribute('y')) + 13).toBeLessThan(224);
   });
 
   it('COG null : rose non tournee et double tiret', () => {
