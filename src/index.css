@@ -930,13 +930,21 @@ button.helm-tile:focus-visible {
   stroke-width: 2;
 }
 
-.compass-courseup .compass-cardinal {
+/* #182 retour n°15 : classe RENOMMÉE .compass-point (PAS
+   .compass-cardinal) — index.css garde une règle legacy
+   .compass-cardinal { position: absolute; top: 15%; left: 50%;
+   transform: translateX(-50%) } qui arrachait les lettres de leurs
+   coordonnées SVG et tuait la contre-rotation (empilement en griffe
+   au centre depuis #180). Le CSS transform écrase l'attribut
+   transform SVG : jamais de CSS transform sur du texte SVG qui
+   porte déjà un rotate(). */
+.compass-courseup .compass-point {
   fill: #8fa3b0;
   font-size: 13px;
   font-weight: 700;
 }
 
-.compass-courseup .compass-cardinal-n {
+.compass-courseup .compass-point-n {
   fill: #e8f1f5;
 }
 

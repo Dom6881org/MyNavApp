@@ -57,7 +57,14 @@ const CompassDial: React.FC<CompassDialProps> = ({
    * lui-même : les lettres restent droites quelle que soit la rose.
    * #182 retour n°15 : fidélité à la maquette — les cardinaux sont
    * POURTOUT de la rose (rayon ~97, entre rose 88 et virole 104),
-   * pas au centre du cadran. */
+   * pas au centre du cadran.
+   * ⚠️ Classe .compass-point (PAS .compass-cardinal) : index.css garde
+   * une règle legacy .compass-cardinal { position: absolute; top: 15%;
+   * left: 50%; transform: translateX(-50%) } qui ARRACHAIT les lettres
+   * de leurs coordonnées SVG et tuait la contre-rotation — depuis #180
+   * les 4 lettres s'empilaient en une griffe illisible au centre du
+   * cadran (bug invisible sur captures, la vision hallucinait les
+   * lettres — tranché par comptage de pixels, retour n°15). */
   const cardinal = (angle: number, label: string, highlight: boolean) => {
     const p = polarToXY(CX, CY, 97, angle);
     return (
@@ -67,7 +74,7 @@ const CompassDial: React.FC<CompassDialProps> = ({
         y={p.y + 4}
         textAnchor="middle"
         transform={`rotate(${-roseRotation} ${p.x} ${p.y})`}
-        className={highlight ? 'compass-cardinal compass-cardinal-n' : 'compass-cardinal'}
+        className={highlight ? 'compass-point compass-point-n' : 'compass-point'}
       >
         {label}
       </text>

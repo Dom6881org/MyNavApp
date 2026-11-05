@@ -38,13 +38,13 @@ describe('CompassDial (COURSE-UP)', () => {
   it('graduations et cardinaux rendus (36 marques, N/E/S/W)', () => {
     const { container } = render(<CompassDial cog={0} />);
     expect(container.querySelectorAll('.compass-tick').length).toBe(36);
-    expect(container.querySelectorAll('.compass-cardinal').length).toBe(4);
+    expect(container.querySelectorAll('.compass-point').length).toBe(4);
     expect(container.querySelectorAll('.compass-lubber').length).toBe(1);
   });
 
   it('cardinaux contre-rotes : les lettres restent droites (rotation inverse de la rose)', () => {
     const { container } = render(<CompassDial cog={137} />);
-    const cardinals = container.querySelectorAll('.compass-cardinal');
+    const cardinals = container.querySelectorAll('.compass-point');
     expect(cardinals.length).toBe(4);
     // rose tournee de -137 (= 223) ; chaque cardinal porte rotate(-223, x, y)
     for (const c of Array.from(cardinals)) {
@@ -57,5 +57,15 @@ describe('CompassDial (COURSE-UP)', () => {
     expect(container.querySelectorAll('.compass-outer-ring').length).toBe(1);
     expect(container.querySelectorAll('.compass-boat').length).toBe(1);
     expect(container.querySelectorAll('.compass-lubber').length).toBe(1);
+  });
+
+  it('#182 n°15 : les lettres ne portent PAS la classe legacy .compass-cardinal', () => {
+    // La règle legacy .compass-cardinal { position: absolute; top: 15%;
+    // left: 50%; transform: translateX(-50%) } arrachait les 4 lettres de
+    // leurs coordonnées SVG et tuait la contre-rotation (empilement en
+    // griffe illisible au centre du cadran depuis #180).
+    const { container } = render(<CompassDial cog={137} />);
+    expect(container.querySelectorAll('.compass-cardinal').length).toBe(0);
+    expect(container.querySelectorAll('.compass-point').length).toBe(4);
   });
 });
