@@ -695,8 +695,10 @@ html, body {
   display: flex;
   flex-direction: column;
   gap: 0.3rem;
-  flex: 1 1 auto;
+  /* #182 : instrument central sur 2/3, colonne droite sur 1/3 */
+  flex: 2 1 0;
   min-width: 0;
+  min-height: 0;
 }
 
 .helm-central-switch {
@@ -751,18 +753,20 @@ html, body {
 }
 
 .helm-compact {
-  /* HELM design-centered : colonne de compacts fixes (SOG/TWS/DEPTH)
-     à droite du central — 170 px comme la maquette */
+  /* #182 (retour terrain n°12) : colonne droite mise en valeur — 1/3 de
+     la largeur, tuiles DIGITALES cliquables (permutation avec le central).
+     Plus de largeur fixe : flex 1 contre flex 2 du central. */
   display: flex;
   flex-direction: column;
   justify-content: center;
   gap: 0.5rem;
-  flex: 0 0 10rem;
+  flex: 1 1 0;
+  min-width: 0;
   padding-left: 0.75rem;
   border-left: 1px solid var(--border-color);
 }
 
-/* Sidebar étroite : les compacts repassent sous le central (téléphone) */
+/* Sidebar étroite : les tuiles repassent sous le central (téléphone) */
 @media (max-width: 480px) {
   .helm-panel {
     flex-direction: column;
@@ -774,23 +778,49 @@ html, body {
   }
 }
 
-.helm-compact-row {
+/* #182 : tuile digitale — label, GRANDE valeur, jumelage. Cliquable
+   (sauf profondeur) : survol = accent, la tuile passe au centre au clic. */
+.helm-tile {
   display: grid;
-  grid-template-columns: 2.2rem 1fr auto;
-  align-items: baseline;
-  gap: 0.4rem;
-  font-size: 0.7rem;
+  justify-items: start;
+  align-content: center;
+  gap: 0.15rem;
+  padding: 0.6rem 0.75rem;
+  background: var(--bg-tertiary);
+  border: 1px solid var(--border-color);
+  border-radius: 9px;
   color: var(--text-secondary);
+  font: inherit;
+  text-align: left;
+  width: 100%;
 }
 
-.helm-compact-row span {
-  letter-spacing: 0.06em;
-  font-size: 0.62rem;
+button.helm-tile {
+  cursor: pointer;
 }
 
-.helm-compact-row strong {
+button.helm-tile:hover,
+button.helm-tile:focus-visible {
+  border-color: var(--accent-color);
   color: var(--text-primary);
-  font-size: 1.25rem;
+}
+
+.helm-tile-lbl {
+  letter-spacing: 0.12em;
+  font-size: 0.62rem;
+  font-weight: 700;
+}
+
+.helm-tile-val {
+  color: var(--text-primary);
+  font-size: 1.9rem;
+  font-weight: 700;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+}
+
+.helm-tile-sub {
+  font-size: 0.7rem;
   font-variant-numeric: tabular-nums;
 }
 
