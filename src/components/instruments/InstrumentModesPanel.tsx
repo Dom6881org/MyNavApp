@@ -32,8 +32,10 @@ const MODES: { id: UiMode; label: string }[] = [
   { id: 'prep', label: 'ROUTING' }
 ];
 
+// `data` reste dans l'interface (l'auto-switch profondeur le réutilisera
+// s'il revient) mais n'est plus déstructuré : ESLint échoue la CI sur une
+// prop non lue.
 const InstrumentModesPanel: React.FC<InstrumentModesPanelProps> = ({
-  data,
   initialMode,
   onModeChange
 }) => {
