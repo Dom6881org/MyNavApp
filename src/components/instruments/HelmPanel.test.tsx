@@ -23,21 +23,32 @@ describe('HelmPanel', () => {
   it('compas central par defaut : cadran COURSE-UP avec COG/HDG', () => {
     render(<HelmPanel data={data()} />);
     expect(screen.getByText('COMPASS')).toBeTruthy();
-    expect(screen.getByText('137°')).toBeTruthy();
+    expect(screen.getByText('137')).toBeTruthy();
     expect(screen.getByText('HDG 132°')).toBeTruthy();
+  });
+
+  it('compacts fixes (SOG, TWS, DEPTH) presents dans tous les modes', () => {
+    render(<HelmPanel data={data()} />);
+    expect(screen.getByTestId('helm-compact-sog')).toBeTruthy();
+    expect(screen.getByTestId('helm-compact-wind')).toBeTruthy();
+    expect(screen.getByTestId('helm-compact-depth')).toBeTruthy();
+    fireEvent.click(screen.getByRole('tab', { name: 'VITESSE' }));
+    expect(screen.getByTestId('helm-compact-sog')).toBeTruthy();
+    expect(screen.getByTestId('helm-compact-wind')).toBeTruthy();
+    expect(screen.getByTestId('helm-compact-depth')).toBeTruthy();
+    fireEvent.click(screen.getByRole('tab', { name: 'VENT' }));
+    expect(screen.getByTestId('helm-compact-sog')).toBeTruthy();
+    expect(screen.getByTestId('helm-compact-wind')).toBeTruthy();
+    expect(screen.getByTestId('helm-compact-depth')).toBeTruthy();
   });
 
   it('commutation centrale : COMPAS -> VITESSE -> VENT', () => {
     render(<HelmPanel data={data()} />);
     fireEvent.click(screen.getByRole('tab', { name: 'VITESSE' }));
-    expect(screen.getByText('SOG')).toBeTruthy();
-    expect(screen.getByText('5.0')).toBeTruthy();
-    // le compas passe en compact avec COG/HDG
-    expect(screen.getByTestId('helm-compact-cog')).toBeTruthy();
+    // compact SOG fixe + central VITESSE : la valeur est rendue deux fois
+    expect(screen.getAllByText('5.0').length).toBe(2);
     fireEvent.click(screen.getByRole('tab', { name: 'VENT' }));
     expect(screen.getByText('WIND')).toBeTruthy();
-    expect(screen.getByTestId('helm-compact-sog')).toBeTruthy();
-    expect(screen.getByTestId('helm-compact-cog')).toBeTruthy();
   });
 
   it('VMG affiche : sog x cos(TWA)', () => {
@@ -59,9 +70,18 @@ describe('HelmPanel', () => {
     render(<HelmPanel data={data()} />);
     // compact SOG : STW jumele dans la meme rangee
     expect(screen.getByTestId('helm-compact-sog').textContent).toContain('STW --');
-    // central VITESSE : STW jumele aussi
+    // central VITESSE : STW jumele aussi — et le compact SOG fixe le
+    // montre en permanence : le jumelage est rendu aux DEUX endroits.
     fireEvent.click(screen.getByRole('tab', { name: 'VITESSE' }));
-    expect(screen.getByText(/STW --/)).toBeTruthy();
+    expect(screen.getAllByText(/STW --/).length).toBe(2);
+  });
+
+  it('compact DEPTH : valeur sonde en metres, double tiret sans donnee', () => {
+    const depthData = data({
+      depth: { depth: 24.6, alarm: false, alarmDepth: 2.0 } as unknown as NavigationData['depth']
+    });
+    render(<HelmPanel data={depthData} />);
+    expect(screen.getByTestId('helm-compact-depth').textContent).toContain('24.6');
   });
 
   it('bascule cadran/numerique de la carte centrale (InstrumentCard #157)', () => {

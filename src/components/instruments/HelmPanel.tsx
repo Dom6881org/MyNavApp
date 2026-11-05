@@ -6,13 +6,17 @@ import WindDial from './WindDial';
 import InstrumentCard from './InstrumentCard';
 
 /** Panneau HELM (refonte instruments, Phase 1 — #158) : instrument central
- * commutable VENT / COMPAS / VITESSE en grand, les deux autres en compact,
- * VMG toujours visible (SOG × cos(TWA) au vent). Les cartes réutilisent
- * InstrumentCard (#157) : bascule cadran ⇄ numérique par instrument.
+ * commutable VENT / COMPAS / VITESSE en grand, VMG toujours visible
+ * (SOG × cos(TWA) au vent). Les cartes réutilisent InstrumentCard (#157) :
+ * bascule cadran ⇄ numérique par instrument.
  *
  * #176 : le central VENT est le grand cadran Raymarine (WindDial — arcs
  * bâbord/tribord, aiguille à la provenance, TWS + TWD en digital) avec la
- * ligne TWA/AWA, fidèle à la maquette. */
+ * ligne TWA/AWA, fidèle à la maquette.
+ *
+ * Reprise HELM design-centered : compacts FIXES à droite, comme la
+ * maquette — SOG (jumelé STW), TWS (jumelé TWA), DEPTH — indépendants
+ * de l'instrument central affiché. */
 
 type CentralInstrument = 'wind' | 'compass' | 'speed';
 
@@ -35,12 +39,14 @@ const HelmPanel: React.FC<HelmPanelProps> = ({ data }) => {
   // #176 : sources du cadran vent (mêmes que COASTAL — vent du point)
   const twd = data.wind?.direction ?? null;
   const awa = data.apparentWind?.angleDegrees ?? null;
+  // Compacts fixes (reprise HELM) : DEPTH rejoint SOG et TWS à droite.
+  const depth = data.depth?.depth ?? null;
 
   const centralTitle = central === 'compass' ? 'COMPASS' : central === 'speed' ? 'SOG' : 'WIND';
 
   const centralContent =
     central === 'compass' ? (
-      <CompassDial cog={cog} heading={hdg} />
+      <CompassDial cog={cog} heading={hdg} size={300} />
     ) : central === 'speed' ? (
       <div className="helm-central-value">
         <span className="helm-big-value">{sog === null ? '--' : sog.toFixed(1)}</span>
@@ -50,13 +56,19 @@ const HelmPanel: React.FC<HelmPanelProps> = ({ data }) => {
       </div>
     ) : (
       <div className="helm-central-value">
-        {/* #176 : grand cadran Raymarine au central VENT, comme la maquette */}
-        <WindDial twdDeg={twd} twsKts={tws} size={280} />
-        <span className="helm-unit" data-testid="helm-wind-line">
-          {twa === null
-            ? 'no wind data'
-            : `TWA ${Math.round(twa)}°${awa === null ? '' : ` · AWA ${Math.round(Math.abs(awa))}°`}`}
-        </span>
+        {/* #176 : grand cadran Raymarine au central VENT, comme la maquette.
+            #180 retour n°6 : sans vent, le cadran affiche « no wind data »
+            en son centre — pas de doublon dans la ligne du bas. */}
+        {/* #180 retour n°9 : le cadran vent OCCUPE L'ESPACE DISPONIBLE —
+            plus de taille fixe, il grandit avec la carte centrale. */}
+        <div className="helm-wind-stage">
+          <WindDial twdDeg={twd} twsKts={tws} fill />
+        </div>
+        {twa !== null && (
+          <span className="helm-unit" data-testid="helm-wind-line">
+            {`TWA ${Math.round(twa)}°${awa === null ? '' : ` · AWA ${Math.round(Math.abs(awa))}°`}`}
+          </span>
+        )}
       </div>
     );
 
@@ -89,28 +101,24 @@ const HelmPanel: React.FC<HelmPanelProps> = ({ data }) => {
         </div>
       </div>
 
+      {/* Compacts fixes façon maquette : SOG+STW, TWS+TWA, DEPTH —
+          la colonne ne change jamais avec l'instrument central. */}
       <div className="helm-compact">
-        {central !== 'compass' && (
-          <div className="helm-compact-row" data-testid="helm-compact-cog">
-            <span>COG</span>
-            <strong>{cog === null ? '--' : `${Math.round(cog)}°`}</strong>
-            <small className="helm-hdg">{hdg === null ? 'HDG --' : `HDG ${Math.round(hdg)}°`}</small>
-          </div>
-        )}
-        {central !== 'speed' && (
-          <div className="helm-compact-row" data-testid="helm-compact-sog">
-            <span>SOG</span>
-            <strong>{sog === null ? '--' : sog.toFixed(1)}</strong>
-            <small>{stw === null ? 'kn · STW --' : `kn · STW ${stw.toFixed(1)}`}</small>
-          </div>
-        )}
-        {central !== 'wind' && (
-          <div className="helm-compact-row" data-testid="helm-compact-wind">
-            <span>TWS</span>
-            <strong>{tws === null ? '--' : tws.toFixed(0)}</strong>
-            <small>{twa === null ? 'no wind' : `kt · TWA ${Math.round(twa)}°`}</small>
-          </div>
-        )}
+        <div className="helm-compact-row" data-testid="helm-compact-sog">
+          <span>SOG</span>
+          <strong>{sog === null ? '--' : sog.toFixed(1)}</strong>
+          <small>{stw === null ? 'kn · STW --' : `kn · STW ${stw.toFixed(1)}`}</small>
+        </div>
+        <div className="helm-compact-row" data-testid="helm-compact-wind">
+          <span>TWS</span>
+          <strong>{tws === null ? '--' : tws.toFixed(0)}</strong>
+          <small>{twa === null ? 'no wind' : `kt · TWA ${Math.round(twa)}°`}</small>
+        </div>
+        <div className="helm-compact-row" data-testid="helm-compact-depth">
+          <span>DEPTH</span>
+          <strong>{depth === null ? '--' : depth.toFixed(1)}</strong>
+          <small>m</small>
+        </div>
       </div>
     </div>
   );
