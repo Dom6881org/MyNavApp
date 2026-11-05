@@ -223,11 +223,14 @@ const App: React.FC = () => {
               />
             </div>
             {/* Barre d'état persistante (retour terrain Dom #180) : la bande
-                OVERVIEW (SOG·COG, WIND, DEPTH, TIME, POSITION) est en haut de
-                TOUTES les vues — plus seulement au-dessus de la carte. */}
-            <div className="overview-strip">
-              <OverviewPanel data={navigationData} />
-            </div>
+                OVERVIEW (SOG·COG, WIND, DEPTH, TIME, POSITION) en haut des
+                vues. #182 retour n°13 : retirée de HELM — TIME et POSITION
+                y deviennent des tuiles cliquables de la colonne droite. */}
+            {activeMode !== 'helm' && (
+              <div className="overview-strip">
+                <OverviewPanel data={navigationData} />
+              </div>
+            )}
             {/* HELM : panneau seul, plein écran — retour terrain Dom :
                 MOTION et rangée basse (WIND/DEPTH) retirés, ils dupliquent
                 le vent et la profondeur déjà dans les compacts HELM (#180). */}

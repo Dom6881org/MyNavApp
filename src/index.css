@@ -753,15 +753,17 @@ html, body {
 }
 
 .helm-compact {
-  /* #182 (retour terrain n°12) : colonne droite mise en valeur — 1/3 de
-     la largeur, tuiles DIGITALES cliquables (permutation avec le central).
-     Plus de largeur fixe : flex 1 contre flex 2 du central. */
+  /* #182 (retour n°12) : colonne droite mise en valeur — 1/3 de la largeur,
+     tuiles DIGITALES cliquables (permutation avec le central).
+     Retour n°13 : les tuiles OCCUPENT TOUT l'espace (vertical/horizontal),
+     sans agrandir la fenêtre — flex 1 chacune, contenu centré. */
   display: flex;
   flex-direction: column;
-  justify-content: center;
-  gap: 0.5rem;
+  justify-content: stretch;
+  gap: 0.4rem;
   flex: 1 1 0;
   min-width: 0;
+  min-height: 0;
   padding-left: 0.75rem;
   border-left: 1px solid var(--border-color);
 }
@@ -778,21 +780,26 @@ html, body {
   }
 }
 
-/* #182 : tuile digitale — label, GRANDE valeur, jumelage. Cliquable
-   (sauf profondeur) : survol = accent, la tuile passe au centre au clic. */
+/* #182 : tuile digitale — label, GRANDE valeur, jumelage. Toutes
+   cliquables (retour n°13 : profondeur, heure, position incluses) :
+   survol = accent, la tuile passe au centre au clic. La tuile s'étire
+   pour occuper la colonne (flex 1), contenu centré horizontalement. */
 .helm-tile {
   display: grid;
-  justify-items: start;
+  justify-items: center;
   align-content: center;
   gap: 0.15rem;
-  padding: 0.6rem 0.75rem;
+  padding: 0.5rem 0.6rem;
   background: var(--bg-tertiary);
   border: 1px solid var(--border-color);
   border-radius: 9px;
   color: var(--text-secondary);
   font: inherit;
-  text-align: left;
+  text-align: center;
   width: 100%;
+  flex: 1 1 0;
+  min-height: 0;
+  overflow: hidden;
 }
 
 button.helm-tile {
@@ -826,6 +833,45 @@ button.helm-tile:focus-visible {
 
 .helm-hdg {
   color: var(--warning-color);
+}
+
+/* #182 retour n°13 : les QUATRE valeurs du vent en digital sous le
+   cadran central — TWS, AWS, TWA, AWA. */
+.helm-wind-readouts {
+  display: flex;
+  justify-content: center;
+  gap: 1.25rem;
+  margin-top: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.helm-readout {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.15rem;
+}
+
+.helm-readout-lbl {
+  font-size: 0.62rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  color: var(--text-secondary);
+}
+
+.helm-readout strong {
+  font-size: 1.4rem;
+  font-weight: 700;
+  line-height: 1;
+  color: var(--text-primary);
+  font-variant-numeric: tabular-nums;
+}
+
+/* Position centrale : deux lignes lat/lon, police un cran sous la
+   grande valeur pour rester dans le panneau en 1100×600. */
+.helm-position-line {
+  font-size: 2.2rem;
+  line-height: 1.15;
 }
 
 /* Compas COURSE-UP façon maquette (HELM design-centered) — couleurs
