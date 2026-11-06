@@ -1517,6 +1517,12 @@ button.helm-tile.active:focus-visible {
   display: flex;
   flex-direction: column;
   min-height: 0;
+  /* #186 : la règle de base .instrument-card-body est align-items:center —
+     en flex COLUMN cela centre l'axe HORIZONTAL et réduit les enfants à
+     leur largeur de contenu. Le canvas de la carte (largeur en % de son
+     stage, lui-même shrink-to-fit) s'effondrait alors à 0 px : carte
+     invisible. Stretch = enfants pleine largeur. */
+  align-items: stretch;
 }
 
 /* VENT : cadran occupant l'espace disponible, jamais rogné. */
