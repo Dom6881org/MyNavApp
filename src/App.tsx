@@ -239,15 +239,15 @@ const App: React.FC = () => {
                 <HelmPanel data={navigationData} onResetMaxSpeed={resetMaxSpeed} />
               </div>
             )}
-            {/* COASTAL : les instruments remplissent l'écran —
-                l'emplacement de la carte ne reste jamais vide (#172) */}
+            {/* COASTAL reset (#186) : VENT / PROFONDEUR / CARTE en 3
+                colonnes pleine hauteur, pensées pour l'arrivée au
+                mouillage — MotionPanel et rangée basse retirés (reset
+                complet), le panneau prend tout l'écran (pattern
+                ui-stage-helm) et l'emplacement de la carte ne reste
+                jamais vide (#172). */}
             {activeMode === 'coastal' && (
-              <div className="ui-stage-panels">
+              <div className="ui-stage-panels ui-stage-coastal">
                 <CoastalPanel data={navigationData} />
-                <MotionPanel />
-                <div className="ui-stage-bottom">
-                  <BottomInstrumentsPanel data={navigationData} />
-                </div>
               </div>
             )}
             {/* OVERVIEW / ROUTING : la carte occupe tout l'espace libre

@@ -1487,52 +1487,300 @@ button.helm-tile.active:focus-visible {
   fill: var(--accent-secondary);
 }
 
+/* ===== Reset COASTAL (#186) — arrivée au mouillage : 3 colonnes
+   égales VENT / PROFONDEUR / CARTE (maquettes c1–c4 validées ; colonne
+   profondeur avec 0 m EN BAS, échelle montante). ===== */
 .coastal-panel {
   display: flex;
   flex-direction: column;
   gap: 0.4rem;
+  min-height: 0;
 }
 
-.coastal-tiles {
+.coastal-grid {
   display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 0.4rem;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 0.5rem;
+  flex: 1 1 auto;
+  min-height: 0;
 }
 
-.coastal-tile {
+/* Cartes pleine hauteur, contenu étiré (pattern ui-stage-helm). */
+.coastal-grid .instrument-card {
   display: flex;
   flex-direction: column;
+  min-height: 0;
+}
+
+.coastal-grid .instrument-card-body {
+  flex: 1 1 auto;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
+/* VENT : cadran occupant l'espace disponible, jamais rogné. */
+.coastal-wind-stage {
+  flex: 1 1 auto;
+  min-height: 0;
+  display: flex;
   align-items: center;
-  gap: 0.15rem;
+  justify-content: center;
+}
+
+.coastal-wind-stage .wind-dial {
+  max-width: 100%;
+  max-height: 100%;
+}
+
+/* PROFONDEUR : grande valeur au-dessus de la colonne. */
+.coastal-depth-value {
+  display: flex;
+  align-items: baseline;
+  justify-content: center;
+  gap: 0.3rem;
+  padding: 0.25rem 0 0.15rem;
+}
+
+.coastal-depth-value strong {
+  font-size: 2.6rem;
+  font-weight: 700;
+  line-height: 1;
+  color: var(--text-primary);
+  font-variant-numeric: tabular-nums;
+}
+
+.coastal-depth-value strong.alarm {
+  color: #d64545;
+}
+
+.coastal-depth-value span {
+  font-size: 1rem;
+  color: var(--text-secondary);
+}
+
+/* Colonne verticale : le SVG occupe l'espace disponible. */
+.coastal-depth-stage {
+  flex: 1 1 auto;
+  min-height: 0;
+  display: flex;
+  justify-content: center;
+  padding: 0 0.25rem;
+}
+
+.coastal-depth-column {
+  height: 100%;
+  max-width: 100%;
+}
+
+/* Zones de couleur (0 m en bas) — mêmes rouges/verts que les arcs du
+   WindDial ; thème light dédié (maquettes c1/c2). */
+.coastal-depth-zone-danger {
+  fill: #c33a3a;
+}
+
+.coastal-depth-zone-caution {
+  fill: #d97b1e;
+}
+
+.coastal-depth-zone-safe {
+  fill: #2ea86f;
+}
+
+.theme-light .coastal-depth-zone-danger {
+  fill: #c53030;
+}
+
+.theme-light .coastal-depth-zone-caution {
+  fill: #b26a00;
+}
+
+.theme-light .coastal-depth-zone-safe {
+  fill: #12804d;
+}
+
+/* Eau : voile translucide du bas (0 m) jusqu'au marqueur. */
+.coastal-depth-water {
+  fill: #4488ff;
+  opacity: 0.12;
+}
+
+.coastal-depth-water.alarm {
+  fill: #c33a3a;
+  opacity: 0.18;
+}
+
+/* Graduations à gauche de la colonne — 0 m en bas. */
+.coastal-depth-tick line {
+  stroke: var(--text-secondary);
+  stroke-width: 1.5;
+}
+
+.coastal-depth-tick text {
+  font-size: 11px;
+  text-anchor: end;
+  fill: var(--text-secondary);
+}
+
+/* Marqueur de profondeur actuelle (ligne + pastille + valeur). */
+.coastal-depth-marker line {
+  stroke: #ffffff;
+  stroke-width: 2.5;
+}
+
+.coastal-depth-marker circle {
+  fill: #ffffff;
+}
+
+.coastal-depth-marker text {
+  font-size: 15px;
+  font-weight: 700;
+  fill: var(--text-primary);
+}
+
+/* Alerte ≤ 2 m : bandeau rouge CLIGNOTANT au-dessus de la colonne
+   (maquette c3) — colonne entière en rouge, valeur en rouge. */
+@keyframes coastal-depth-blink {
+  0%, 54% { opacity: 1; }
+  55%, 100% { opacity: 0.55; }
+}
+
+.coastal-depth-alert {
+  margin: 0 0.4rem 0.35rem;
+  padding: 0.4rem 0.5rem;
+  font-size: 0.8rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-align: center;
+  text-transform: uppercase;
+  color: #ffffff;
+  background: #c33a3a;
+  border-radius: 6px;
+  animation: coastal-depth-blink 1s linear infinite;
+}
+
+.theme-light .coastal-depth-alert {
+  background: #c53030;
+}
+
+/* Badge « échelle ×2 » dans le header de la carte PROFONDEUR. */
+.coastal-depth-scale-badge {
+  font-size: 0.62rem;
+  letter-spacing: 0.06em;
+  color: var(--text-secondary);
   background: var(--bg-tertiary);
   border: 1px solid var(--border-color);
+  border-radius: 999px;
+  padding: 0.22rem 0.55rem;
+  margin-right: 0.4rem;
+  white-space: nowrap;
+}
+
+/* Pied TEMP + ALARME. */
+.coastal-depth-foot {
+  display: flex;
+  justify-content: space-around;
+  padding: 0.35rem 0.5rem 0.15rem;
+}
+
+/* CARTE : fond + bateau + ⚓, épuré au max (maquettes c1/c4). */
+.coastal-map-stage {
+  flex: 1 1 auto;
+  min-height: 0;
+  position: relative;
   border-radius: 6px;
-  padding: 0.5rem 0.3rem;
+  overflow: hidden;
+  border: 1px solid var(--border-color);
+  margin: 0 0.4rem 0.4rem;
 }
 
-.coastal-tile span {
-  font-size: 0.6rem;
-  letter-spacing: 0.08em;
+.coastal-map-canvas {
+  width: 100%;
+  height: 100%;
+  min-height: 160px;
+  background: #0f2438;
+}
+
+.theme-light .coastal-map-canvas {
+  background: #dce9f2;
+}
+
+.coastal-map-fallback {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.75rem;
   color: var(--text-secondary);
+  background: var(--bg-primary);
 }
 
-.coastal-tile strong {
-  font-size: 1.3rem;
-  font-variant-numeric: tabular-nums;
+/* Marqueur ⚓ du mouillage : pastille accent + ancre blanche. */
+.coastal-map-anchor-pin {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  background: #4488ff;
+  border: 2px solid #ffffff;
+  color: #ffffff;
+  font-size: 15px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.4);
+}
+
+/* Pied de carte : bouton « ⚓ MOUILLAGE FAIT » pleine largeur accent
+   (c1) ; une fois mouillé, barre position/heure + NOUVEAU MOUILLAGE
+   (c4). */
+.coastal-anchor-btn {
+  flex: 0 0 auto;
+  width: calc(100% - 0.8rem);
+  margin: 0 0.4rem 0.4rem;
+  padding: 0.55rem 0;
+  font-size: 0.85rem;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  color: #ffffff;
+  background: var(--accent-color);
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+}
+
+.coastal-anchor-btn:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.coastal-anchor-bar {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  margin: 0 0.4rem 0.4rem;
+  padding: 0.4rem 0.5rem 0.4rem 0.75rem;
+  background: var(--bg-tertiary);
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+}
+
+.coastal-anchor-info {
+  font-size: 0.72rem;
   color: var(--text-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
-.coastal-tile small {
-  font-size: 0.6rem;
-  color: var(--text-secondary);
-}
-
-.coastal-tile.alarm {
-  border-color: var(--danger-color);
-}
-
-.coastal-tile.alarm strong {
-  color: var(--danger-color);
+.coastal-anchor-bar .coastal-anchor-btn {
+  width: auto;
+  margin: 0;
+  padding: 0.45rem 0.7rem;
+  font-size: 0.68rem;
+  flex: 0 0 auto;
 }
 
 .overview-panel {
@@ -1713,20 +1961,6 @@ button.helm-tile.active:focus-visible {
 }
 
 /* ===== Refonte instruments Phase 4 — SHALLOW + auto-switch (#164) ===== */
-/* Bannière d'alarme profondeur dans COASTAL : rouge, role alert. */
-.coastal-alarm-banner {
-  padding: 6px 10px;
-  font-size: 12px;
-  font-weight: 700;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-  color: #ffb3b3;
-  background: rgba(200, 40, 40, 0.3);
-  border: 1px solid rgba(255, 122, 122, 0.6);
-  border-radius: 8px;
-  margin-bottom: 8px;
-}
-
 /* Avis de bascule automatique (status discret, pas une alarme). */
 .instrument-auto-notice {
   margin: 6px 0 0;
@@ -2141,4 +2375,26 @@ button.helm-tile.active:focus-visible {
     border-left: 0;
     border-top: 1px solid var(--border-color);
   }
+}
+
+/* ===== Reset COASTAL (#186) : COASTAL plein écran — mêmes règles que
+   HELM (#180) : le panneau PREND TOUT L'ESPACE DISPONIBLE, pas de
+   centrage ni max-width ; les 3 colonnes s'étirent en pleine hauteur. */
+.ui-stage-coastal .coastal-panel {
+  flex: 1 1 auto;
+  max-width: none;
+}
+
+/* La colonne VENT centre son cadran dans l'espace gagné (le stage
+   .coastal-wind-stage impose déjà hauteur/largeur contraintes). */
+.ui-stage-coastal .helm-central-value {
+  flex: 1 1 auto;
+  width: 100%;
+  min-height: 0;
+}
+
+.ui-stage-coastal .coastal-wind-stage .wind-dial {
+  height: 100%;
+  width: auto;
+  max-width: 100%;
 }

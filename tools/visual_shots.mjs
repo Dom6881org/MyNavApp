@@ -18,7 +18,7 @@ const BASE = process.env.BASE_URL ?? 'http://127.0.0.1:3001';
 const WAIT_MS = Number(process.env.WAIT_MS ?? 8000);
 const OUT = 'shots';
 
-const VIEWS = ['helm', 'helm-half', 'helm-numeric', 'helm-wind', 'helm-wind-small', 'helm-speed', 'helm-speed-numeric', 'helm-time', 'helm-depth', 'helm-position', 'coastal', 'overview', 'prep', 'legacy'];
+const VIEWS = ['helm', 'helm-half', 'helm-numeric', 'helm-wind', 'helm-wind-small', 'helm-speed', 'helm-speed-numeric', 'helm-time', 'helm-depth', 'helm-position', 'coastal', 'coastal-numeric', 'coastal-anchor', 'coastal-small', 'overview', 'prep', 'legacy'];
 const THEMES = ['dark', 'light'];
 
 // Vues dérivées : capture d'un état interactif de la vue HELM.
@@ -87,6 +87,30 @@ const DERIVED = {
   // #180 retour n°11 : fenêtre réduite (écran du bord) — le cadran doit
   // se réduire pour rester ENTIER (pas de rognage, pas d'onglets perdus).
   'helm-wind-small': { viewport: { width: 1100, height: 600 }, click: 'helm-compact-wind' },
+  // ===== Reset COASTAL (#186) : vues dérivées de la vue arrrivée au
+  // mouillage — 3 colonnes VENT/PROFONDEUR/CARTE, 0 m en bas. =====
+  // Segment NUMÉRIQUE du switch vent : TWS énorme + AWS/TWA/AWA.
+  'coastal-numeric': {
+    ui: 'coastal',
+    run: async (page) => {
+      await page
+        .getByTestId('coastal-wind-switch')
+        .getByRole('button', { name: 'NUMÉRIQUE' })
+        .click();
+      await page.waitForTimeout(500);
+    }
+  },
+  // Bouton « ⚓ MOUILLAGE FAIT » : marqueur ⚓ sur la carte + barre
+  // date/heure/position + NOUVEAU MOUILLAGE (localStorage).
+  'coastal-anchor': {
+    ui: 'coastal',
+    run: async (page) => {
+      await page.getByTestId('coastal-anchor-btn').click();
+      await page.waitForTimeout(500);
+    }
+  },
+  // Fenêtre réduite (écran du bord) : les 3 colonnes restent entières.
+  'coastal-small': { ui: 'coastal', viewport: { width: 1100, height: 600 } },
 };
 
 // Derivées simples : { viewport, click } — capture d'une vue HELM dans un
@@ -121,10 +145,15 @@ async function main() {
         try { window.localStorage.setItem('dashboardLayout', layout); } catch { /* noop */ }
       }, layoutFor(theme));
       const derived = DERIVED[view];
-      await page.goto(BASE + '/?ui=' + (derived ? 'helm' : view), { waitUntil: 'load' });
+      // Vue cible : par défaut la vue elle-même ; les dérivées HELM
+      // restent sur ?ui=helm, les dérivées COASTAL (#186) portent ui:'coastal'.
+      const uiTarget = derived ? (derived.ui ?? 'helm') : view;
+      await page.goto(BASE + '/?ui=' + uiTarget, { waitUntil: 'load' });
       await page.waitForTimeout(WAIT_MS);
       if (typeof derived === 'function') {
         await derived(page);
+      } else if (derived?.run) {
+        await derived.run(page);
       } else if (simple?.click) {
         await page.getByTestId(simple.click).click();
         await page.waitForTimeout(500);
