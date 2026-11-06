@@ -135,6 +135,22 @@ describe('CoastalPanel — reset #186 (3 colonnes vent/profondeur/carte)', () =>
     expect(screen.getByTestId('coastal-anchor-bar').textContent).toContain('20:05');
   });
 
+  it('quitter le mouillage : efface le mouillage et revient à l\'état initial (retour #186)', () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date('2026-11-05T18:42:00'));
+    render(<CoastalPanel data={data()} />);
+    fireEvent.click(screen.getByTestId('coastal-anchor-btn'));
+    expect(screen.getByTestId('coastal-anchor-bar')).toBeTruthy();
+    expect(window.localStorage.getItem('coastal-anchor')).not.toBeNull();
+
+    // QUITTER LE MOUILLAGE : barre remplacée par le bouton pleine largeur,
+    // localStorage effacé.
+    fireEvent.click(screen.getByTestId('coastal-anchor-quit-btn'));
+    expect(screen.queryByTestId('coastal-anchor-bar')).toBeNull();
+    expect(window.localStorage.getItem('coastal-anchor')).toBeNull();
+    expect(screen.getByTestId('coastal-anchor-btn').textContent).toContain('MOUILLAGE FAIT');
+  });
+
   it('sans position GPS : bouton mouillage désactivé + fallback carte', () => {
     render(<CoastalPanel data={data({ position: null })} />);
     expect((screen.getByTestId('coastal-anchor-btn') as HTMLButtonElement).disabled).toBe(true);

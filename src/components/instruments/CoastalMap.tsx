@@ -15,8 +15,8 @@ import InstrumentCard from './InstrumentCard';
  * + marqueur ⚓ du mouillage, rien d'autre.
  *
  * Pied de carte : bouton « ⚓ MOUILLAGE FAIT » pleine largeur (accent) ;
- * une fois mouillé, barre « ⚓ date heure · position » + bouton
- * « NOUVEAU MOUILLAGE ». */
+ * une fois mouillé, barre « ⚓ date heure · position » + QUITTER LE
+ * MOUILLAGE / NOUVEAU MOUILLAGE (retour #186 — accent, pas de rouge). */
 
 interface CoastalMapProps {
   position: Position | null;
@@ -26,6 +26,8 @@ interface CoastalMapProps {
   anchor: AnchorRecord | null;
   /** Enregistre un nouveau mouillage (REMPLACE l'ancien). */
   onDropAnchor: (latitude: number, longitude: number) => void;
+  /** Quitte le mouillage : EFFACE le mouillage enregistré (#186). */
+  onClearAnchor: () => void;
 }
 
 /** window.L est déclaré globalement par MapViewSimple (LeafletObject) —
@@ -55,7 +57,8 @@ const CoastalMap: React.FC<CoastalMapProps> = ({
   position,
   heading,
   anchor,
-  onDropAnchor
+  onDropAnchor,
+  onClearAnchor
 }) => {
   const mapDivRef = useRef<HTMLDivElement | null>(null);
   const mapRef = useRef<LeafletBundle.Map | null>(null);
@@ -217,17 +220,30 @@ const CoastalMap: React.FC<CoastalMapProps> = ({
             {formatCoordinate(anchor.latitude, true)}{' '}
             {formatCoordinate(anchor.longitude, false)}
           </span>
-          <button
-            type="button"
-            className="coastal-anchor-btn new"
-            data-testid="coastal-anchor-btn"
-            disabled={!canDropAnchor}
-            onClick={() => {
-              if (position) onDropAnchor(position.latitude, position.longitude);
-            }}
-          >
-            NOUVEAU MOUILLAGE
-          </button>
+          {/* Retour #186 : QUITTER LE MOUILLAGE efface le mouillage ;
+              NOUVEAU MOUILLAGE le remplace. Deux boutons accent — le
+              rouge reste réservé aux urgences (choix de Dom). */}
+          <div className="coastal-anchor-actions">
+            <button
+              type="button"
+              className="coastal-anchor-btn quit"
+              data-testid="coastal-anchor-quit-btn"
+              onClick={onClearAnchor}
+            >
+              QUITTER LE MOUILLAGE
+            </button>
+            <button
+              type="button"
+              className="coastal-anchor-btn new"
+              data-testid="coastal-anchor-btn"
+              disabled={!canDropAnchor}
+              onClick={() => {
+                if (position) onDropAnchor(position.latitude, position.longitude);
+              }}
+            >
+              NOUVEAU MOUILLAGE
+            </button>
+          </div>
         </div>
       )}
     </InstrumentCard>

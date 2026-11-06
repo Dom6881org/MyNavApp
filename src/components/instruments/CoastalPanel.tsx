@@ -31,7 +31,7 @@ interface CoastalPanelProps {
 
 const CoastalPanel: React.FC<CoastalPanelProps> = ({ data }) => {
   const [windMode, setWindMode] = useState<WindDisplay>('dial');
-  const { anchor, saveAnchor } = useAnchor();
+  const { anchor, saveAnchor, clearAnchor } = useAnchor();
 
   // Sources du vent identiques à HELM (#176) : vent du point pour TWD,
   // vent vrai interpolé pour TWS/TWA, apparent pour AWS/AWA.
@@ -139,6 +139,7 @@ const CoastalPanel: React.FC<CoastalPanelProps> = ({ data }) => {
           heading={heading}
           anchor={anchor}
           onDropAnchor={saveAnchor}
+          onClearAnchor={clearAnchor}
         />
       </div>
     </div>

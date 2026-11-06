@@ -62,4 +62,20 @@ describe('useAnchor — mouillage v1 (#186)', () => {
     expect(formatAnchorTime(new Date(2026, 10, 5, 18, 42).toISOString())).toBe('05/11 18:42');
     expect(formatAnchorTime('nimporte')).toBe('--/-- --:--');
   });
+
+  it('clearAnchor efface le mouillage (retour #186)', () => {
+    vi.useFakeTimers();
+    const { result } = renderHook(() => useAnchor());
+    act(() => result.current.saveAnchor(42.68, 3.02));
+    expect(result.current.anchor).not.toBeNull();
+
+    act(() => result.current.clearAnchor());
+
+    expect(result.current.anchor).toBeNull();
+    expect(window.localStorage.getItem('coastal-anchor')).toBeNull();
+
+    // Sans mouillage, clearAnchor reste sans effet ni crash.
+    act(() => result.current.clearAnchor());
+    expect(result.current.anchor).toBeNull();
+  });
 });

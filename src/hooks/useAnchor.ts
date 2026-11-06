@@ -5,7 +5,10 @@ import { useCallback, useState } from 'react';
  * La position au moment du mouillage est persistée en localStorage :
  * un clic sur « ⚓ MOUILLAGE FAIT » (ou « NOUVEAU MOUILLAGE ») REMPLACE
  * l'ancien mouillage — pas d'historique (suivi de position au mouillage
- * : plus tard). */
+ * : plus tard).
+ *
+ * « QUITTER LE MOUILLAGE » (retour #186) EFFACE le mouillage : retour à
+ * l'état initial (bouton ⚓ MOUILLAGE FAIT, pastille ⚓ retirée). */
 
 export interface AnchorRecord {
   latitude: number;
@@ -45,6 +48,7 @@ export const formatAnchorTime = (timestamp: string): string => {
 export const useAnchor = (): {
   anchor: AnchorRecord | null;
   saveAnchor: (latitude: number, longitude: number) => void;
+  clearAnchor: () => void;
 } => {
   const [anchor, setAnchor] = useState<AnchorRecord | null>(() => readAnchor());
 
@@ -62,7 +66,16 @@ export const useAnchor = (): {
     setAnchor(record);
   }, []);
 
-  return { anchor, saveAnchor };
+  const clearAnchor = useCallback(() => {
+    try {
+      window.localStorage.removeItem(STORAGE_KEY);
+    } catch {
+      /* localStorage indisponible : retour à l'état mémoire seul */
+    }
+    setAnchor(null);
+  }, []);
+
+  return { anchor, saveAnchor, clearAnchor };
 };
 
 export default useAnchor;
