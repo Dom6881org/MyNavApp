@@ -956,6 +956,18 @@ button.helm-tile.active:focus-visible {
   color: var(--accent-color);
 }
 
+/* #188 v5 : la règle `.helm-readout strong` (spécificité 0,1,1) écrase
+   les classes simples — sans ces règles plus spécifiques, les readouts
+   sous le cadran restaient gris en dark alors que la grille numérique
+   était colorée. */
+.helm-readout strong.wind-true {
+  color: var(--warning-color);
+}
+
+.helm-readout strong.wind-apparent {
+  color: var(--accent-color);
+}
+
 /* #188 v5 : grille numérique VENT — les QUATRE valeurs TWS/TWA/AWS/AWA
    de MÊME taille en 2×2 aérée (fini le TWS géant tassé, retour n°2).
    Partagée HELM central / COASTAL (variante coastal plus bas). */
@@ -1502,6 +1514,16 @@ button.helm-tile.active:focus-visible {
 }
 
 .theme-light .wind-apparent {
+  color: #2f6fd8;
+}
+
+/* #188 v5 : idem dark — battre `.helm-readout strong` pour les readouts
+   sous le cadran (l'ambre/bleu natifs manquent de contraste en light). */
+.theme-light .helm-readout strong.wind-true {
+  color: #b87700;
+}
+
+.theme-light .helm-readout strong.wind-apparent {
   color: #2f6fd8;
 }
 
