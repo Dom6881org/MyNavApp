@@ -59,6 +59,7 @@ const CoastalMap: React.FC<CoastalMapProps> = ({
 }) => {
   const mapDivRef = useRef<HTMLDivElement | null>(null);
   const mapRef = useRef<LeafletBundle.Map | null>(null);
+  const resizeObserverRef = useRef<ResizeObserver | null>(null);
   const boatRef = useRef<LeafletBundle.Marker | null>(null);
   const anchorMarkerRef = useRef<LeafletBundle.Marker | null>(null);
   const anchorLineRef = useRef<LeafletBundle.Polyline | null>(null);
@@ -74,6 +75,8 @@ const CoastalMap: React.FC<CoastalMapProps> = ({
   // Démontage (changement de vue) : la carte est détruite proprement.
   useEffect(() => {
     return () => {
+      resizeObserverRef.current?.disconnect();
+      resizeObserverRef.current = null;
       mapRef.current?.remove();
       mapRef.current = null;
       boatRef.current = null;
@@ -116,6 +119,16 @@ const CoastalMap: React.FC<CoastalMapProps> = ({
           updateWhenZooming: false
         }).addTo(map);
         mapRef.current = map;
+        // #186 : la 3e colonne s'étire après le premier render NMEA —
+        // Leaflet doit être informé de la taille réelle du conteneur
+        // (pattern #174 : invalidateSize + ResizeObserver).
+        map.invalidateSize();
+        if (typeof ResizeObserver !== 'undefined' && !resizeObserverRef.current) {
+          resizeObserverRef.current = new ResizeObserver(() => {
+            mapRef.current?.invalidateSize();
+          });
+          resizeObserverRef.current.observe(mapDivRef.current);
+        }
       }
 
       const map = mapRef.current;

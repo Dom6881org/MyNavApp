@@ -11,7 +11,7 @@
  * Variables : BASE_URL (défaut http://127.0.0.1:3001), WAIT_MS (défaut 8000).
  */
 
-import { mkdirSync } from 'node:fs';
+import { mkdirSync, writeFileSync } from 'node:fs';
 import { chromium } from 'playwright';
 
 const BASE = process.env.BASE_URL ?? 'http://127.0.0.1:3001';
@@ -141,6 +141,27 @@ async function main() {
         viewport: simple?.viewport ?? { width: 1440, height: 900 },
       });
       const page = await context.newPage();
+      // #186 debug carte vide : console, erreurs de page et requêtes de
+      // tuiles collectées pendant la session (dump JSON pour les vues
+      // COASTAL, poussées avec shots/ sur visual/pr-N).
+      const consoleMsgs = [];
+      const pageErrors = [];
+      const tileResponses = [];
+      page.on('console', (msg) => {
+        consoleMsgs.push({ type: msg.type(), text: msg.text().slice(0, 300) });
+      });
+      page.on('pageerror', (err) => pageErrors.push(String(err).slice(0, 500)));
+      page.on('response', (res) => {
+        if (res.url().includes('/api/tiles/')) {
+          tileResponses.push({ url: res.url(), status: res.status() });
+        }
+      });
+      page.on('requestfailed', (req) => {
+        const failure = req.failure();
+        if (req.url().includes('/api/tiles/')) {
+          tileResponses.push({ url: req.url(), failed: failure?.errorText });
+        }
+      });
       await page.addInitScript((layout) => {
         try { window.localStorage.setItem('dashboardLayout', layout); } catch { /* noop */ }
       }, layoutFor(theme));
@@ -161,6 +182,59 @@ async function main() {
       const file = OUT + '/' + view + '-' + theme + '.png';
       await page.screenshot({ path: file });
       console.log('capture: ' + file);
+      if (uiTarget === 'coastal') {
+        const diag = await page.evaluate(() => {
+          const describe = (el) => {
+            if (!el) return null;
+            const c = getComputedStyle(el);
+            return {
+              className: el.className,
+              childCount: el.childElementCount,
+              rect: el.getBoundingClientRect().toJSON(),
+              style: {
+                display: c.display,
+                position: c.position,
+                width: c.width,
+                height: c.height,
+                minHeight: c.minHeight,
+                backgroundColor: c.backgroundColor,
+                visibility: c.visibility,
+                opacity: c.opacity,
+                overflow: c.overflow,
+                zIndex: c.zIndex
+              }
+            };
+          };
+          let canvasRule = null;
+          for (const sheet of Array.from(document.styleSheets)) {
+            try {
+              for (const rule of Array.from(sheet.cssRules)) {
+                if (rule.selectorText && rule.selectorText.includes('coastal-map-canvas')) {
+                  canvasRule = rule.cssText;
+                }
+              }
+            } catch { /* feuille cross-origin */ }
+          }
+          const canvas = document.querySelector('.coastal-map-canvas');
+          const card = document.querySelector('[data-testid="instrument-CARTE"]');
+          return {
+            stage: describe(document.querySelector('.coastal-map-stage')),
+            canvas: describe(canvas),
+            canvasHtml: canvas ? canvas.outerHTML.slice(0, 600) : null,
+            cardHtml: card ? card.outerHTML.slice(0, 1200) : null,
+            fallback: !!document.querySelector('.coastal-map-fallback'),
+            windowL: typeof window.L,
+            canvasRule,
+            tileResourceEntries: performance
+              .getEntriesByType('resource')
+              .filter((e) => e.name.includes('/api/tiles/')).length
+          };
+        });
+        writeFileSync(
+          OUT + '/debug-' + view + '-' + theme + '.json',
+          JSON.stringify({ diag, consoleMsgs, pageErrors, tileResponses }, null, 2)
+        );
+      }
       await context.close();
     }
   }
