@@ -26,6 +26,8 @@ const BottomInstrumentsPanel: React.FC<BottomInstrumentsPanelProps> = ({ data })
   const twd = data.wind?.direction ?? null;
   const tws = data.wind?.speed ?? null;
   const awa = data.apparentWind?.angleDegrees ?? null;
+  // #188 v5 : AWS pour les readouts apparents sous le cadran.
+  const aws = data.apparentWind?.speedKnots ?? null;
   // #188 : TWA pour l'aiguille « vrai » du cadran relatif.
   const twa = data.trueWind?.angleDegrees ?? null;
   // #188 : même mode partagé que HELM et COASTAL (mynav:wind-needle).
@@ -37,10 +39,17 @@ const BottomInstrumentsPanel: React.FC<BottomInstrumentsPanelProps> = ({ data })
       role="group"
       aria-label="Bottom instruments"
     >
-      <InstrumentCard
-        title="WIND"
-        info={awa === null ? null : <span>AWA {Math.round(Math.abs(awa))}°</span>}
-        headerPrefix={
+      <InstrumentCard title="WIND">
+        <div className="helm-central-value">
+          <WindDial
+            twdDeg={twd}
+            twsKts={tws}
+            awaDeg={awa}
+            twaDeg={twa}
+            mode={needleMode}
+          />
+          {/* #188 v5 (retour n°1) : switch SOUS la rosace — et readouts
+              apparents colorés (bleu = apparent). */}
           <WindNeedleSwitch
             mode={needleMode}
             onChange={(m) => {
@@ -49,15 +58,17 @@ const BottomInstrumentsPanel: React.FC<BottomInstrumentsPanelProps> = ({ data })
             }}
             testId="bottom-wind-needle-switch"
           />
-        }
-      >
-        <WindDial
-          twdDeg={twd}
-          twsKts={tws}
-          awaDeg={awa}
-          twaDeg={twa}
-          mode={needleMode}
-        />
+          <div className="helm-wind-readouts" data-testid="bottom-wind-readouts">
+            <span className="helm-readout">
+              <span className="helm-readout-lbl">AWS</span>
+              <strong className="wind-apparent">{aws === null ? '--' : `${aws.toFixed(0)} kt`}</strong>
+            </span>
+            <span className="helm-readout">
+              <span className="helm-readout-lbl">AWA</span>
+              <strong className="wind-apparent">{awa === null ? '--' : `${Math.round(Math.abs(awa))}°`}</strong>
+            </span>
+          </div>
+        </div>
       </InstrumentCard>
       <InstrumentCard
         title="DEPTH"

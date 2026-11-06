@@ -11,6 +11,7 @@ import CompassDial from './CompassDial';
 import CompassHalfDial from './CompassHalfDial';
 import WindDial from './WindDial';
 import WindNeedleSwitch from './WindNeedleSwitch';
+import WindNumericGrid from './WindNumericGrid';
 import SpeedGauge from './SpeedGauge';
 import FramedReadouts from './FramedReadouts';
 import InstrumentCard from './InstrumentCard';
@@ -313,28 +314,15 @@ const HelmPanel: React.FC<HelmPanelProps> = ({ data, onResetMaxSpeed }) => {
     if (central === 'wind') {
       /* Mode cadran : cadran Raymarine occupant l'espace (#180 n°9) +
          les QUATRE valeurs du vent en digital sous le cadran (#182
-         retour n°13). Mode numérique : TWS énorme + AWS/TWA/AWA
-         dessous (livré au retour n°21, inchangé). */
+         retour n°13). #188 v5 : le switch APPARENT|VRAI vit SOUS la
+         rosace (plus dans le header — retour n°1 de Dom). Mode
+         numérique : grille 2×2 de valeurs ÉGALES colorées par bord
+         (retours n°2/n°3 : plus de TWS géant tassé, PAS de switch
+         puisque tout est affiché). */
       if (effectiveMode === 'numeric') {
         return (
-          <div className="helm-central-value helm-central-digital" data-testid="helm-central-digital">
-            <span className="helm-digital-label">TWS</span>
-            <span className="helm-digital-value">{tws === null ? '--' : tws.toFixed(0)}</span>
-            <span className="helm-unit">kt</span>
-            <div className="helm-wind-readouts">
-              <span className="helm-readout">
-                <span className="helm-readout-lbl">AWS</span>
-                <strong>{fmt(aws, 0, 'kt')}</strong>
-              </span>
-              <span className="helm-readout">
-                <span className="helm-readout-lbl">TWA</span>
-                <strong>{twa === null ? '--' : `${Math.round(Math.abs(twa))}°`}</strong>
-              </span>
-              <span className="helm-readout">
-                <span className="helm-readout-lbl">AWA</span>
-                <strong>{awa === null ? '--' : `${Math.round(Math.abs(awa))}°`}</strong>
-              </span>
-            </div>
+          <div className="helm-central-value" data-testid="helm-wind-numeric">
+            <WindNumericGrid tws={tws} twa={twa} aws={aws} awa={awa} testId="helm-wind-numeric" />
           </div>
         );
       }
@@ -351,24 +339,35 @@ const HelmPanel: React.FC<HelmPanelProps> = ({ data, onResetMaxSpeed }) => {
               fill
             />
           </div>
+          {/* #188 v5 (retour n°1) : switch APPARENT|VRAI SOUS la rosace,
+              centré — absent du mode numérique. */}
+          <WindNeedleSwitch
+            mode={needleMode}
+            onChange={(m) => {
+              setNeedleMode(m);
+              writeWindNeedleMode(m);
+            }}
+            testId="helm-wind-needle-switch"
+          />
           {/* #182 retour n°13 : les QUATRE valeurs du vent en digital sous
-              le cadran — TWS, AWS, TWA, AWA. */}
+              le cadran — TWS, AWS, TWA, AWA. #188 v5 : colorées par bord
+              (ambre = vrai, bleu = apparent). */}
           <div className="helm-wind-readouts" data-testid="helm-wind-readouts">
             <span className="helm-readout">
               <span className="helm-readout-lbl">TWS</span>
-              <strong>{fmt(tws, 0, 'kt')}</strong>
+              <strong className="wind-true">{fmt(tws, 0, 'kt')}</strong>
             </span>
             <span className="helm-readout">
               <span className="helm-readout-lbl">AWS</span>
-              <strong>{fmt(aws, 0, 'kt')}</strong>
+              <strong className="wind-apparent">{fmt(aws, 0, 'kt')}</strong>
             </span>
             <span className="helm-readout">
               <span className="helm-readout-lbl">TWA</span>
-              <strong>{twa === null ? '--' : `${Math.round(Math.abs(twa))}°`}</strong>
+              <strong className="wind-true">{twa === null ? '--' : `${Math.round(Math.abs(twa))}°`}</strong>
             </span>
             <span className="helm-readout">
               <span className="helm-readout-lbl">AWA</span>
-              <strong>{awa === null ? '--' : `${Math.round(Math.abs(awa))}°`}</strong>
+              <strong className="wind-apparent">{awa === null ? '--' : `${Math.round(Math.abs(awa))}°`}</strong>
             </span>
           </div>
         </div>
@@ -454,23 +453,7 @@ const HelmPanel: React.FC<HelmPanelProps> = ({ data, onResetMaxSpeed }) => {
         <InstrumentCard
           title={centralTitle}
           hideToggle
-          headerPrefix={
-            <>
-              {/* #188 : APPARENT | VRAI — bord de l'aiguille du cadran
-                  vent, avant le switch de format (persisté, partagé). */}
-              {central === 'wind' && (
-                <WindNeedleSwitch
-                  mode={needleMode}
-                  onChange={(m) => {
-                    setNeedleMode(m);
-                    writeWindNeedleMode(m);
-                  }}
-                  testId="helm-wind-needle-switch"
-                />
-              )}
-              {modeSwitch}
-            </>
-          }
+          headerPrefix={modeSwitch}
         >
           {renderCentral()}
         </InstrumentCard>

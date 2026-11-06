@@ -945,6 +945,52 @@ button.helm-tile.active:focus-visible {
   flex-wrap: wrap;
 }
 
+/* #188 v5 (retour n°2) : couleurs par BORD de vent — ambre = vrai
+   (TWS/TWA), bleu accent = apparent (AWS/AWA). Utilisées par les
+   readouts sous le cadran ET par la grille numérique WindNumericGrid. */
+.wind-true {
+  color: var(--warning-color);
+}
+
+.wind-apparent {
+  color: var(--accent-color);
+}
+
+/* #188 v5 : grille numérique VENT — les QUATRE valeurs TWS/TWA/AWS/AWA
+   de MÊME taille en 2×2 aérée (fini le TWS géant tassé, retour n°2).
+   Partagée HELM central / COASTAL (variante coastal plus bas). */
+.helm-wind-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1.1rem 3rem;
+  justify-items: center;
+  align-content: center;
+  width: 100%;
+  flex: 1 1 auto;
+  padding: 0.5rem 1rem;
+}
+
+.helm-wind-cell {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.3rem;
+}
+
+.helm-wind-lbl {
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.25em;
+  color: var(--text-secondary);
+}
+
+.helm-wind-grid strong {
+  font-size: clamp(2rem, 8.5vh, 3.6rem);
+  font-weight: 700;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+}
+
 .helm-readout {
   display: flex;
   flex-direction: column;
@@ -1447,6 +1493,16 @@ button.helm-tile.active:focus-visible {
 
 .theme-light .wind-dial-twd-label {
   fill: #52697c;
+}
+
+/* #188 v5 : couleurs par bord en theme-light — l'ambre et le bleu
+   natives du theme manquent de contraste sur fond clair. */
+.theme-light .wind-true {
+  color: #b87700;
+}
+
+.theme-light .wind-apparent {
+  color: #2f6fd8;
 }
 
 /* #182 retour n°16 : degrés tous les 30° sur la rose (sauf cardinaux),
@@ -2421,4 +2477,20 @@ button.helm-tile.active:focus-visible {
   height: 100%;
   width: auto;
   max-width: 100%;
+}
+
+/* #188 v5 : la colonne COASTAL est étroite (~440px) — la grille
+   numérique VENT y reste en 2×2 mais avec des valeurs plus petites
+   que le central HELM (proportions maquette v5 : 46px vs 64px). */
+.ui-stage-coastal .helm-wind-grid {
+  gap: 0.9rem 1.6rem;
+}
+
+.ui-stage-coastal .helm-wind-grid strong {
+  font-size: clamp(1.4rem, 5vh, 2.4rem);
+}
+
+.ui-stage-coastal .helm-wind-lbl {
+  font-size: 0.7rem;
+  letter-spacing: 0.2em;
 }

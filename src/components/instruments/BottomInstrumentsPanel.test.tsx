@@ -32,9 +32,19 @@ describe('BottomInstrumentsPanel (finalisation #166)', () => {
     expect(screen.queryByRole('button', { name: 'DEPTH display mode' })).toBeNull();
   });
 
-  it('#188 : switch APPARENT|VRAI sur la carte WIND — défaut apparent, aiguille suit, persisté', () => {
+  it('#188 v5 : switch APPARENT|VRAI SOUS la rosace + readouts apparents colorés, défaut apparent, persisté', () => {
     render(<BottomInstrumentsPanel data={data()} />);
     const sw = screen.getByTestId('bottom-wind-needle-switch');
+    // retour n°1 : sous la rosace, pas dans le header
+    expect(sw.closest('.instrument-card-header')).toBeNull();
+    expect(sw.closest('.helm-central-value')).toBeTruthy();
+    // readouts apparents sous le cadran, bleu = apparent
+    const readouts = screen.getByTestId('bottom-wind-readouts');
+    expect(readouts.textContent).toContain('AWS');
+    expect(readouts.textContent).toContain('15 kt');
+    expect(readouts.textContent).toContain('AWA');
+    expect(readouts.textContent).toContain('45°');
+    expect(readouts.querySelectorAll('.wind-apparent').length).toBe(2);
     const segments = Array.from(sw.querySelectorAll('button'));
     // APPARENT actif par défaut — aiguille sur AWA 45
     expect(segments.find((b) => b.textContent === 'APPARENT')?.getAttribute('aria-pressed')).toBe('true');
