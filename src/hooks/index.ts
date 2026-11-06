@@ -10,3 +10,4 @@ export * from './useRoutingInput';
 export * from './useRoutingRoute';
 export * from './useGrib';
 export * from './useMotionSensors';
+export * from './useAnchor';
