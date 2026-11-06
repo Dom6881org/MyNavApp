@@ -143,7 +143,7 @@ const CoastalMap: React.FC<CoastalMapProps> = ({
           anchorMarkerRef.current = L.marker(anchorPos, {
             icon: makeAnchorIcon(L),
             title: 'Mouillage',
-            zIndexOffset: 900
+            zIndexOffset: 1100
           }).addTo(map);
         } else {
           anchorMarkerRef.current.setLatLng(anchorPos);
