@@ -24,7 +24,7 @@ describe('CoastalDepthCard — colonne 0 m en bas (#186)', () => {
 
   it('le marqueur est plus HAUT que la zone rouge quand ça s’approfondit', () => {
     const { rerender } = render(<CoastalDepthCard depth={8.4} temperature={17} />);
-    let markerY = Number(
+    const markerY = Number(
       (screen.getByTestId('coastal-depth-column').querySelector('.coastal-depth-marker line') as SVGLineElement).getAttribute('y1')
     );
     const redTop = Number(

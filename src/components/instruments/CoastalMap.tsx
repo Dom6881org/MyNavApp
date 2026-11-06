@@ -119,6 +119,7 @@ const CoastalMap: React.FC<CoastalMapProps> = ({
       }
 
       const map = mapRef.current;
+      if (!map) return;
       const boatIcon = makeBoatIcon(L, heading ?? 0);
       if (!boatRef.current) {
         boatRef.current = L.marker([position.latitude, position.longitude], {
