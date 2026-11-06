@@ -11,14 +11,14 @@
  * Variables : BASE_URL (défaut http://127.0.0.1:3001), WAIT_MS (défaut 8000).
  */
 
-import { mkdirSync } from 'node:fs';
+import { mkdirSync, writeFileSync } from 'node:fs';
 import { chromium } from 'playwright';
 
 const BASE = process.env.BASE_URL ?? 'http://127.0.0.1:3001';
 const WAIT_MS = Number(process.env.WAIT_MS ?? 8000);
 const OUT = 'shots';
 
-const VIEWS = ['helm', 'helm-half', 'helm-numeric', 'helm-wind', 'helm-wind-small', 'helm-speed', 'helm-speed-numeric', 'helm-time', 'helm-depth', 'helm-position', 'coastal', 'overview', 'prep', 'legacy'];
+const VIEWS = ['helm', 'helm-half', 'helm-numeric', 'helm-wind', 'helm-wind-small', 'helm-speed', 'helm-speed-numeric', 'helm-time', 'helm-depth', 'helm-position', 'coastal', 'coastal-numeric', 'coastal-anchor', 'coastal-quit', 'coastal-muted', 'coastal-small', 'overview', 'prep', 'legacy'];
 const THEMES = ['dark', 'light'];
 
 // Vues dérivées : capture d'un état interactif de la vue HELM.
@@ -87,6 +87,57 @@ const DERIVED = {
   // #180 retour n°11 : fenêtre réduite (écran du bord) — le cadran doit
   // se réduire pour rester ENTIER (pas de rognage, pas d'onglets perdus).
   'helm-wind-small': { viewport: { width: 1100, height: 600 }, click: 'helm-compact-wind' },
+  // ===== Reset COASTAL (#186) : vues dérivées de la vue arrrivée au
+  // mouillage — 3 colonnes VENT/PROFONDEUR/CARTE, 0 m en bas. =====
+  // Segment NUMÉRIQUE du switch vent : TWS énorme + AWS/TWA/AWA.
+  'coastal-numeric': {
+    ui: 'coastal',
+    run: async (page) => {
+      await page
+        .getByTestId('coastal-wind-switch')
+        .getByRole('button', { name: 'NUMÉRIQUE' })
+        .click();
+      await page.waitForTimeout(500);
+    }
+  },
+  // Bouton « ⚓ MOUILLAGE FAIT » : marqueur ⚓ sur la carte + barre
+  // date/heure/position + NOUVEAU MOUILLAGE (localStorage).
+  'coastal-anchor': {
+    ui: 'coastal',
+    run: async (page) => {
+      await page.getByTestId('coastal-anchor-btn').click();
+      await page.waitForTimeout(500);
+    }
+  },
+  // Retour #186 : QUITTER LE MOUILLAGE — la pastille ⚓ et le pointillé
+  // doivent disparaître de la carte, retour au bouton pleine largeur.
+  'coastal-quit': {
+    ui: 'coastal',
+    run: async (page) => {
+      await page.getByTestId('coastal-anchor-btn').click();
+      await page.waitForTimeout(300);
+      await page.getByTestId('coastal-anchor-quit-btn').click();
+      await page.waitForTimeout(500);
+    }
+  },
+  // Retour #186 : chart background — la vue COASTAL suit la préférence
+  // OVERVIEW (clé localStorage mapBaseStyle) ; capture en 'muted' après
+  // rechargement pour vérifier les filtres tuiles.
+  'coastal-muted': {
+    ui: 'coastal',
+    run: async (page) => {
+      await page.evaluate(() => {
+        try { window.localStorage.setItem('mapBaseStyle', 'muted'); } catch { /* noop */ }
+      });
+      await page.reload({ waitUntil: 'load' });
+      await page
+        .waitForSelector('[data-testid="wind-arrow"]', { timeout: 10000 })
+        .catch(() => {});
+      await page.waitForTimeout(500);
+    }
+  },
+  // Fenêtre réduite (écran du bord) : les 3 colonnes restent entières.
+  'coastal-small': { ui: 'coastal', viewport: { width: 1100, height: 600 } },
 };
 
 // Derivées simples : { viewport, click } — capture d'une vue HELM dans un
@@ -117,14 +168,50 @@ async function main() {
         viewport: simple?.viewport ?? { width: 1440, height: 900 },
       });
       const page = await context.newPage();
+      // #186 debug carte vide : console, erreurs de page et requêtes de
+      // tuiles collectées pendant la session (dump JSON pour les vues
+      // COASTAL, poussées avec shots/ sur visual/pr-N).
+      const consoleMsgs = [];
+      const pageErrors = [];
+      const tileResponses = [];
+      page.on('console', (msg) => {
+        consoleMsgs.push({ type: msg.type(), text: msg.text().slice(0, 300) });
+      });
+      page.on('pageerror', (err) => pageErrors.push(String(err).slice(0, 500)));
+      page.on('response', (res) => {
+        if (res.url().includes('/api/tiles/')) {
+          tileResponses.push({ url: res.url(), status: res.status() });
+        }
+      });
+      page.on('requestfailed', (req) => {
+        const failure = req.failure();
+        if (req.url().includes('/api/tiles/')) {
+          tileResponses.push({ url: req.url(), failed: failure?.errorText });
+        }
+      });
       await page.addInitScript((layout) => {
         try { window.localStorage.setItem('dashboardLayout', layout); } catch { /* noop */ }
       }, layoutFor(theme));
       const derived = DERIVED[view];
-      await page.goto(BASE + '/?ui=' + (derived ? 'helm' : view), { waitUntil: 'load' });
+      // Vue cible : par défaut la vue elle-même ; les dérivées HELM
+      // restent sur ?ui=helm, les dérivées COASTAL (#186) portent ui:'coastal'.
+      const uiTarget = derived ? (derived.ui ?? 'helm') : view;
+      await page.goto(BASE + '/?ui=' + uiTarget, { waitUntil: 'load' });
       await page.waitForTimeout(WAIT_MS);
+      if (uiTarget === 'coastal') {
+        // #186 : le TWD du cadran vient du vent du point interpolé (source
+        // HELM #176) — il peut arriver après le WAIT_MS selon la latence
+        // de la grille de vent. On attend l'aiguille (max 10 s) pour que
+        // la capture montre bien le cadran complet.
+        await page
+          .waitForSelector('[data-testid="wind-arrow"]', { timeout: 10000 })
+          .catch(() => {});
+        await page.waitForTimeout(500);
+      }
       if (typeof derived === 'function') {
         await derived(page);
+      } else if (derived?.run) {
+        await derived.run(page);
       } else if (simple?.click) {
         await page.getByTestId(simple.click).click();
         await page.waitForTimeout(500);
@@ -132,6 +219,59 @@ async function main() {
       const file = OUT + '/' + view + '-' + theme + '.png';
       await page.screenshot({ path: file });
       console.log('capture: ' + file);
+      if (uiTarget === 'coastal') {
+        const diag = await page.evaluate(() => {
+          const describe = (el) => {
+            if (!el) return null;
+            const c = getComputedStyle(el);
+            return {
+              className: el.className,
+              childCount: el.childElementCount,
+              rect: el.getBoundingClientRect().toJSON(),
+              style: {
+                display: c.display,
+                position: c.position,
+                width: c.width,
+                height: c.height,
+                minHeight: c.minHeight,
+                backgroundColor: c.backgroundColor,
+                visibility: c.visibility,
+                opacity: c.opacity,
+                overflow: c.overflow,
+                zIndex: c.zIndex
+              }
+            };
+          };
+          let canvasRule = null;
+          for (const sheet of Array.from(document.styleSheets)) {
+            try {
+              for (const rule of Array.from(sheet.cssRules)) {
+                if (rule.selectorText && rule.selectorText.includes('coastal-map-canvas')) {
+                  canvasRule = rule.cssText;
+                }
+              }
+            } catch { /* feuille cross-origin */ }
+          }
+          const canvas = document.querySelector('.coastal-map-canvas');
+          const card = document.querySelector('[data-testid="instrument-CARTE"]');
+          return {
+            stage: describe(document.querySelector('.coastal-map-stage')),
+            canvas: describe(canvas),
+            canvasHtml: canvas ? canvas.outerHTML.slice(0, 600) : null,
+            cardHtml: card ? card.outerHTML.slice(0, 1200) : null,
+            fallback: !!document.querySelector('.coastal-map-fallback'),
+            windowL: typeof window.L,
+            canvasRule,
+            tileResourceEntries: performance
+              .getEntriesByType('resource')
+              .filter((e) => e.name.includes('/api/tiles/')).length
+          };
+        });
+        writeFileSync(
+          OUT + '/debug-' + view + '-' + theme + '.json',
+          JSON.stringify({ diag, consoleMsgs, pageErrors, tileResponses }, null, 2)
+        );
+      }
       await context.close();
     }
   }

@@ -57,6 +57,18 @@ jobs:
           done
           echo "::error title=visual::serveur inaccessible après 60 s"; exit 1
 
+      - name: Préchargement GRIB (vent déterministe pour les captures)
+        # #186 : sans GRIB frais côté serveur, le vent du point (TWD/TWS du
+        # cadran) vient d'appels Open-Météo directs depuis le navigateur —
+        # latence/429 variables, aiguille parfois absente des captures.
+        # Un GRIB téléchargé une fois (cache 60 min) sert tous les contextes
+        # Playwright : vent instantané et déterministe.
+        run: |
+          curl -sf -X POST http://127.0.0.1:3001/api/grib/download \
+            -H 'Content-Type: application/json' \
+            -d '{"south":41.5,"north":44.0,"west":1.5,"east":4.5,"horizonH":6}' \
+            || echo "::warning title=visual::GRIB indisponible — captures sans vent du point"
+
       - name: Captures (5 vues x 2 thèmes)
         run: node tools/visual_shots.mjs
 
