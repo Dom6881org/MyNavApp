@@ -6,7 +6,7 @@ import { formatCoordinate } from '../../utils/formatCoordinate';
 import type { AnchorRecord } from '../../hooks/useAnchor';
 import { formatAnchorTime } from '../../hooks/useAnchor';
 import InstrumentCard from './InstrumentCard';
-import type { MapBaseStyle } from './ControlPanel';
+import type { MapBaseStyle } from '../ControlPanel';
 
 /** Carte du reset COASTAL (#186, maquettes c1/c4 validées) :
  * « Fond + bateau + ⚓ uniquement, épuré au max » (Dom).
