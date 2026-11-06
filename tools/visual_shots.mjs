@@ -171,6 +171,16 @@ async function main() {
       const uiTarget = derived ? (derived.ui ?? 'helm') : view;
       await page.goto(BASE + '/?ui=' + uiTarget, { waitUntil: 'load' });
       await page.waitForTimeout(WAIT_MS);
+      if (uiTarget === 'coastal') {
+        // #186 : le TWD du cadran vient du vent du point interpolé (source
+        // HELM #176) — il peut arriver après le WAIT_MS selon la latence
+        // de la grille de vent. On attend l'aiguille (max 10 s) pour que
+        // la capture montre bien le cadran complet.
+        await page
+          .waitForSelector('[data-testid="wind-arrow"]', { timeout: 10000 })
+          .catch(() => {});
+        await page.waitForTimeout(500);
+      }
       if (typeof derived === 'function') {
         await derived(page);
       } else if (derived?.run) {
