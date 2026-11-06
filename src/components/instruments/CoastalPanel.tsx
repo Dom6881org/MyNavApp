@@ -116,7 +116,7 @@ const CoastalPanel: React.FC<CoastalPanelProps> = ({ data }) => {
           {windMode === 'numeric' ? (
             /* #188 v5 (retours n°2/n°3) : grille 2×2 de valeurs ÉGALES
                colorées par bord — PAS de switch en numérique. */
-            <div className="helm-central-value" data-testid="coastal-wind-numeric">
+            <div className="helm-central-value">
               <WindNumericGrid
                 tws={tws}
                 twa={twa}

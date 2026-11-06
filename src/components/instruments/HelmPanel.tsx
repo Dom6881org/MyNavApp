@@ -321,7 +321,7 @@ const HelmPanel: React.FC<HelmPanelProps> = ({ data, onResetMaxSpeed }) => {
          puisque tout est affiché). */
       if (effectiveMode === 'numeric') {
         return (
-          <div className="helm-central-value" data-testid="helm-wind-numeric">
+          <div className="helm-central-value">
             <WindNumericGrid tws={tws} twa={twa} aws={aws} awa={awa} testId="helm-wind-numeric" />
           </div>
         );
