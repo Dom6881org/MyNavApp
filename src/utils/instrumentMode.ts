@@ -111,3 +111,37 @@ export function writeInstrumentMode(title: string, mode: InstrumentMode): void {
     // stockage indisponible : sans conséquence
   }
 }
+
+/** Bord de vent affiché sur l'aiguille du cadran vent (#188) :
+ * apparent (AWA, défaut — façon Raymarine) ou vrai (TWA). Le mode est
+ * PERSISTÉ et PARTAGÉ par les trois placements du cadran (HELM,
+ * COASTAL, rangée basse) : une seule lecture du vent partout. */
+export type WindNeedleMode = 'apparent' | 'true';
+
+const WIND_NEEDLE_KEY = 'mynav:wind-needle';
+
+/** Pur : seul 'true' sélectionne le vrai ; toute autre valeur (absente,
+ * corrompue, 'apparent') retombe sur le mode APPARENT par défaut. */
+export function parseWindNeedleMode(value: string | null): WindNeedleMode {
+  return value === 'true' ? 'true' : 'apparent';
+}
+
+/** Lit le bord de vent persisté (défaut apparent). */
+export function readWindNeedleMode(): WindNeedleMode {
+  if (typeof window === 'undefined') return 'apparent';
+  try {
+    return parseWindNeedleMode(window.localStorage.getItem(WIND_NEEDLE_KEY));
+  } catch {
+    return 'apparent';
+  }
+}
+
+/** Persiste le bord de vent affiché. */
+export function writeWindNeedleMode(mode: WindNeedleMode): void {
+  if (typeof window === 'undefined') return;
+  try {
+    window.localStorage.setItem(WIND_NEEDLE_KEY, mode);
+  } catch {
+    // stockage indisponible : sans conséquence
+  }
+}
