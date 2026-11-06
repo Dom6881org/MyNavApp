@@ -178,6 +178,13 @@ const CoastalMap: React.FC<CoastalMapProps> = ({
         } else {
           anchorLineRef.current.setLatLngs(line);
         }
+      } else {
+        // Retour #186 : QUITTER LE MOUILLAGE — pastille ⚓ et pointillé
+        // doivent DISPARAÎTRE de la carte quand le mouillage est effacé.
+        anchorMarkerRef.current?.remove();
+        anchorMarkerRef.current = null;
+        anchorLineRef.current?.remove();
+        anchorLineRef.current = null;
       }
     } catch {
       setMapError(true);

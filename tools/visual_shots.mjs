@@ -18,7 +18,7 @@ const BASE = process.env.BASE_URL ?? 'http://127.0.0.1:3001';
 const WAIT_MS = Number(process.env.WAIT_MS ?? 8000);
 const OUT = 'shots';
 
-const VIEWS = ['helm', 'helm-half', 'helm-numeric', 'helm-wind', 'helm-wind-small', 'helm-speed', 'helm-speed-numeric', 'helm-time', 'helm-depth', 'helm-position', 'coastal', 'coastal-numeric', 'coastal-anchor', 'coastal-small', 'overview', 'prep', 'legacy'];
+const VIEWS = ['helm', 'helm-half', 'helm-numeric', 'helm-wind', 'helm-wind-small', 'helm-speed', 'helm-speed-numeric', 'helm-time', 'helm-depth', 'helm-position', 'coastal', 'coastal-numeric', 'coastal-anchor', 'coastal-quit', 'coastal-small', 'overview', 'prep', 'legacy'];
 const THEMES = ['dark', 'light'];
 
 // Vues dérivées : capture d'un état interactif de la vue HELM.
@@ -106,6 +106,17 @@ const DERIVED = {
     ui: 'coastal',
     run: async (page) => {
       await page.getByTestId('coastal-anchor-btn').click();
+      await page.waitForTimeout(500);
+    }
+  },
+  // Retour #186 : QUITTER LE MOUILLAGE — la pastille ⚓ et le pointillé
+  // doivent disparaître de la carte, retour au bouton pleine largeur.
+  'coastal-quit': {
+    ui: 'coastal',
+    run: async (page) => {
+      await page.getByTestId('coastal-anchor-btn').click();
+      await page.waitForTimeout(300);
+      await page.getByTestId('coastal-anchor-quit-btn').click();
       await page.waitForTimeout(500);
     }
   },
