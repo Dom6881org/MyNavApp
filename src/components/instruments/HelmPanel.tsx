@@ -1,1 +1,511 @@
-{"path":"/home/user/src186/src/components/instruments/HelmPanel.tsx","content":"import React, { useState } from 'react';\nimport type { NavigationData } from '../../types';\nimport { normalizeDeg } from '../../utils/instrumentPrimitives';\nimport {\n  readWindNeedleMode,\n  writeWindNeedleMode,\n  type WindNeedleMode\n} from '../../utils/instrumentMode';\nimport { formatCoordinate } from '../../utils/formatCoordinate';\nimport CompassDial from './CompassDial';\nimport CompassHalfDial from './CompassHalfDial';\nimport WindDial from './WindDial';\nimport WindNeedleSwitch from './WindNeedleSwitch';\nimport SpeedGauge from './SpeedGauge';\nimport FramedReadouts from './FramedReadouts';\nimport InstrumentCard from './InstrumentCard';\n\n/** Panneau HELM (refonte instruments, Phase 1 — #158) : instrument\n * central commutable en grand + colonne de tuiles digitales.\n *\n * #182 (retour n°12/13) : central sur 2/3, colonne droite sur 1/3 en\n * VUE DIGITALE — SIX instruments (vent, cap, vitesse, PROFONDEUR,\n * HEURE, POSITION), TOUTES les tuiles cliquables, le clic affiche\n * l'information EN GRAND au centre, la tuile RESTE à droite et\n * l'active est SURLIGNÉE (cadre accent).\n *\n * #184 (retour n°21-quater de Dom, maquette validée) : SWITCH\n * SEGMENTÉ à gauche du titre du container central — COMPAS : TROIS\n * états (CADRAN course-up / 1/2 CADRAN legacy / NUMÉRIQUE) ;\n * VITESSE et VENT : DEUX (CADRAN / NUMÉRIQUE) ; PROFONDEUR, HEURE,\n * POSITION : AUCUN (pas de switch du tout). Vues numériques CADRÉES\n * (lignes label/valeur, même philosophie partout) : compas COG/HDG ;\n * vitesse STW/SOG/MAX + bouton RESET ; heure LOCALE/TU ; profondeur\n * DEPTH/TEMP ; position LAT/LON + qualité du signal GPS (± m).\n * VMG retiré (retour n°21-quater) : les informations de route suivie\n * (ETA, next waypoint…) arriveront dans cette vue plus tard. */\n\ntype CentralInstrument = 'wind' | 'compass' | 'speed' | 'depth' | 'time' | 'position';\n\n/** Format d'affichage du central : 'dial' = cadran course-up (ou\n * jauge/cadran selon l'instrument), 'half' = demi-cadran legacy\n * (compas uniquement), 'numeric' = vue numérique cadrée. */\ntype CentralDisplay = 'dial' | 'half' | 'numeric';\n\ninterface HelmPanelProps {\n  data: NavigationData;\n  /** #184 : reset du max de vitesse de session — bouton RESET de la\n   * vue vitesse (cadran et numérique). */\n  onResetMaxSpeed?: () => void;\n}\n\n/** Segments du switch par instrument (maquette n°21-quater) : le\n * compas a le segment 1/2 CADRAN en plus ; profondeur/heure/position\n * n'ont PAS de switch (liste vide). */\nconst MODES: Record<CentralInstrument, CentralDisplay[]> = {\n  compass: ['dial', 'half', 'numeric'],\n  speed: ['dial', 'numeric'],\n  wind: ['dial', 'numeric'],\n  depth: [],\n  time: [],\n  position: []\n};\n\nconst MODE_LABEL: Record<CentralDisplay, string> = {\n  dial: 'CADRAN',\n  half: '1/2 CADRAN',\n  numeric: 'NUMÉRIQUE'\n};\n\nconst HelmPanel: React.FC<HelmPanelProps> = ({ data, onResetMaxSpeed }) => {\n  const [central, setCentral] = useState<CentralInstrument>('compass');\n  // #184 : un seul état de format pour tout le central (préférence\n  // d'affichage, pas de données) ; pas de persistance pour l'instant.\n  const [centralMode, setCentralMode] = useState<CentralDisplay>('dial');\n  // #188 : bord de vent sur l'aiguille du cadran (apparent par défaut,\n  // façon Raymarine) — persisté et partagé avec COASTAL et la rangée\n  // basse (mynav:wind-needle).\n  const [needleMode, setNeedleMode] = useState<WindNeedleMode>(readWindNeedleMode);\n\n  const cog = data.compass?.cog ?? null;\n  const hdg = data.compass?.heading ?? null;\n  const sog = data.speed?.sog ?? null;\n  // Jumelage design revue 2 : SOG+STW ensemble partout. 0.0 = donnée\n  // réelle, affichée telle quelle ; '--' seulement sans donnée (VHW absent).\n  const stw = data.speed?.stw ?? null;\n  const maxSpeed = data.speed?.maxSpeed ?? null;\n  // #176 : sources du cadran vent (mêmes que COASTAL — vent du point)\n  const twd = data.wind?.direction ?? null;\n  const tws = data.trueWind?.speedKnots ?? null;\n  const twa = data.trueWind?.angleDegrees ?? null;\n  const aws = data.apparentWind?.speedKnots ?? null;\n  const awa = data.apparentWind?.angleDegrees ?? null;\n  const depth = data.depth?.depth ?? null;\n  const waterTemp = data.depth?.temperature ?? null;\n  // #182 retour n°13 : heure + position remplacent la bande d'état en HELM\n  const localTime = data.gpsTime?.localTime ?? null;\n  const utcTime = data.gpsTime?.utcTime ?? null;\n  const localDate = data.gpsTime?.date ?? null;\n  const position = data.position;\n  // #184 retour n°21-quater : qualité du signal GPS (précision en mètres)\n  const gpsAccuracy = data.gpsAccuracy ?? null;\n\n  const fmt = (value: number | null, digits: number, unit: string) =>\n    value === null ? '--' : `${value.toFixed(digits)} ${unit}`;\n\n  // Mode EFFECTIF : si l'instrument courant ne propose pas le mode\n  // mémorisé (ex. 'half' en revenant au vent), repli sur son premier\n  // mode — sans toucher à l'état (le mode d'origine est restauré en\n  // revenant sur l'instrument qui le propose).\n  const modes = MODES[central];\n  const effectiveMode: CentralDisplay = modes.includes(centralMode)\n    ? centralMode\n    : modes[0] ?? 'dial';\n\n  const centralTitle =\n    central === 'compass'\n      ? 'COMPASS'\n      : central === 'speed'\n        ? 'SOG'\n        : central === 'depth'\n          ? 'DEPTH'\n          : central === 'time'\n            ? 'TIME'\n            : central === 'position'\n              ? 'POSITION'\n              : 'WIND';\n\n  // Switch segmenté (header du central, à GAUCHE du titre) — absent\n  // pour profondeur/heure/position (retour n°21-quater).\n  const modeSwitch =\n    modes.length > 0 ? (\n      <div\n        className=\"helm-mode-switch\"\n        role=\"group\"\n        aria-label=\"Format d'affichage\"\n        data-testid=\"helm-mode-switch\"\n      >\n        {modes.map((mode) => (\n          <button\n            key={mode}\n            type=\"button\"\n            className={`helm-switch-btn${mode === effectiveMode ? ' active' : ''}`}\n            aria-pressed={mode === effectiveMode}\n            onClick={() => setCentralMode(mode)}\n          >\n            {MODE_LABEL[mode]}\n          </button>\n        ))}\n      </div>\n    ) : null;\n\n  // ===== vues numériques CADRÉES (#184 retour n°21-quater) =====\n  const framedNumeric =\n    central === 'compass' ? (\n      <div className=\"helm-central-value\">\n        <FramedReadouts\n          data-testid=\"helm-central-numeric\"\n          rows={[\n            {\n              label: 'COG',\n              labelClass: 'lbl-cog',\n              value: cog === null ? '--' : `${Math.round(normalizeDeg(cog))}°`\n            },\n            {\n              label: 'HDG',\n              labelClass: 'lbl-hdg',\n              value: hdg === null ? '--' : `${Math.round(normalizeDeg(hdg))}°`\n            }\n          ]}\n        />\n      </div>\n    ) : central === 'speed' ? (\n      <div className=\"helm-central-value\">\n        <FramedReadouts\n          data-testid=\"helm-central-numeric\"\n          rows={[\n            {\n              label: 'STW',\n              labelClass: 'lbl-stw',\n              value: stw === null ? '--' : stw.toFixed(1),\n              unit: 'kn'\n            },\n            {\n              label: 'SOG',\n              labelClass: 'lbl-sog',\n              value: sog === null ? '--' : sog.toFixed(1),\n              unit: 'kn'\n            },\n            {\n              label: 'MAX',\n              labelClass: 'lbl-max',\n              value: maxSpeed === null ? '--.-' : maxSpeed.toFixed(1),\n              unit: 'kn',\n              secondary: true,\n              extra: onResetMaxSpeed ? (\n                <button\n                  type=\"button\"\n                  className=\"speed-max-reset\"\n                  onClick={onResetMaxSpeed}\n                  title=\"Reset session max speed\"\n                >\n                  RESET\n                </button>\n              ) : undefined\n            }\n          ]}\n        />\n      </div>\n    ) : central === 'depth' ? (\n      <div className=\"helm-central-value\">\n        <FramedReadouts\n          data-testid=\"helm-central-numeric\"\n          rows={[\n            {\n              label: 'DEPTH',\n              labelClass: 'lbl-depth',\n              value: depth === null ? '--' : depth.toFixed(1),\n              unit: 'm'\n            },\n            {\n              label: 'TEMP',\n              value: waterTemp === null ? '--' : waterTemp.toFixed(1),\n              unit: '°C',\n              secondary: true\n            }\n          ]}\n        />\n      </div>\n    ) : central === 'time' ? (\n      <div className=\"helm-central-value\">\n        <FramedReadouts\n          data-testid=\"helm-central-numeric\"\n          rows={[\n            { label: 'LOCAL', value: localTime ?? '--' },\n            { label: 'TU', value: utcTime ?? '--' }\n          ]}\n        />\n      </div>\n    ) : central === 'position' ? (\n      <div className=\"helm-central-value\">\n        <FramedReadouts\n          data-testid=\"helm-central-numeric\"\n          rows={[\n            {\n              label: 'LAT',\n              value: position === null ? '--' : formatCoordinate(position.latitude, true)\n            },\n            {\n              label: 'LON',\n              value: position === null ? '--' : formatCoordinate(position.longitude, false)\n            },\n            {\n              label: 'GPS',\n              labelClass: 'lbl-gps',\n              rowClass: 'gps',\n              value: gpsAccuracy === null ? '--' : `± ${Math.round(gpsAccuracy)} m`,\n              secondary: true\n            }\n          ]}\n        />\n      </div>\n    ) : null; // vent : la vue digitale existante (TWS énorme) reste\n\n  // ===== contenu central selon l'instrument et le mode =====\n  const renderCentral = () => {\n    if (central === 'compass') {\n      if (effectiveMode === 'dial') {\n        /* #182 retours n°14/15/16 : cadran course-up OCCUPANT l'espace\n           disponible ; COG/HDG À L'INTÉRIEUR du cadran (maquette). */\n        return (\n          <div className=\"helm-central-value\">\n            <div className=\"helm-compass-stage\">\n              <CompassDial cog={cog} heading={hdg} fill />\n            </div>\n          </div>\n        );\n      }\n      if (effectiveMode === 'half') {\n        /* #184 retour n°21-quater : demi-cadran LEGACY en grand au\n           central (rose -COG, aiguille cyan fixe, cap superposé,\n           HDG/COG en secondaires) — jamais rogné (chaîne flex\n           min-height: 0 comme les autres stages). */\n        return (\n          <div className=\"helm-central-value\">\n            <div className=\"helm-compass-half-stage\">\n              <CompassHalfDial cog={cog} heading={hdg} fill />\n            </div>\n          </div>\n        );\n      }\n      return framedNumeric;\n    }\n    if (central === 'speed') {\n      if (effectiveMode === 'dial') {\n        /* #184 retour n°21-quater : jauge legacy du Speedometer en\n           grand au central (aiguilles STW/SOG, marque MAX, readouts,\n           ligne MAX + RESET). */\n        return (\n          <div className=\"helm-central-value\">\n            <div className=\"helm-speed-stage\">\n              <SpeedGauge\n                sog={sog}\n                stw={stw}\n                maxSpeed={maxSpeed}\n                onResetMaxSpeed={onResetMaxSpeed}\n              />\n            </div>\n          </div>\n        );\n      }\n      return framedNumeric;\n    }\n    if (central === 'wind') {\n      /* Mode cadran : cadran Raymarine occupant l'espace (#180 n°9) +\n         les QUATRE valeurs du vent en digital sous le cadran (#182\n         retour n°13). Mode numérique : TWS énorme + AWS/TWA/AWA\n         dessous (livré au retour n°21, inchangé). */\n      if (effectiveMode === 'numeric') {\n        return (\n          <div className=\"helm-central-value helm-central-digital\" data-testid=\"helm-central-digital\">\n            <span className=\"helm-digital-label\">TWS</span>\n            <span className=\"helm-digital-value\">{tws === null ? '--' : tws.toFixed(0)}</span>\n            <span className=\"helm-unit\">kt</span>\n            <div className=\"helm-wind-readouts\">\n              <span className=\"helm-readout\">\n                <span className=\"helm-readout-lbl\">AWS</span>\n                <strong>{fmt(aws, 0, 'kt')}</strong>\n              </span>\n              <span className=\"helm-readout\">\n                <span className=\"helm-readout-lbl\">TWA</span>\n                <strong>{twa === null ? '--' : `${Math.round(Math.abs(twa))}°`}</strong>\n              </span>\n              <span className=\"helm-readout\">\n                <span className=\"helm-readout-lbl\">AWA</span>\n                <strong>{awa === null ? '--' : `${Math.round(Math.abs(awa))}°`}</strong>\n              </span>\n            </div>\n          </div>\n        );\n      }\n      return (\n        <div className=\"helm-central-value\">\n          {/* Cadran Raymarine occupant l'espace disponible (#180 retour n°9) */}\n          <div className=\"helm-wind-stage\">\n            <WindDial\n              twdDeg={twd}\n              twsKts={tws}\n              awaDeg={awa}\n              twaDeg={twa}\n              mode={needleMode}\n              fill\n            />\n          </div>\n          {/* #182 retour n°13 : les QUATRE valeurs du vent en digital sous\n              le cadran — TWS, AWS, TWA, AWA. */}\n          <div className=\"helm-wind-readouts\" data-testid=\"helm-wind-readouts\">\n            <span className=\"helm-readout\">\n              <span className=\"helm-readout-lbl\">TWS</span>\n              <strong>{fmt(tws, 0, 'kt')}</strong>\n            </span>\n            <span className=\"helm-readout\">\n              <span className=\"helm-readout-lbl\">AWS</span>\n              <strong>{fmt(aws, 0, 'kt')}</strong>\n            </span>\n            <span className=\"helm-readout\">\n              <span className=\"helm-readout-lbl\">TWA</span>\n              <strong>{twa === null ? '--' : `${Math.round(Math.abs(twa))}°`}</strong>\n            </span>\n            <span className=\"helm-readout\">\n              <span className=\"helm-readout-lbl\">AWA</span>\n              <strong>{awa === null ? '--' : `${Math.round(Math.abs(awa))}°`}</strong>\n            </span>\n          </div>\n        </div>\n      );\n    }\n    // depth / time / position : vue numérique cadrée, pas de switch\n    return framedNumeric;\n  };\n\n  // #184 retour n°21 : ordre demandé par Dom — HEURE en haut, POSITION\n  // en 2e, puis VITESSE, VENT, CAP, PROFONDEUR. Les SIX tuiles restent\n  // TOUJOURS visibles (l'info passe en grand au centre, la tuile reste).\n  const tileOrder: CentralInstrument[] = [\n    'time',\n    'position',\n    'speed',\n    'wind',\n    'compass',\n    'depth'\n  ];\n\n  // Contenu digital d'une tuile par instrument (jumelages conservés).\n  const tileData = (type: CentralInstrument) => {\n    if (type === 'wind') {\n      return {\n        label: 'TWS',\n        value: tws === null ? '--' : tws.toFixed(0),\n        sub: twa === null ? 'no wind' : `kt · TWA ${Math.round(Math.abs(twa))}°`,\n        testid: 'helm-compact-wind',\n        name: 'VENT'\n      };\n    }\n    if (type === 'speed') {\n      return {\n        label: 'SOG',\n        value: sog === null ? '--' : sog.toFixed(1),\n        sub: stw === null ? 'kn · STW --' : `kn · STW ${stw.toFixed(1)}`,\n        testid: 'helm-compact-sog',\n        name: 'VITESSE'\n      };\n    }\n    if (type === 'compass') {\n      return {\n        label: 'COG',\n        value: cog === null ? '--' : `${Math.round(normalizeDeg(cog))}°`,\n        sub: hdg === null ? 'HDG --' : `HDG ${Math.round(normalizeDeg(hdg))}°`,\n        testid: 'helm-compact-compass',\n        name: 'CAP'\n      };\n    }\n    if (type === 'depth') {\n      return {\n        label: 'DEPTH',\n        value: depth === null ? '--' : depth.toFixed(1),\n        sub: 'm',\n        testid: 'helm-compact-depth',\n        name: 'PROFONDEUR'\n      };\n    }\n    if (type === 'time') {\n      return {\n        label: 'TIME',\n        value: localTime ?? '--',\n        sub: localDate ?? 'local',\n        testid: 'helm-compact-time',\n        name: 'HEURE'\n      };\n    }\n    return {\n      label: 'POSITION',\n      value: position === null ? '--' : formatCoordinate(position.latitude, true),\n      sub: position === null ? 'WGS 84' : formatCoordinate(position.longitude, false),\n      testid: 'helm-compact-position',\n      name: 'POSITION'\n    };\n  };\n\n  return (\n    <div className=\"helm-panel\" role=\"group\" aria-label=\"Helm instruments\">\n      {/* Instrument central : 2/3 de la largeur (#182). Le switch\n          segmenté vit dans le header (headerPrefix, à gauche du titre). */}\n      <div className=\"helm-central\">\n        <InstrumentCard\n          title={centralTitle}\n          hideToggle\n          headerPrefix={\n            <>\n              {/* #188 : APPARENT | VRAI — bord de l'aiguille du cadran\n                  vent, avant le switch de format (persisté, partagé). */}\n              {central === 'wind' && (\n                <WindNeedleSwitch\n                  mode={needleMode}\n                  onChange={(m) => {\n                    setNeedleMode(m);\n                    writeWindNeedleMode(m);\n                  }}\n                  testId=\"helm-wind-needle-switch\"\n                />\n              )}\n              {modeSwitch}\n            </>\n          }\n        >\n          {renderCentral()}\n        </InstrumentCard>\n      </div>\n\n      {/* Colonne droite : 1/3, VUE DIGITALE, les SIX instruments TOUJOURS\n          visibles (retour n°21 #184) — ordre HEURE, POSITION, VITESSE,\n          VENT, CAP, PROFONDEUR. Chaque tuile est CLIQUABLE et OCCUPE tout\n          l'espace disponible ; la tuile de l'instrument AU CENTRE reste\n          affichée et est SURLIGNÉE (cadre accent + pastille). */}\n      <div className=\"helm-compact\" role=\"group\" aria-label=\"Instruments numériques\">\n        {tileOrder.map((type) => {\n          const tile = tileData(type);\n          const active = type === central;\n          return (\n            <button\n              key={type}\n              type=\"button\"\n              className={`helm-tile${active ? ' active' : ''}`}\n              data-testid={tile.testid}\n              aria-label={`Afficher ${tile.name} au centre`}\n              aria-current={active ? 'true' : undefined}\n              onClick={() => setCentral(type)}\n            >\n              <span className=\"helm-tile-lbl\">{tile.label}</span>\n              <strong className=\"helm-tile-val\">{tile.value}</strong>\n              <small className={type === 'compass' ? 'helm-tile-sub helm-hdg' : 'helm-tile-sub'}>\n                {tile.sub}\n              </small>\n            </button>\n          );\n        })}\n      </div>\n    </div>\n  );\n};\n\nexport default HelmPanel;\n","file_size_bytes":18643,"returned_bytes":18643,"offset":0,"lines_read":511,"was_truncated":false,"total_lines":511,"next_offset":null}
+import React, { useState } from 'react';
+import type { NavigationData } from '../../types';
+import { normalizeDeg } from '../../utils/instrumentPrimitives';
+import {
+  readWindNeedleMode,
+  writeWindNeedleMode,
+  type WindNeedleMode
+} from '../../utils/instrumentMode';
+import { formatCoordinate } from '../../utils/formatCoordinate';
+import CompassDial from './CompassDial';
+import CompassHalfDial from './CompassHalfDial';
+import WindDial from './WindDial';
+import WindNeedleSwitch from './WindNeedleSwitch';
+import SpeedGauge from './SpeedGauge';
+import FramedReadouts from './FramedReadouts';
+import InstrumentCard from './InstrumentCard';
+
+/** Panneau HELM (refonte instruments, Phase 1 — #158) : instrument
+ * central commutable en grand + colonne de tuiles digitales.
+ *
+ * #182 (retour n°12/13) : central sur 2/3, colonne droite sur 1/3 en
+ * VUE DIGITALE — SIX instruments (vent, cap, vitesse, PROFONDEUR,
+ * HEURE, POSITION), TOUTES les tuiles cliquables, le clic affiche
+ * l'information EN GRAND au centre, la tuile RESTE à droite et
+ * l'active est SURLIGNÉE (cadre accent).
+ *
+ * #184 (retour n°21-quater de Dom, maquette validée) : SWITCH
+ * SEGMENTÉ à gauche du titre du container central — COMPAS : TROIS
+ * états (CADRAN course-up / 1/2 CADRAN legacy / NUMÉRIQUE) ;
+ * VITESSE et VENT : DEUX (CADRAN / NUMÉRIQUE) ; PROFONDEUR, HEURE,
+ * POSITION : AUCUN (pas de switch du tout). Vues numériques CADRÉES
+ * (lignes label/valeur, même philosophie partout) : compas COG/HDG ;
+ * vitesse STW/SOG/MAX + bouton RESET ; heure LOCALE/TU ; profondeur
+ * DEPTH/TEMP ; position LAT/LON + qualité du signal GPS (± m).
+ * VMG retiré (retour n°21-quater) : les informations de route suivie
+ * (ETA, next waypoint…) arriveront dans cette vue plus tard. */
+
+type CentralInstrument = 'wind' | 'compass' | 'speed' | 'depth' | 'time' | 'position';
+
+/** Format d'affichage du central : 'dial' = cadran course-up (ou
+ * jauge/cadran selon l'instrument), 'half' = demi-cadran legacy
+ * (compas uniquement), 'numeric' = vue numérique cadrée. */
+type CentralDisplay = 'dial' | 'half' | 'numeric';
+
+interface HelmPanelProps {
+  data: NavigationData;
+  /** #184 : reset du max de vitesse de session — bouton RESET de la
+   * vue vitesse (cadran et numérique). */
+  onResetMaxSpeed?: () => void;
+}
+
+/** Segments du switch par instrument (maquette n°21-quater) : le
+ * compas a le segment 1/2 CADRAN en plus ; profondeur/heure/position
+ * n'ont PAS de switch (liste vide). */
+const MODES: Record<CentralInstrument, CentralDisplay[]> = {
+  compass: ['dial', 'half', 'numeric'],
+  speed: ['dial', 'numeric'],
+  wind: ['dial', 'numeric'],
+  depth: [],
+  time: [],
+  position: []
+};
+
+const MODE_LABEL: Record<CentralDisplay, string> = {
+  dial: 'CADRAN',
+  half: '1/2 CADRAN',
+  numeric: 'NUMÉRIQUE'
+};
+
+const HelmPanel: React.FC<HelmPanelProps> = ({ data, onResetMaxSpeed }) => {
+  const [central, setCentral] = useState<CentralInstrument>('compass');
+  // #184 : un seul état de format pour tout le central (préférence
+  // d'affichage, pas de données) ; pas de persistance pour l'instant.
+  const [centralMode, setCentralMode] = useState<CentralDisplay>('dial');
+  // #188 : bord de vent sur l'aiguille du cadran (apparent par défaut,
+  // façon Raymarine) — persisté et partagé avec COASTAL et la rangée
+  // basse (mynav:wind-needle).
+  const [needleMode, setNeedleMode] = useState<WindNeedleMode>(readWindNeedleMode);
+
+  const cog = data.compass?.cog ?? null;
+  const hdg = data.compass?.heading ?? null;
+  const sog = data.speed?.sog ?? null;
+  // Jumelage design revue 2 : SOG+STW ensemble partout. 0.0 = donnée
+  // réelle, affichée telle quelle ; '--' seulement sans donnée (VHW absent).
+  const stw = data.speed?.stw ?? null;
+  const maxSpeed = data.speed?.maxSpeed ?? null;
+  // #176 : sources du cadran vent (mêmes que COASTAL — vent du point)
+  const twd = data.wind?.direction ?? null;
+  const tws = data.trueWind?.speedKnots ?? null;
+  const twa = data.trueWind?.angleDegrees ?? null;
+  const aws = data.apparentWind?.speedKnots ?? null;
+  const awa = data.apparentWind?.angleDegrees ?? null;
+  const depth = data.depth?.depth ?? null;
+  const waterTemp = data.depth?.temperature ?? null;
+  // #182 retour n°13 : heure + position remplacent la bande d'état en HELM
+  const localTime = data.gpsTime?.localTime ?? null;
+  const utcTime = data.gpsTime?.utcTime ?? null;
+  const localDate = data.gpsTime?.date ?? null;
+  const position = data.position;
+  // #184 retour n°21-quater : qualité du signal GPS (précision en mètres)
+  const gpsAccuracy = data.gpsAccuracy ?? null;
+
+  const fmt = (value: number | null, digits: number, unit: string) =>
+    value === null ? '--' : `${value.toFixed(digits)} ${unit}`;
+
+  // Mode EFFECTIF : si l'instrument courant ne propose pas le mode
+  // mémorisé (ex. 'half' en revenant au vent), repli sur son premier
+  // mode — sans toucher à l'état (le mode d'origine est restauré en
+  // revenant sur l'instrument qui le propose).
+  const modes = MODES[central];
+  const effectiveMode: CentralDisplay = modes.includes(centralMode)
+    ? centralMode
+    : modes[0] ?? 'dial';
+
+  const centralTitle =
+    central === 'compass'
+      ? 'COMPASS'
+      : central === 'speed'
+        ? 'SOG'
+        : central === 'depth'
+          ? 'DEPTH'
+          : central === 'time'
+            ? 'TIME'
+            : central === 'position'
+              ? 'POSITION'
+              : 'WIND';
+
+  // Switch segmenté (header du central, à GAUCHE du titre) — absent
+  // pour profondeur/heure/position (retour n°21-quater).
+  const modeSwitch =
+    modes.length > 0 ? (
+      <div
+        className="helm-mode-switch"
+        role="group"
+        aria-label="Format d'affichage"
+        data-testid="helm-mode-switch"
+      >
+        {modes.map((mode) => (
+          <button
+            key={mode}
+            type="button"
+            className={`helm-switch-btn${mode === effectiveMode ? ' active' : ''}`}
+            aria-pressed={mode === effectiveMode}
+            onClick={() => setCentralMode(mode)}
+          >
+            {MODE_LABEL[mode]}
+          </button>
+        ))}
+      </div>
+    ) : null;
+
+  // ===== vues numériques CADRÉES (#184 retour n°21-quater) =====
+  const framedNumeric =
+    central === 'compass' ? (
+      <div className="helm-central-value">
+        <FramedReadouts
+          data-testid="helm-central-numeric"
+          rows={[
+            {
+              label: 'COG',
+              labelClass: 'lbl-cog',
+              value: cog === null ? '--' : `${Math.round(normalizeDeg(cog))}°`
+            },
+            {
+              label: 'HDG',
+              labelClass: 'lbl-hdg',
+              value: hdg === null ? '--' : `${Math.round(normalizeDeg(hdg))}°`
+            }
+          ]}
+        />
+      </div>
+    ) : central === 'speed' ? (
+      <div className="helm-central-value">
+        <FramedReadouts
+          data-testid="helm-central-numeric"
+          rows={[
+            {
+              label: 'STW',
+              labelClass: 'lbl-stw',
+              value: stw === null ? '--' : stw.toFixed(1),
+              unit: 'kn'
+            },
+            {
+              label: 'SOG',
+              labelClass: 'lbl-sog',
+              value: sog === null ? '--' : sog.toFixed(1),
+              unit: 'kn'
+            },
+            {
+              label: 'MAX',
+              labelClass: 'lbl-max',
+              value: maxSpeed === null ? '--.-' : maxSpeed.toFixed(1),
+              unit: 'kn',
+              secondary: true,
+              extra: onResetMaxSpeed ? (
+                <button
+                  type="button"
+                  className="speed-max-reset"
+                  onClick={onResetMaxSpeed}
+                  title="Reset session max speed"
+                >
+                  RESET
+                </button>
+              ) : undefined
+            }
+          ]}
+        />
+      </div>
+    ) : central === 'depth' ? (
+      <div className="helm-central-value">
+        <FramedReadouts
+          data-testid="helm-central-numeric"
+          rows={[
+            {
+              label: 'DEPTH',
+              labelClass: 'lbl-depth',
+              value: depth === null ? '--' : depth.toFixed(1),
+              unit: 'm'
+            },
+            {
+              label: 'TEMP',
+              value: waterTemp === null ? '--' : waterTemp.toFixed(1),
+              unit: '°C',
+              secondary: true
+            }
+          ]}
+        />
+      </div>
+    ) : central === 'time' ? (
+      <div className="helm-central-value">
+        <FramedReadouts
+          data-testid="helm-central-numeric"
+          rows={[
+            { label: 'LOCAL', value: localTime ?? '--' },
+            { label: 'TU', value: utcTime ?? '--' }
+          ]}
+        />
+      </div>
+    ) : central === 'position' ? (
+      <div className="helm-central-value">
+        <FramedReadouts
+          data-testid="helm-central-numeric"
+          rows={[
+            {
+              label: 'LAT',
+              value: position === null ? '--' : formatCoordinate(position.latitude, true)
+            },
+            {
+              label: 'LON',
+              value: position === null ? '--' : formatCoordinate(position.longitude, false)
+            },
+            {
+              label: 'GPS',
+              labelClass: 'lbl-gps',
+              rowClass: 'gps',
+              value: gpsAccuracy === null ? '--' : `± ${Math.round(gpsAccuracy)} m`,
+              secondary: true
+            }
+          ]}
+        />
+      </div>
+    ) : null; // vent : la vue digitale existante (TWS énorme) reste
+
+  // ===== contenu central selon l'instrument et le mode =====
+  const renderCentral = () => {
+    if (central === 'compass') {
+      if (effectiveMode === 'dial') {
+        /* #182 retours n°14/15/16 : cadran course-up OCCUPANT l'espace
+           disponible ; COG/HDG À L'INTÉRIEUR du cadran (maquette). */
+        return (
+          <div className="helm-central-value">
+            <div className="helm-compass-stage">
+              <CompassDial cog={cog} heading={hdg} fill />
+            </div>
+          </div>
+        );
+      }
+      if (effectiveMode === 'half') {
+        /* #184 retour n°21-quater : demi-cadran LEGACY en grand au
+           central (rose -COG, aiguille cyan fixe, cap superposé,
+           HDG/COG en secondaires) — jamais rogné (chaîne flex
+           min-height: 0 comme les autres stages). */
+        return (
+          <div className="helm-central-value">
+            <div className="helm-compass-half-stage">
+              <CompassHalfDial cog={cog} heading={hdg} fill />
+            </div>
+          </div>
+        );
+      }
+      return framedNumeric;
+    }
+    if (central === 'speed') {
+      if (effectiveMode === 'dial') {
+        /* #184 retour n°21-quater : jauge legacy du Speedometer en
+           grand au central (aiguilles STW/SOG, marque MAX, readouts,
+           ligne MAX + RESET). */
+        return (
+          <div className="helm-central-value">
+            <div className="helm-speed-stage">
+              <SpeedGauge
+                sog={sog}
+                stw={stw}
+                maxSpeed={maxSpeed}
+                onResetMaxSpeed={onResetMaxSpeed}
+              />
+            </div>
+          </div>
+        );
+      }
+      return framedNumeric;
+    }
+    if (central === 'wind') {
+      /* Mode cadran : cadran Raymarine occupant l'espace (#180 n°9) +
+         les QUATRE valeurs du vent en digital sous le cadran (#182
+         retour n°13). Mode numérique : TWS énorme + AWS/TWA/AWA
+         dessous (livré au retour n°21, inchangé). */
+      if (effectiveMode === 'numeric') {
+        return (
+          <div className="helm-central-value helm-central-digital" data-testid="helm-central-digital">
+            <span className="helm-digital-label">TWS</span>
+            <span className="helm-digital-value">{tws === null ? '--' : tws.toFixed(0)}</span>
+            <span className="helm-unit">kt</span>
+            <div className="helm-wind-readouts">
+              <span className="helm-readout">
+                <span className="helm-readout-lbl">AWS</span>
+                <strong>{fmt(aws, 0, 'kt')}</strong>
+              </span>
+              <span className="helm-readout">
+                <span className="helm-readout-lbl">TWA</span>
+                <strong>{twa === null ? '--' : `${Math.round(Math.abs(twa))}°`}</strong>
+              </span>
+              <span className="helm-readout">
+                <span className="helm-readout-lbl">AWA</span>
+                <strong>{awa === null ? '--' : `${Math.round(Math.abs(awa))}°`}</strong>
+              </span>
+            </div>
+          </div>
+        );
+      }
+      return (
+        <div className="helm-central-value">
+          {/* Cadran Raymarine occupant l'espace disponible (#180 retour n°9) */}
+          <div className="helm-wind-stage">
+            <WindDial
+              twdDeg={twd}
+              twsKts={tws}
+              awaDeg={awa}
+              twaDeg={twa}
+              mode={needleMode}
+              fill
+            />
+          </div>
+          {/* #182 retour n°13 : les QUATRE valeurs du vent en digital sous
+              le cadran — TWS, AWS, TWA, AWA. */}
+          <div className="helm-wind-readouts" data-testid="helm-wind-readouts">
+            <span className="helm-readout">
+              <span className="helm-readout-lbl">TWS</span>
+              <strong>{fmt(tws, 0, 'kt')}</strong>
+            </span>
+            <span className="helm-readout">
+              <span className="helm-readout-lbl">AWS</span>
+              <strong>{fmt(aws, 0, 'kt')}</strong>
+            </span>
+            <span className="helm-readout">
+              <span className="helm-readout-lbl">TWA</span>
+              <strong>{twa === null ? '--' : `${Math.round(Math.abs(twa))}°`}</strong>
+            </span>
+            <span className="helm-readout">
+              <span className="helm-readout-lbl">AWA</span>
+              <strong>{awa === null ? '--' : `${Math.round(Math.abs(awa))}°`}</strong>
+            </span>
+          </div>
+        </div>
+      );
+    }
+    // depth / time / position : vue numérique cadrée, pas de switch
+    return framedNumeric;
+  };
+
+  // #184 retour n°21 : ordre demandé par Dom — HEURE en haut, POSITION
+  // en 2e, puis VITESSE, VENT, CAP, PROFONDEUR. Les SIX tuiles restent
+  // TOUJOURS visibles (l'info passe en grand au centre, la tuile reste).
+  const tileOrder: CentralInstrument[] = [
+    'time',
+    'position',
+    'speed',
+    'wind',
+    'compass',
+    'depth'
+  ];
+
+  // Contenu digital d'une tuile par instrument (jumelages conservés).
+  const tileData = (type: CentralInstrument) => {
+    if (type === 'wind') {
+      return {
+        label: 'TWS',
+        value: tws === null ? '--' : tws.toFixed(0),
+        sub: twa === null ? 'no wind' : `kt · TWA ${Math.round(Math.abs(twa))}°`,
+        testid: 'helm-compact-wind',
+        name: 'VENT'
+      };
+    }
+    if (type === 'speed') {
+      return {
+        label: 'SOG',
+        value: sog === null ? '--' : sog.toFixed(1),
+        sub: stw === null ? 'kn · STW --' : `kn · STW ${stw.toFixed(1)}`,
+        testid: 'helm-compact-sog',
+        name: 'VITESSE'
+      };
+    }
+    if (type === 'compass') {
+      return {
+        label: 'COG',
+        value: cog === null ? '--' : `${Math.round(normalizeDeg(cog))}°`,
+        sub: hdg === null ? 'HDG --' : `HDG ${Math.round(normalizeDeg(hdg))}°`,
+        testid: 'helm-compact-compass',
+        name: 'CAP'
+      };
+    }
+    if (type === 'depth') {
+      return {
+        label: 'DEPTH',
+        value: depth === null ? '--' : depth.toFixed(1),
+        sub: 'm',
+        testid: 'helm-compact-depth',
+        name: 'PROFONDEUR'
+      };
+    }
+    if (type === 'time') {
+      return {
+        label: 'TIME',
+        value: localTime ?? '--',
+        sub: localDate ?? 'local',
+        testid: 'helm-compact-time',
+        name: 'HEURE'
+      };
+    }
+    return {
+      label: 'POSITION',
+      value: position === null ? '--' : formatCoordinate(position.latitude, true),
+      sub: position === null ? 'WGS 84' : formatCoordinate(position.longitude, false),
+      testid: 'helm-compact-position',
+      name: 'POSITION'
+    };
+  };
+
+  return (
+    <div className="helm-panel" role="group" aria-label="Helm instruments">
+      {/* Instrument central : 2/3 de la largeur (#182). Le switch
+          segmenté vit dans le header (headerPrefix, à gauche du titre). */}
+      <div className="helm-central">
+        <InstrumentCard
+          title={centralTitle}
+          hideToggle
+          headerPrefix={
+            <>
+              {/* #188 : APPARENT | VRAI — bord de l'aiguille du cadran
+                  vent, avant le switch de format (persisté, partagé). */}
+              {central === 'wind' && (
+                <WindNeedleSwitch
+                  mode={needleMode}
+                  onChange={(m) => {
+                    setNeedleMode(m);
+                    writeWindNeedleMode(m);
+                  }}
+                  testId="helm-wind-needle-switch"
+                />
+              )}
+              {modeSwitch}
+            </>
+          }
+        >
+          {renderCentral()}
+        </InstrumentCard>
+      </div>
+
+      {/* Colonne droite : 1/3, VUE DIGITALE, les SIX instruments TOUJOURS
+          visibles (retour n°21 #184) — ordre HEURE, POSITION, VITESSE,
+          VENT, CAP, PROFONDEUR. Chaque tuile est CLIQUABLE et OCCUPE tout
+          l'espace disponible ; la tuile de l'instrument AU CENTRE reste
+          affichée et est SURLIGNÉE (cadre accent + pastille). */}
+      <div className="helm-compact" role="group" aria-label="Instruments numériques">
+        {tileOrder.map((type) => {
+          const tile = tileData(type);
+          const active = type === central;
+          return (
+            <button
+              key={type}
+              type="button"
+              className={`helm-tile${active ? ' active' : ''}`}
+              data-testid={tile.testid}
+              aria-label={`Afficher ${tile.name} au centre`}
+              aria-current={active ? 'true' : undefined}
+              onClick={() => setCentral(type)}
+            >
+              <span className="helm-tile-lbl">{tile.label}</span>
+              <strong className="helm-tile-val">{tile.value}</strong>
+              <small className={type === 'compass' ? 'helm-tile-sub helm-hdg' : 'helm-tile-sub'}>
+                {tile.sub}
+              </small>
+            </button>
+          );
+        })}
+      </div>
+    </div>
+  );
+};
+
+export default HelmPanel;

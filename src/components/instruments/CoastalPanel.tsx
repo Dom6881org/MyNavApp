@@ -1,1 +1,182 @@
-{"path":"/home/user/src186/src/components/instruments/CoastalPanel.tsx","content":"import React, { useState } from 'react';\nimport type { NavigationData } from '../../types';\nimport InstrumentCard from './InstrumentCard';\nimport WindDial from './WindDial';\nimport WindNeedleSwitch from './WindNeedleSwitch';\nimport {\n  readWindNeedleMode,\n  writeWindNeedleMode,\n  type WindNeedleMode\n} from '../../utils/instrumentMode';\nimport CoastalDepthCard from './CoastalDepthCard';\nimport CoastalMap from './CoastalMap';\nimport { useAnchor } from '../../hooks/useAnchor';\n\n/** Panneau COASTAL — reset complet (#186, maquettes c1–c4 validées).\n *\n * Pensé pour L'ARRIVÉE AU MOUILLAGE : trois colonnes égales (1/3\n * chacune), VENT / PROFONDEUR / CARTE, le panneau prend tout l'écran\n * (bandeau haut classique conservé au-dessus, hors de ce panneau).\n *\n * - VENT : mêmes présentation et options que HELM — switch segmenté\n *   CADRAN / NUMÉRIQUE dans le header (pattern #184 headerPrefix).\n * - PROFONDEUR : colonne verticale 0 m EN BAS, zones rouge 0–2 /\n *   orange 2–3 / vert, échelle adaptative ×2, marqueur + alerte ≤ 2 m\n *   (voir CoastalDepthCard).\n * - CARTE : fond + bateau + ⚓, épuré au max (voir CoastalMap) + bouton\n *   « MOUILLAGE FAIT » (localStorage, un nouveau mouillage remplace).\n *\n * MotionPanel et BottomInstrumentsPanel disparaissent de la vue\n * (reset complet — App.tsx). */\n\ntype WindDisplay = 'dial' | 'numeric';\n\ninterface CoastalPanelProps {\n  data: NavigationData;\n}\n\nconst CoastalPanel: React.FC<CoastalPanelProps> = ({ data }) => {\n  const [windMode, setWindMode] = useState<WindDisplay>('dial');\n  // #188 : bord de l'aiguille (apparent par défaut) — même mode\n  // partagé que HELM et la rangée basse (mynav:wind-needle).\n  const [needleMode, setNeedleMode] = useState<WindNeedleMode>(readWindNeedleMode);\n  const { anchor, saveAnchor, clearAnchor } = useAnchor();\n\n  // Sources du vent identiques à HELM (#176) : vent du point pour TWD,\n  // vent vrai interpolé pour TWS/TWA, apparent pour AWS/AWA.\n  const twd = data.wind?.direction ?? null;\n  const tws = data.trueWind?.speedKnots ?? null;\n  const twa = data.trueWind?.angleDegrees ?? null;\n  const aws = data.apparentWind?.speedKnots ?? null;\n  const awa = data.apparentWind?.angleDegrees ?? null;\n\n  const depth = data.depth?.depth ?? null;\n  const waterTemp = data.depth?.temperature ?? null;\n  const sensorAlarm = data.depth?.alarm ?? false;\n  const alarmDepth = data.depth?.alarmDepth ?? null;\n\n  const position = data.position ?? null;\n  const heading = data.compass?.heading ?? data.compass?.cog ?? null;\n\n  const fmt = (value: number | null, digits: number, unit: string) =>\n    value === null ? '--' : `${value.toFixed(digits)} ${unit}`;\n\n  const windSwitch = (\n    <div\n      className=\"helm-mode-switch\"\n      role=\"group\"\n      aria-label=\"Format d'affichage du vent\"\n      data-testid=\"coastal-wind-switch\"\n    >\n      {(['dial', 'numeric'] as WindDisplay[]).map((mode) => (\n        <button\n          key={mode}\n          type=\"button\"\n          className={`helm-switch-btn${mode === windMode ? ' active' : ''}`}\n          aria-pressed={mode === windMode}\n          onClick={() => setWindMode(mode)}\n        >\n          {mode === 'dial' ? 'CADRAN' : 'NUMÉRIQUE'}\n        </button>\n      ))}\n    </div>\n  );\n\n  const windReadouts = (compact: boolean) => {\n    const items = compact\n      ? ([\n          ['AWS', aws === null ? '--' : `${aws.toFixed(0)} kt`],\n          ['TWA', twa === null ? '--' : `${Math.round(Math.abs(twa))}°`],\n          ['AWA', awa === null ? '--' : `${Math.round(Math.abs(awa))}°`]\n        ] as const)\n      : ([\n          ['TWS', fmt(tws, 0, 'kt')],\n          ['AWS', fmt(aws, 0, 'kt')],\n          ['TWA', twa === null ? '--' : `${Math.round(Math.abs(twa))}°`],\n          ['AWA', awa === null ? '--' : `${Math.round(Math.abs(awa))}°`]\n        ] as const);\n    return (\n      <div className=\"helm-wind-readouts\" data-testid=\"coastal-wind-readouts\">\n        {items.map(([label, value]) => (\n          <span className=\"helm-readout\" key={label}>\n            <span className=\"helm-readout-lbl\">{label}</span>\n            <strong>{value}</strong>\n          </span>\n        ))}\n      </div>\n    );\n  };\n\n  return (\n    <div className=\"coastal-panel\" role=\"group\" aria-label=\"Coastal instruments\">\n      <div className=\"coastal-grid\">\n        {/* Colonne 1/3 — VENT : même présentation et options que HELM. */}\n        <InstrumentCard\n          title=\"VENT\"\n          hideToggle\n          headerPrefix={\n            <>\n              {/* #188 : APPARENT | VRAI avant le switch de format */}\n              <WindNeedleSwitch\n                mode={needleMode}\n                onChange={(m) => {\n                  setNeedleMode(m);\n                  writeWindNeedleMode(m);\n                }}\n                testId=\"coastal-wind-needle-switch\"\n              />\n              {windSwitch}\n            </>\n          }\n        >\n          {windMode === 'numeric' ? (\n            <div\n              className=\"helm-central-value helm-central-digital\"\n              data-testid=\"coastal-wind-numeric\"\n            >\n              <span className=\"helm-digital-label\">TWS</span>\n              <span className=\"helm-digital-value\">\n                {tws === null ? '--' : tws.toFixed(0)}\n              </span>\n              <span className=\"helm-unit\">kt</span>\n              {windReadouts(true)}\n            </div>\n          ) : (\n            <div className=\"helm-central-value\">\n              <div className=\"coastal-wind-stage\">\n                <WindDial\n                  twdDeg={twd}\n                  twsKts={tws}\n                  awaDeg={awa}\n                  twaDeg={twa}\n                  mode={needleMode}\n                  fill\n                />\n              </div>\n              {windReadouts(false)}\n            </div>\n          )}\n        </InstrumentCard>\n\n        {/* Colonne 1/3 — PROFONDEUR : colonne verticale, 0 m en bas. */}\n        <CoastalDepthCard\n          depth={depth}\n          temperature={waterTemp}\n          alarmDepth={alarmDepth}\n          sensorAlarm={sensorAlarm}\n        />\n\n        {/* Colonne 1/3 — CARTE : fond + bateau + ⚓, mouillage fait. */}\n        <CoastalMap\n          position={position}\n          heading={heading}\n          anchor={anchor}\n          onDropAnchor={saveAnchor}\n          onClearAnchor={clearAnchor}\n        />\n      </div>\n    </div>\n  );\n};\n\nexport default CoastalPanel;\n","file_size_bytes":6406,"returned_bytes":6406,"offset":0,"lines_read":182,"was_truncated":false,"total_lines":182,"next_offset":null}
+import React, { useState } from 'react';
+import type { NavigationData } from '../../types';
+import InstrumentCard from './InstrumentCard';
+import WindDial from './WindDial';
+import WindNeedleSwitch from './WindNeedleSwitch';
+import {
+  readWindNeedleMode,
+  writeWindNeedleMode,
+  type WindNeedleMode
+} from '../../utils/instrumentMode';
+import CoastalDepthCard from './CoastalDepthCard';
+import CoastalMap from './CoastalMap';
+import { useAnchor } from '../../hooks/useAnchor';
+
+/** Panneau COASTAL — reset complet (#186, maquettes c1–c4 validées).
+ *
+ * Pensé pour L'ARRIVÉE AU MOUILLAGE : trois colonnes égales (1/3
+ * chacune), VENT / PROFONDEUR / CARTE, le panneau prend tout l'écran
+ * (bandeau haut classique conservé au-dessus, hors de ce panneau).
+ *
+ * - VENT : mêmes présentation et options que HELM — switch segmenté
+ *   CADRAN / NUMÉRIQUE dans le header (pattern #184 headerPrefix).
+ * - PROFONDEUR : colonne verticale 0 m EN BAS, zones rouge 0–2 /
+ *   orange 2–3 / vert, échelle adaptative ×2, marqueur + alerte ≤ 2 m
+ *   (voir CoastalDepthCard).
+ * - CARTE : fond + bateau + ⚓, épuré au max (voir CoastalMap) + bouton
+ *   « MOUILLAGE FAIT » (localStorage, un nouveau mouillage remplace).
+ *
+ * MotionPanel et BottomInstrumentsPanel disparaissent de la vue
+ * (reset complet — App.tsx). */
+
+type WindDisplay = 'dial' | 'numeric';
+
+interface CoastalPanelProps {
+  data: NavigationData;
+}
+
+const CoastalPanel: React.FC<CoastalPanelProps> = ({ data }) => {
+  const [windMode, setWindMode] = useState<WindDisplay>('dial');
+  // #188 : bord de l'aiguille (apparent par défaut) — même mode
+  // partagé que HELM et la rangée basse (mynav:wind-needle).
+  const [needleMode, setNeedleMode] = useState<WindNeedleMode>(readWindNeedleMode);
+  const { anchor, saveAnchor, clearAnchor } = useAnchor();
+
+  // Sources du vent identiques à HELM (#176) : vent du point pour TWD,
+  // vent vrai interpolé pour TWS/TWA, apparent pour AWS/AWA.
+  const twd = data.wind?.direction ?? null;
+  const tws = data.trueWind?.speedKnots ?? null;
+  const twa = data.trueWind?.angleDegrees ?? null;
+  const aws = data.apparentWind?.speedKnots ?? null;
+  const awa = data.apparentWind?.angleDegrees ?? null;
+
+  const depth = data.depth?.depth ?? null;
+  const waterTemp = data.depth?.temperature ?? null;
+  const sensorAlarm = data.depth?.alarm ?? false;
+  const alarmDepth = data.depth?.alarmDepth ?? null;
+
+  const position = data.position ?? null;
+  const heading = data.compass?.heading ?? data.compass?.cog ?? null;
+
+  const fmt = (value: number | null, digits: number, unit: string) =>
+    value === null ? '--' : `${value.toFixed(digits)} ${unit}`;
+
+  const windSwitch = (
+    <div
+      className="helm-mode-switch"
+      role="group"
+      aria-label="Format d'affichage du vent"
+      data-testid="coastal-wind-switch"
+    >
+      {(['dial', 'numeric'] as WindDisplay[]).map((mode) => (
+        <button
+          key={mode}
+          type="button"
+          className={`helm-switch-btn${mode === windMode ? ' active' : ''}`}
+          aria-pressed={mode === windMode}
+          onClick={() => setWindMode(mode)}
+        >
+          {mode === 'dial' ? 'CADRAN' : 'NUMÉRIQUE'}
+        </button>
+      ))}
+    </div>
+  );
+
+  const windReadouts = (compact: boolean) => {
+    const items = compact
+      ? ([
+          ['AWS', aws === null ? '--' : `${aws.toFixed(0)} kt`],
+          ['TWA', twa === null ? '--' : `${Math.round(Math.abs(twa))}°`],
+          ['AWA', awa === null ? '--' : `${Math.round(Math.abs(awa))}°`]
+        ] as const)
+      : ([
+          ['TWS', fmt(tws, 0, 'kt')],
+          ['AWS', fmt(aws, 0, 'kt')],
+          ['TWA', twa === null ? '--' : `${Math.round(Math.abs(twa))}°`],
+          ['AWA', awa === null ? '--' : `${Math.round(Math.abs(awa))}°`]
+        ] as const);
+    return (
+      <div className="helm-wind-readouts" data-testid="coastal-wind-readouts">
+        {items.map(([label, value]) => (
+          <span className="helm-readout" key={label}>
+            <span className="helm-readout-lbl">{label}</span>
+            <strong>{value}</strong>
+          </span>
+        ))}
+      </div>
+    );
+  };
+
+  return (
+    <div className="coastal-panel" role="group" aria-label="Coastal instruments">
+      <div className="coastal-grid">
+        {/* Colonne 1/3 — VENT : même présentation et options que HELM. */}
+        <InstrumentCard
+          title="VENT"
+          hideToggle
+          headerPrefix={
+            <>
+              {/* #188 : APPARENT | VRAI avant le switch de format */}
+              <WindNeedleSwitch
+                mode={needleMode}
+                onChange={(m) => {
+                  setNeedleMode(m);
+                  writeWindNeedleMode(m);
+                }}
+                testId="coastal-wind-needle-switch"
+              />
+              {windSwitch}
+            </>
+          }
+        >
+          {windMode === 'numeric' ? (
+            <div
+              className="helm-central-value helm-central-digital"
+              data-testid="coastal-wind-numeric"
+            >
+              <span className="helm-digital-label">TWS</span>
+              <span className="helm-digital-value">
+                {tws === null ? '--' : tws.toFixed(0)}
+              </span>
+              <span className="helm-unit">kt</span>
+              {windReadouts(true)}
+            </div>
+          ) : (
+            <div className="helm-central-value">
+              <div className="coastal-wind-stage">
+                <WindDial
+                  twdDeg={twd}
+                  twsKts={tws}
+                  awaDeg={awa}
+                  twaDeg={twa}
+                  mode={needleMode}
+                  fill
+                />
+              </div>
+              {windReadouts(false)}
+            </div>
+          )}
+        </InstrumentCard>
+
+        {/* Colonne 1/3 — PROFONDEUR : colonne verticale, 0 m en bas. */}
+        <CoastalDepthCard
+          depth={depth}
+          temperature={waterTemp}
+          alarmDepth={alarmDepth}
+          sensorAlarm={sensorAlarm}
+        />
+
+        {/* Colonne 1/3 — CARTE : fond + bateau + ⚓, mouillage fait. */}
+        <CoastalMap
+          position={position}
+          heading={heading}
+          anchor={anchor}
+          onDropAnchor={saveAnchor}
+          onClearAnchor={clearAnchor}
+        />
+      </div>
+    </div>
+  );
+};
+
+export default CoastalPanel;

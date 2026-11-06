@@ -1,1 +1,32 @@
-{"path":"/home/user/src186/src/components/instruments/WindNeedleSwitch.test.tsx","content":"import { fireEvent, render, screen } from '@testing-library/react';\nimport { describe, expect, it, vi } from 'vitest';\nimport WindNeedleSwitch from './WindNeedleSwitch';\n\n/** #188 : switch segmenté APPARENT | VRAI du header des cartes vent\n * (pattern #184 — jamais sur le cadran), état partagé mynav:wind-needle. */\n\ndescribe('WindNeedleSwitch (#188)', () => {\n  it('deux segments APPARENT et VRAI', () => {\n    render(<WindNeedleSwitch mode=\"apparent\" onChange={() => {}} testId=\"wind-needle-switch\" />);\n    expect(screen.getByRole('button', { name: 'APPARENT' })).toBeTruthy();\n    expect(screen.getByRole('button', { name: 'VRAI' })).toBeTruthy();\n  });\n\n  it('segment actif marqué aria-pressed et classe active', () => {\n    const { container } = render(\n      <WindNeedleSwitch mode=\"true\" onChange={() => {}} testId=\"wind-needle-switch\" />\n    );\n    const apparent = screen.getByRole('button', { name: 'APPARENT' });\n    const vrai = screen.getByRole('button', { name: 'VRAI' });\n    expect(apparent.getAttribute('aria-pressed')).toBe('false');\n    expect(vrai.getAttribute('aria-pressed')).toBe('true');\n    expect(container.querySelectorAll('.helm-switch-btn.active').length).toBe(1);\n  });\n\n  it('clic VRAI → onChange(\"true\")', () => {\n    const onChange = vi.fn();\n    render(<WindNeedleSwitch mode=\"apparent\" onChange={onChange} testId=\"wind-needle-switch\" />);\n    fireEvent.click(screen.getByRole('button', { name: 'VRAI' }));\n    expect(onChange).toHaveBeenCalledWith('true');\n  });\n});\n","file_size_bytes":1512,"returned_bytes":1512,"offset":0,"lines_read":32,"was_truncated":false,"total_lines":32,"next_offset":null}
+import { fireEvent, render, screen } from '@testing-library/react';
+import { describe, expect, it, vi } from 'vitest';
+import WindNeedleSwitch from './WindNeedleSwitch';
+
+/** #188 : switch segmenté APPARENT | VRAI du header des cartes vent
+ * (pattern #184 — jamais sur le cadran), état partagé mynav:wind-needle. */
+
+describe('WindNeedleSwitch (#188)', () => {
+  it('deux segments APPARENT et VRAI', () => {
+    render(<WindNeedleSwitch mode="apparent" onChange={() => {}} testId="wind-needle-switch" />);
+    expect(screen.getByRole('button', { name: 'APPARENT' })).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'VRAI' })).toBeTruthy();
+  });
+
+  it('segment actif marqué aria-pressed et classe active', () => {
+    const { container } = render(
+      <WindNeedleSwitch mode="true" onChange={() => {}} testId="wind-needle-switch" />
+    );
+    const apparent = screen.getByRole('button', { name: 'APPARENT' });
+    const vrai = screen.getByRole('button', { name: 'VRAI' });
+    expect(apparent.getAttribute('aria-pressed')).toBe('false');
+    expect(vrai.getAttribute('aria-pressed')).toBe('true');
+    expect(container.querySelectorAll('.helm-switch-btn.active').length).toBe(1);
+  });
+
+  it('clic VRAI → onChange("true")', () => {
+    const onChange = vi.fn();
+    render(<WindNeedleSwitch mode="apparent" onChange={onChange} testId="wind-needle-switch" />);
+    fireEvent.click(screen.getByRole('button', { name: 'VRAI' }));
+    expect(onChange).toHaveBeenCalledWith('true');
+  });
+});

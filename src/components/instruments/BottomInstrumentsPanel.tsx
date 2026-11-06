@@ -1,1 +1,84 @@
-{"path":"/home/user/src186/src/components/instruments/BottomInstrumentsPanel.tsx","content":"import React, { useState } from 'react';\nimport type { NavigationData } from '../../types';\nimport InstrumentCard from './InstrumentCard';\nimport WindDial from './WindDial';\nimport WindNeedleSwitch from './WindNeedleSwitch';\nimport {\n  readWindNeedleMode,\n  writeWindNeedleMode,\n  type WindNeedleMode\n} from '../../utils/instrumentMode';\n\n/** Rangée basse façon InstrumentCard (refonte instruments, finalisation —\n * #166) : remplace les WindIndicator/DepthSounder legacy par les cartes\n * de la refonte — WIND avec WindDial (bascule 123/◉ conservée), DEPTH en\n * numérique (pas de cadran possible → sans bascule), alarme profondeur\n * mise en avant comme dans COASTAL. */\n\ninterface BottomInstrumentsPanelProps {\n  data: NavigationData;\n}\n\nconst BottomInstrumentsPanel: React.FC<BottomInstrumentsPanelProps> = ({ data }) => {\n  const depth = data.depth?.depth ?? null;\n  const depthAlarm = data.depth?.alarm ?? false;\n  const alarmDepth = data.depth?.alarmDepth ?? null;\n  const twd = data.wind?.direction ?? null;\n  const tws = data.wind?.speed ?? null;\n  const awa = data.apparentWind?.angleDegrees ?? null;\n  // #188 : TWA pour l'aiguille « vrai » du cadran relatif.\n  const twa = data.trueWind?.angleDegrees ?? null;\n  // #188 : même mode partagé que HELM et COASTAL (mynav:wind-needle).\n  const [needleMode, setNeedleMode] = useState<WindNeedleMode>(readWindNeedleMode);\n\n  return (\n    <div\n      className={depthAlarm ? 'bottom-instruments alarm' : 'bottom-instruments'}\n      role=\"group\"\n      aria-label=\"Bottom instruments\"\n    >\n      <InstrumentCard\n        title=\"WIND\"\n        info={awa === null ? null : <span>AWA {Math.round(Math.abs(awa))}°</span>}\n        headerPrefix={\n          <WindNeedleSwitch\n            mode={needleMode}\n            onChange={(m) => {\n              setNeedleMode(m);\n              writeWindNeedleMode(m);\n            }}\n            testId=\"bottom-wind-needle-switch\"\n          />\n        }\n      >\n        <WindDial\n          twdDeg={twd}\n          twsKts={tws}\n          awaDeg={awa}\n          twaDeg={twa}\n          mode={needleMode}\n        />\n      </InstrumentCard>\n      <InstrumentCard\n        title=\"DEPTH\"\n        hideToggle\n        info={\n          depthAlarm ? (\n            <span className=\"instrument-wrapper-alarm\" role=\"status\">ALARM</span>\n          ) : null\n        }\n      >\n        <div className=\"helm-central-value\" data-testid=\"bottom-depth\">\n          <span className=\"helm-big-value\">{depth === null ? '--' : depth.toFixed(1)}</span>\n          <span className=\"helm-unit\">\n            {depthAlarm\n              ? `m · alarm at ${alarmDepth === null ? '--' : alarmDepth.toFixed(1)}`\n              : 'm'}\n          </span>\n        </div>\n      </InstrumentCard>\n    </div>\n  );\n};\n\nexport default BottomInstrumentsPanel;\n","file_size_bytes":2806,"returned_bytes":2806,"offset":0,"lines_read":84,"was_truncated":false,"total_lines":84,"next_offset":null}
+import React, { useState } from 'react';
+import type { NavigationData } from '../../types';
+import InstrumentCard from './InstrumentCard';
+import WindDial from './WindDial';
+import WindNeedleSwitch from './WindNeedleSwitch';
+import {
+  readWindNeedleMode,
+  writeWindNeedleMode,
+  type WindNeedleMode
+} from '../../utils/instrumentMode';
+
+/** Rangée basse façon InstrumentCard (refonte instruments, finalisation —
+ * #166) : remplace les WindIndicator/DepthSounder legacy par les cartes
+ * de la refonte — WIND avec WindDial (bascule 123/◉ conservée), DEPTH en
+ * numérique (pas de cadran possible → sans bascule), alarme profondeur
+ * mise en avant comme dans COASTAL. */
+
+interface BottomInstrumentsPanelProps {
+  data: NavigationData;
+}
+
+const BottomInstrumentsPanel: React.FC<BottomInstrumentsPanelProps> = ({ data }) => {
+  const depth = data.depth?.depth ?? null;
+  const depthAlarm = data.depth?.alarm ?? false;
+  const alarmDepth = data.depth?.alarmDepth ?? null;
+  const twd = data.wind?.direction ?? null;
+  const tws = data.wind?.speed ?? null;
+  const awa = data.apparentWind?.angleDegrees ?? null;
+  // #188 : TWA pour l'aiguille « vrai » du cadran relatif.
+  const twa = data.trueWind?.angleDegrees ?? null;
+  // #188 : même mode partagé que HELM et COASTAL (mynav:wind-needle).
+  const [needleMode, setNeedleMode] = useState<WindNeedleMode>(readWindNeedleMode);
+
+  return (
+    <div
+      className={depthAlarm ? 'bottom-instruments alarm' : 'bottom-instruments'}
+      role="group"
+      aria-label="Bottom instruments"
+    >
+      <InstrumentCard
+        title="WIND"
+        info={awa === null ? null : <span>AWA {Math.round(Math.abs(awa))}°</span>}
+        headerPrefix={
+          <WindNeedleSwitch
+            mode={needleMode}
+            onChange={(m) => {
+              setNeedleMode(m);
+              writeWindNeedleMode(m);
+            }}
+            testId="bottom-wind-needle-switch"
+          />
+        }
+      >
+        <WindDial
+          twdDeg={twd}
+          twsKts={tws}
+          awaDeg={awa}
+          twaDeg={twa}
+          mode={needleMode}
+        />
+      </InstrumentCard>
+      <InstrumentCard
+        title="DEPTH"
+        hideToggle
+        info={
+          depthAlarm ? (
+            <span className="instrument-wrapper-alarm" role="status">ALARM</span>
+          ) : null
+        }
+      >
+        <div className="helm-central-value" data-testid="bottom-depth">
+          <span className="helm-big-value">{depth === null ? '--' : depth.toFixed(1)}</span>
+          <span className="helm-unit">
+            {depthAlarm
+              ? `m · alarm at ${alarmDepth === null ? '--' : alarmDepth.toFixed(1)}`
+              : 'm'}
+          </span>
+        </div>
+      </InstrumentCard>
+    </div>
+  );
+};
+
+export default BottomInstrumentsPanel;

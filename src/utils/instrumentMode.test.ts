@@ -1,1 +1,108 @@
-{"path":"/home/user/src186/src/utils/instrumentMode.test.ts","content":"import { describe, expect, it } from 'vitest';\nimport {\n  getUiMode,\n  instrumentModeKey,\n  parseStoredMode,\n  parseUiMode,\n  parseWindNeedleMode,\n  readInstrumentMode,\n  readWindNeedleMode,\n  setUiMode,\n  writeInstrumentMode,\n  writeWindNeedleMode\n} from './instrumentMode';\n\ndescribe('instrumentMode (pur)', () => {\n  describe('parseUiMode', () => {\n    it('aucune source : null (legacy)', () => {\n      expect(parseUiMode('', null, null)).toBeNull();\n      expect(parseUiMode('', '0', '0')).toBeNull();\n    });\n\n    it('URL ?ui= prioritaire', () => {\n      expect(parseUiMode('?ui=coastal', 'overview', '1')).toBe('coastal');\n      expect(parseUiMode('?foo=1&ui=overview', null, null)).toBe('overview');\n      expect(parseUiMode('?ui=helm', null, null)).toBe('helm');\n    });\n\n    it('storage mynav:ui-mode sans URL', () => {\n      expect(parseUiMode('', 'coastal', null)).toBe('coastal');\n      expect(parseUiMode('', 'bogus', null)).toBeNull();\n    });\n\n    it('URL ?ui=prep (Phase 3) prioritaire', () => {\n      expect(parseUiMode('?ui=prep', 'overview', null)).toBe('prep');\n      expect(parseUiMode('', 'prep', null)).toBe('prep');\n    });\n\n    it('URL ?ui=legacy (finalisation #166) : selection legacy', () => {\n      expect(parseUiMode('?ui=legacy', 'coastal', null)).toBe('legacy');\n    });\n\n    it('retro-compat Phase 1 : ?helm=1 puis mynav:helm', () => {\n      expect(parseUiMode('?helm=1', null, null)).toBe('helm');\n      expect(parseUiMode('', null, '1')).toBe('helm');\n    });\n  });\n\n  describe('parseStoredMode / instrumentModeKey', () => {\n    it('valeurs valides, fallback sinon', () => {\n      expect(parseStoredMode('dial', 'numeric')).toBe('dial');\n      expect(parseStoredMode('numeric', 'dial')).toBe('numeric');\n      expect(parseStoredMode(null, 'dial')).toBe('dial');\n      expect(parseStoredMode('autre', 'numeric')).toBe('numeric');\n    });\n\n    it('cle normalisee sur le titre', () => {\n      expect(instrumentModeKey('COMPASS')).toBe('mynav:instrument-mode:compass');\n    });\n  });\n});\n\ndescribe('instrumentMode (navigateur)', () => {\n  it('getUiMode/setUiMode : defaut HELM depuis la finalisation (#166)', () => {\n    window.localStorage.clear();\n    expect(getUiMode()).toBe('helm'); // defaut, plus de vue legacy par defaut\n    setUiMode('coastal');\n    expect(getUiMode()).toBe('coastal');\n    setUiMode(null);\n    expect(getUiMode()).toBe('helm'); // selection effacee -> defaut\n  });\n\n  it('?ui=legacy : echappatoire explicite vers la vue historique (#166)', () => {\n    window.localStorage.clear();\n    window.localStorage.setItem('mynav:ui-mode', 'coastal');\n    window.history.replaceState(null, '', '/?ui=legacy');\n    expect(getUiMode()).toBeNull();\n    window.history.replaceState(null, '', '/');\n    window.localStorage.clear();\n    expect(getUiMode()).toBe('helm');\n  });\n\n  it('readInstrumentMode/writeInstrumentMode par instrument', () => {\n    window.localStorage.clear();\n    expect(readInstrumentMode('WIND', 'dial')).toBe('dial');\n    writeInstrumentMode('WIND', 'numeric');\n    expect(readInstrumentMode('WIND', 'dial')).toBe('numeric');\n    // isolation par titre\n    expect(readInstrumentMode('SOG', 'dial')).toBe('dial');\n  });\n\n  it('parseWindNeedleMode : seul \"true\" sélectionne le vrai, défaut apparent (#188)', () => {\n    expect(parseWindNeedleMode('true')).toBe('true');\n    expect(parseWindNeedleMode('apparent')).toBe('apparent');\n    expect(parseWindNeedleMode(null)).toBe('apparent');\n    expect(parseWindNeedleMode('bogus')).toBe('apparent');\n  });\n\n  it('readWindNeedleMode/writeWindNeedleMode : persisté mynav:wind-needle (#188)', () => {\n    window.localStorage.clear();\n    expect(readWindNeedleMode()).toBe('apparent'); // défaut\n    writeWindNeedleMode('true');\n    expect(readWindNeedleMode()).toBe('true');\n    expect(window.localStorage.getItem('mynav:wind-needle')).toBe('true');\n    writeWindNeedleMode('apparent');\n    expect(readWindNeedleMode()).toBe('apparent');\n    window.localStorage.clear();\n  });\n});\n","file_size_bytes":3992,"returned_bytes":3992,"offset":0,"lines_read":108,"was_truncated":false,"total_lines":108,"next_offset":null}
+import { describe, expect, it } from 'vitest';
+import {
+  getUiMode,
+  instrumentModeKey,
+  parseStoredMode,
+  parseUiMode,
+  parseWindNeedleMode,
+  readInstrumentMode,
+  readWindNeedleMode,
+  setUiMode,
+  writeInstrumentMode,
+  writeWindNeedleMode
+} from './instrumentMode';
+
+describe('instrumentMode (pur)', () => {
+  describe('parseUiMode', () => {
+    it('aucune source : null (legacy)', () => {
+      expect(parseUiMode('', null, null)).toBeNull();
+      expect(parseUiMode('', '0', '0')).toBeNull();
+    });
+
+    it('URL ?ui= prioritaire', () => {
+      expect(parseUiMode('?ui=coastal', 'overview', '1')).toBe('coastal');
+      expect(parseUiMode('?foo=1&ui=overview', null, null)).toBe('overview');
+      expect(parseUiMode('?ui=helm', null, null)).toBe('helm');
+    });
+
+    it('storage mynav:ui-mode sans URL', () => {
+      expect(parseUiMode('', 'coastal', null)).toBe('coastal');
+      expect(parseUiMode('', 'bogus', null)).toBeNull();
+    });
+
+    it('URL ?ui=prep (Phase 3) prioritaire', () => {
+      expect(parseUiMode('?ui=prep', 'overview', null)).toBe('prep');
+      expect(parseUiMode('', 'prep', null)).toBe('prep');
+    });
+
+    it('URL ?ui=legacy (finalisation #166) : selection legacy', () => {
+      expect(parseUiMode('?ui=legacy', 'coastal', null)).toBe('legacy');
+    });
+
+    it('retro-compat Phase 1 : ?helm=1 puis mynav:helm', () => {
+      expect(parseUiMode('?helm=1', null, null)).toBe('helm');
+      expect(parseUiMode('', null, '1')).toBe('helm');
+    });
+  });
+
+  describe('parseStoredMode / instrumentModeKey', () => {
+    it('valeurs valides, fallback sinon', () => {
+      expect(parseStoredMode('dial', 'numeric')).toBe('dial');
+      expect(parseStoredMode('numeric', 'dial')).toBe('numeric');
+      expect(parseStoredMode(null, 'dial')).toBe('dial');
+      expect(parseStoredMode('autre', 'numeric')).toBe('numeric');
+    });
+
+    it('cle normalisee sur le titre', () => {
+      expect(instrumentModeKey('COMPASS')).toBe('mynav:instrument-mode:compass');
+    });
+  });
+});
+
+describe('instrumentMode (navigateur)', () => {
+  it('getUiMode/setUiMode : defaut HELM depuis la finalisation (#166)', () => {
+    window.localStorage.clear();
+    expect(getUiMode()).toBe('helm'); // defaut, plus de vue legacy par defaut
+    setUiMode('coastal');
+    expect(getUiMode()).toBe('coastal');
+    setUiMode(null);
+    expect(getUiMode()).toBe('helm'); // selection effacee -> defaut
+  });
+
+  it('?ui=legacy : echappatoire explicite vers la vue historique (#166)', () => {
+    window.localStorage.clear();
+    window.localStorage.setItem('mynav:ui-mode', 'coastal');
+    window.history.replaceState(null, '', '/?ui=legacy');
+    expect(getUiMode()).toBeNull();
+    window.history.replaceState(null, '', '/');
+    window.localStorage.clear();
+    expect(getUiMode()).toBe('helm');
+  });
+
+  it('readInstrumentMode/writeInstrumentMode par instrument', () => {
+    window.localStorage.clear();
+    expect(readInstrumentMode('WIND', 'dial')).toBe('dial');
+    writeInstrumentMode('WIND', 'numeric');
+    expect(readInstrumentMode('WIND', 'dial')).toBe('numeric');
+    // isolation par titre
+    expect(readInstrumentMode('SOG', 'dial')).toBe('dial');
+  });
+
+  it('parseWindNeedleMode : seul "true" sélectionne le vrai, défaut apparent (#188)', () => {
+    expect(parseWindNeedleMode('true')).toBe('true');
+    expect(parseWindNeedleMode('apparent')).toBe('apparent');
+    expect(parseWindNeedleMode(null)).toBe('apparent');
+    expect(parseWindNeedleMode('bogus')).toBe('apparent');
+  });
+
+  it('readWindNeedleMode/writeWindNeedleMode : persisté mynav:wind-needle (#188)', () => {
+    window.localStorage.clear();
+    expect(readWindNeedleMode()).toBe('apparent'); // défaut
+    writeWindNeedleMode('true');
+    expect(readWindNeedleMode()).toBe('true');
+    expect(window.localStorage.getItem('mynav:wind-needle')).toBe('true');
+    writeWindNeedleMode('apparent');
+    expect(readWindNeedleMode()).toBe('apparent');
+    window.localStorage.clear();
+  });
+});

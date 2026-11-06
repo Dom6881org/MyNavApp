@@ -1,1 +1,194 @@
-{"path":"/home/user/src186/src/components/instruments/CoastalPanel.test.tsx","content":"import { render, screen, fireEvent } from '@testing-library/react';\nimport { beforeEach, describe, expect, it, vi, afterEach } from 'vitest';\nimport CoastalPanel from './CoastalPanel';\nimport type { NavigationData } from '../../types';\n\nconst data = (overrides: Partial<NavigationData> = {}): NavigationData => ({\n  position: { latitude: 42.5, longitude: 3.1 },\n  speed: { speed: 5.0, sog: 5.0, stw: null, maxSpeed: 6.1, averageSpeed: 4.2 },\n  wind: { direction: 320, speed: 12, gust: 15, source: 'GRIB' },\n  apparentWind: { angleDegrees: 45, speedKnots: 15 },\n  trueWind: { angleDegrees: 60, speedKnots: 12 },\n  windGrid: [],\n  windForecastStatus: { isLoading: false, error: null, updatedAt: null, gridError: null },\n  compass: { heading: 132, cog: 137, magneticHeading: null, deviation: 0 },\n  depth: { depth: 24.6, temperature: 17, alarm: false, alarmDepth: 2 },\n  gpsTime: { utcTime: '10:00', localTime: '11:00', date: '2026-11-04' },\n  gpsAccuracy: null,\n  ...overrides\n});\n\nbeforeEach(() => {\n  window.localStorage.clear();\n});\n\nafterEach(() => {\n  vi.useRealTimers();\n});\n\ndescribe('CoastalPanel — reset #186 (3 colonnes vent/profondeur/carte)', () => {\n  it('affiche les 3 cartes VENT / PROFONDEUR / CARTE', () => {\n    render(<CoastalPanel data={data()} />);\n    expect(screen.getByText('VENT')).toBeTruthy();\n    expect(screen.getByText('PROFONDEUR')).toBeTruthy();\n    expect(screen.getByText('CARTE')).toBeTruthy();\n  });\n\n  it('vent : switch CADRAN/NUMÉRIQUE, cadran par défaut puis TWS énorme en numérique', () => {    render(<CoastalPanel data={data()} />);\n    const sw = screen.getByTestId('coastal-wind-switch');\n    expect(sw.textContent).toContain('CADRAN');\n    expect(sw.textContent).toContain('NUMÉRIQUE');\n    // Cadran par défaut : le WindDial affiche le TWS au centre (et le\n    // readout TWS sous le cadran — même texte, plusieurs occurrences).\n    expect(screen.getAllByText('12 kt').length).toBeGreaterThanOrEqual(1);\n    // Les QUATRE readouts TWS/AWS/TWA/AWA sous le cadran.\n    const readouts = screen.getByTestId('coastal-wind-readouts');\n    expect(readouts.textContent).toContain('TWS');\n    expect(readouts.textContent).toContain('AWS');\n    expect(readouts.textContent).toContain('TWA');\n    expect(readouts.textContent).toContain('AWA');\n\n    // Passage en numérique : TWS énorme + jumelage AWS/TWA/AWA (HELM).\n    fireEvent.click(\n      screen.getByTestId('coastal-wind-switch').querySelector('button:last-child')!\n    );\n    expect(screen.getByTestId('coastal-wind-numeric')).toBeTruthy();\n    expect(screen.getByTestId('coastal-wind-numeric').textContent).toContain('12');\n    expect(screen.queryByText('12 kt')).toBeNull();\n  });\n\n  it('#188 : switch APPARENT|VRAI dans le header VENT — défaut apparent, persisté', () => {\n    render(<CoastalPanel data={data()} />);\n    const sw = screen.getByTestId('coastal-wind-needle-switch');\n    const segments = Array.from(sw.querySelectorAll('button'));\n    // APPARENT actif par défaut — aiguille sur AWA 45 (fixtures)\n    expect(segments.find((b) => b.textContent === 'APPARENT')?.getAttribute('aria-pressed')).toBe('true');\n    expect(document.querySelector('svg.wind-dial')?.getAttribute('aria-label')).toContain('Apparent wind 45');\n    // clic VRAI : aiguille sur TWA 60 + persistance\n    fireEvent.click(segments.find((b) => b.textContent === 'VRAI')!);\n    expect(segments.find((b) => b.textContent === 'VRAI')?.getAttribute('aria-pressed')).toBe('true');\n    expect(document.querySelector('svg.wind-dial')?.getAttribute('aria-label')).toContain('True wind 60');\n    expect(window.localStorage.getItem('mynav:wind-needle')).toBe('true');\n  });\n\n  it('profondeur 24.6 m : échelle adaptative ×2 (0-30) + marqueur', () => {\n    render(<CoastalPanel data={data()} />);\n    expect(screen.getByTestId('coastal-depth-scale-badge').textContent).toContain('échelle ×2');\n    const marker = screen.getByTestId('coastal-depth-marker');\n    expect(marker.getAttribute('data-depth')).toBe('24.6');\n    // Graduations tous les 5 m jusqu'à 30 (0 m en bas).\n    const tickTexts = Array.from(\n      screen.getByTestId('coastal-depth-column').querySelectorAll('text')\n    ).map((t) => t.textContent);\n    ['0', '5', '10', '15', '20', '25', '30'].forEach((t) => {\n      expect(tickTexts).toContain(t);\n    });\n    expect(screen.getByTestId('coastal-depth-value').textContent).toContain('24.6');\n    expect(screen.queryByTestId('coastal-depth-alert')).toBeNull();\n  });\n\n  it('profondeur 8.4 m : échelle nominale 0-15, pas de badge ×2', () => {\n    render(\n      <CoastalPanel data={data({ depth: { depth: 8.4, temperature: 17, alarm: false, alarmDepth: 2 } })} />\n    );\n    expect(screen.queryByTestId('coastal-depth-scale-badge')).toBeNull();\n    const tickTexts = Array.from(\n      screen.getByTestId('coastal-depth-column').querySelectorAll('text')\n    ).map((t) => t.textContent);\n    ['0', '5', '10', '15'].forEach((t) => expect(tickTexts).toContain(t));\n    expect(tickTexts).not.toContain('20');\n    expect(screen.getByTestId('coastal-depth-marker').getAttribute('data-depth')).toBe('8.4');\n  });\n\n  it('alerte ≤ 2 m : bandeau clignotant + colonne entière en rouge', () => {\n    render(\n      <CoastalPanel data={data({ depth: { depth: 1.8, temperature: 17, alarm: false, alarmDepth: 2 } })} />\n    );\n    const alert = screen.getByTestId('coastal-depth-alert');\n    expect(alert.getAttribute('role')).toBe('alert');\n    expect(alert.textContent).toContain('1.8 M');\n    expect(alert.textContent).toContain('TROP PEU PROFOND');\n    // Colonne entière en rouge : une seule zone danger pleine hauteur.\n    expect(screen.getByTestId('coastal-depth-zone-red')).toBeTruthy();\n    expect(screen.getByTestId('coastal-depth-value').textContent).toContain('1.8');\n    // Pied : TEMP + seuil ALARME 2.0 m.\n    expect(screen.getByTestId('coastal-depth-foot').textContent).toContain('2.0 m');\n  });\n\n  it('sans données profondeur : double tiret, pas de marqueur, pas de badge', () => {\n    render(<CoastalPanel data={data({ depth: null })} />);\n    expect(screen.getByTestId('coastal-depth-value').textContent).toContain('--');\n    expect(screen.queryByTestId('coastal-depth-marker')).toBeNull();\n    expect(screen.queryByTestId('coastal-depth-scale-badge')).toBeNull();\n  });\n\n  it('mouillage : bouton pleine largeur, localStorage, remplacement au nouveau clic', () => {\n    vi.useFakeTimers();\n    vi.setSystemTime(new Date('2026-11-05T18:42:00'));\n    render(<CoastalPanel data={data()} />);\n    const btn = screen.getByTestId('coastal-anchor-btn');\n    expect(btn.textContent).toContain('MOUILLAGE FAIT');\n\n    fireEvent.click(btn);\n    // Barre de mouillage : heure + position + bouton NOUVEAU MOUILLAGE.\n    const bar = screen.getByTestId('coastal-anchor-bar');\n    expect(bar.textContent).toContain('05/11 18:42');\n    expect(bar.textContent).toContain('42°');\n    expect(screen.getByTestId('coastal-anchor-btn').textContent).toContain('NOUVEAU MOUILLAGE');\n\n    const stored = JSON.parse(window.localStorage.getItem('coastal-anchor')!);\n    expect(stored.latitude).toBe(42.5);\n    expect(stored.longitude).toBe(3.1);\n\n    // Un nouveau mouillage REMPLACE l'ancien (pas d'historique).\n    vi.setSystemTime(new Date('2026-11-05T20:05:00'));\n    fireEvent.click(screen.getByTestId('coastal-anchor-btn'));\n    const stored2 = JSON.parse(window.localStorage.getItem('coastal-anchor')!);\n    expect(stored2.timestamp).not.toBe(stored.timestamp);\n    expect(screen.getByTestId('coastal-anchor-bar').textContent).toContain('20:05');\n  });\n\n  it('quitter le mouillage : efface le mouillage et revient à l\\'état initial (retour #186)', () => {\n    vi.useFakeTimers();\n    vi.setSystemTime(new Date('2026-11-05T18:42:00'));\n    render(<CoastalPanel data={data()} />);\n    fireEvent.click(screen.getByTestId('coastal-anchor-btn'));\n    expect(screen.getByTestId('coastal-anchor-bar')).toBeTruthy();\n    expect(window.localStorage.getItem('coastal-anchor')).not.toBeNull();\n\n    // QUITTER LE MOUILLAGE : barre remplacée par le bouton pleine largeur,\n    // localStorage effacé.\n    fireEvent.click(screen.getByTestId('coastal-anchor-quit-btn'));\n    expect(screen.queryByTestId('coastal-anchor-bar')).toBeNull();\n    expect(window.localStorage.getItem('coastal-anchor')).toBeNull();\n    expect(screen.getByTestId('coastal-anchor-btn').textContent).toContain('MOUILLAGE FAIT');\n  });\n\n  it('chart background : suit la préférence OVERVIEW (clé mapBaseStyle, retour #186)', () => {\n    // Défaut : standard.\n    const { unmount } = render(<CoastalPanel data={data()} />);\n    expect(\n      (screen.getByTestId('coastal-map').querySelector('.coastal-map-canvas') as HTMLElement)\n        .className\n    ).toContain('map-base-standard');\n    unmount();\n\n    // Préférence OVERVIEW 'faded' → classe map-base-faded sur le conteneur carte.\n    window.localStorage.setItem('mapBaseStyle', 'faded');\n    render(<CoastalPanel data={data()} />);\n    expect(\n      (screen.getByTestId('coastal-map').querySelector('.coastal-map-canvas') as HTMLElement)\n        .className\n    ).toContain('map-base-faded');\n    expect(\n      (screen.getByTestId('coastal-map').querySelector('.coastal-map-canvas') as HTMLElement)\n        .className\n    ).not.toContain('map-base-standard');\n  });\n\n  it('sans position GPS : bouton mouillage désactivé + fallback carte', () => {\n    render(<CoastalPanel data={data({ position: null })} />);\n    expect((screen.getByTestId('coastal-anchor-btn') as HTMLButtonElement).disabled).toBe(true);\n    expect(screen.getByTestId('coastal-map-fallback').textContent).toContain('pas de position GPS');\n  });\n});\n","file_size_bytes":9630,"returned_bytes":9630,"offset":0,"lines_read":194,"was_truncated":false,"total_lines":194,"next_offset":null}
+import { render, screen, fireEvent } from '@testing-library/react';
+import { beforeEach, describe, expect, it, vi, afterEach } from 'vitest';
+import CoastalPanel from './CoastalPanel';
+import type { NavigationData } from '../../types';
+
+const data = (overrides: Partial<NavigationData> = {}): NavigationData => ({
+  position: { latitude: 42.5, longitude: 3.1 },
+  speed: { speed: 5.0, sog: 5.0, stw: null, maxSpeed: 6.1, averageSpeed: 4.2 },
+  wind: { direction: 320, speed: 12, gust: 15, source: 'GRIB' },
+  apparentWind: { angleDegrees: 45, speedKnots: 15 },
+  trueWind: { angleDegrees: 60, speedKnots: 12 },
+  windGrid: [],
+  windForecastStatus: { isLoading: false, error: null, updatedAt: null, gridError: null },
+  compass: { heading: 132, cog: 137, magneticHeading: null, deviation: 0 },
+  depth: { depth: 24.6, temperature: 17, alarm: false, alarmDepth: 2 },
+  gpsTime: { utcTime: '10:00', localTime: '11:00', date: '2026-11-04' },
+  gpsAccuracy: null,
+  ...overrides
+});
+
+beforeEach(() => {
+  window.localStorage.clear();
+});
+
+afterEach(() => {
+  vi.useRealTimers();
+});
+
+describe('CoastalPanel — reset #186 (3 colonnes vent/profondeur/carte)', () => {
+  it('affiche les 3 cartes VENT / PROFONDEUR / CARTE', () => {
+    render(<CoastalPanel data={data()} />);
+    expect(screen.getByText('VENT')).toBeTruthy();
+    expect(screen.getByText('PROFONDEUR')).toBeTruthy();
+    expect(screen.getByText('CARTE')).toBeTruthy();
+  });
+
+  it('vent : switch CADRAN/NUMÉRIQUE, cadran par défaut puis TWS énorme en numérique', () => {    render(<CoastalPanel data={data()} />);
+    const sw = screen.getByTestId('coastal-wind-switch');
+    expect(sw.textContent).toContain('CADRAN');
+    expect(sw.textContent).toContain('NUMÉRIQUE');
+    // Cadran par défaut : le WindDial affiche le TWS au centre (et le
+    // readout TWS sous le cadran — même texte, plusieurs occurrences).
+    expect(screen.getAllByText('12 kt').length).toBeGreaterThanOrEqual(1);
+    // Les QUATRE readouts TWS/AWS/TWA/AWA sous le cadran.
+    const readouts = screen.getByTestId('coastal-wind-readouts');
+    expect(readouts.textContent).toContain('TWS');
+    expect(readouts.textContent).toContain('AWS');
+    expect(readouts.textContent).toContain('TWA');
+    expect(readouts.textContent).toContain('AWA');
+
+    // Passage en numérique : TWS énorme + jumelage AWS/TWA/AWA (HELM).
+    fireEvent.click(
+      screen.getByTestId('coastal-wind-switch').querySelector('button:last-child')!
+    );
+    expect(screen.getByTestId('coastal-wind-numeric')).toBeTruthy();
+    expect(screen.getByTestId('coastal-wind-numeric').textContent).toContain('12');
+    expect(screen.queryByText('12 kt')).toBeNull();
+  });
+
+  it('#188 : switch APPARENT|VRAI dans le header VENT — défaut apparent, persisté', () => {
+    render(<CoastalPanel data={data()} />);
+    const sw = screen.getByTestId('coastal-wind-needle-switch');
+    const segments = Array.from(sw.querySelectorAll('button'));
+    // APPARENT actif par défaut — aiguille sur AWA 45 (fixtures)
+    expect(segments.find((b) => b.textContent === 'APPARENT')?.getAttribute('aria-pressed')).toBe('true');
+    expect(document.querySelector('svg.wind-dial')?.getAttribute('aria-label')).toContain('Apparent wind 45');
+    // clic VRAI : aiguille sur TWA 60 + persistance
+    fireEvent.click(segments.find((b) => b.textContent === 'VRAI')!);
+    expect(segments.find((b) => b.textContent === 'VRAI')?.getAttribute('aria-pressed')).toBe('true');
+    expect(document.querySelector('svg.wind-dial')?.getAttribute('aria-label')).toContain('True wind 60');
+    expect(window.localStorage.getItem('mynav:wind-needle')).toBe('true');
+  });
+
+  it('profondeur 24.6 m : échelle adaptative ×2 (0-30) + marqueur', () => {
+    render(<CoastalPanel data={data()} />);
+    expect(screen.getByTestId('coastal-depth-scale-badge').textContent).toContain('échelle ×2');
+    const marker = screen.getByTestId('coastal-depth-marker');
+    expect(marker.getAttribute('data-depth')).toBe('24.6');
+    // Graduations tous les 5 m jusqu'à 30 (0 m en bas).
+    const tickTexts = Array.from(
+      screen.getByTestId('coastal-depth-column').querySelectorAll('text')
+    ).map((t) => t.textContent);
+    ['0', '5', '10', '15', '20', '25', '30'].forEach((t) => {
+      expect(tickTexts).toContain(t);
+    });
+    expect(screen.getByTestId('coastal-depth-value').textContent).toContain('24.6');
+    expect(screen.queryByTestId('coastal-depth-alert')).toBeNull();
+  });
+
+  it('profondeur 8.4 m : échelle nominale 0-15, pas de badge ×2', () => {
+    render(
+      <CoastalPanel data={data({ depth: { depth: 8.4, temperature: 17, alarm: false, alarmDepth: 2 } })} />
+    );
+    expect(screen.queryByTestId('coastal-depth-scale-badge')).toBeNull();
+    const tickTexts = Array.from(
+      screen.getByTestId('coastal-depth-column').querySelectorAll('text')
+    ).map((t) => t.textContent);
+    ['0', '5', '10', '15'].forEach((t) => expect(tickTexts).toContain(t));
+    expect(tickTexts).not.toContain('20');
+    expect(screen.getByTestId('coastal-depth-marker').getAttribute('data-depth')).toBe('8.4');
+  });
+
+  it('alerte ≤ 2 m : bandeau clignotant + colonne entière en rouge', () => {
+    render(
+      <CoastalPanel data={data({ depth: { depth: 1.8, temperature: 17, alarm: false, alarmDepth: 2 } })} />
+    );
+    const alert = screen.getByTestId('coastal-depth-alert');
+    expect(alert.getAttribute('role')).toBe('alert');
+    expect(alert.textContent).toContain('1.8 M');
+    expect(alert.textContent).toContain('TROP PEU PROFOND');
+    // Colonne entière en rouge : une seule zone danger pleine hauteur.
+    expect(screen.getByTestId('coastal-depth-zone-red')).toBeTruthy();
+    expect(screen.getByTestId('coastal-depth-value').textContent).toContain('1.8');
+    // Pied : TEMP + seuil ALARME 2.0 m.
+    expect(screen.getByTestId('coastal-depth-foot').textContent).toContain('2.0 m');
+  });
+
+  it('sans données profondeur : double tiret, pas de marqueur, pas de badge', () => {
+    render(<CoastalPanel data={data({ depth: null })} />);
+    expect(screen.getByTestId('coastal-depth-value').textContent).toContain('--');
+    expect(screen.queryByTestId('coastal-depth-marker')).toBeNull();
+    expect(screen.queryByTestId('coastal-depth-scale-badge')).toBeNull();
+  });
+
+  it('mouillage : bouton pleine largeur, localStorage, remplacement au nouveau clic', () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date('2026-11-05T18:42:00'));
+    render(<CoastalPanel data={data()} />);
+    const btn = screen.getByTestId('coastal-anchor-btn');
+    expect(btn.textContent).toContain('MOUILLAGE FAIT');
+
+    fireEvent.click(btn);
+    // Barre de mouillage : heure + position + bouton NOUVEAU MOUILLAGE.
+    const bar = screen.getByTestId('coastal-anchor-bar');
+    expect(bar.textContent).toContain('05/11 18:42');
+    expect(bar.textContent).toContain('42°');
+    expect(screen.getByTestId('coastal-anchor-btn').textContent).toContain('NOUVEAU MOUILLAGE');
+
+    const stored = JSON.parse(window.localStorage.getItem('coastal-anchor')!);
+    expect(stored.latitude).toBe(42.5);
+    expect(stored.longitude).toBe(3.1);
+
+    // Un nouveau mouillage REMPLACE l'ancien (pas d'historique).
+    vi.setSystemTime(new Date('2026-11-05T20:05:00'));
+    fireEvent.click(screen.getByTestId('coastal-anchor-btn'));
+    const stored2 = JSON.parse(window.localStorage.getItem('coastal-anchor')!);
+    expect(stored2.timestamp).not.toBe(stored.timestamp);
+    expect(screen.getByTestId('coastal-anchor-bar').textContent).toContain('20:05');
+  });
+
+  it('quitter le mouillage : efface le mouillage et revient à l\'état initial (retour #186)', () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date('2026-11-05T18:42:00'));
+    render(<CoastalPanel data={data()} />);
+    fireEvent.click(screen.getByTestId('coastal-anchor-btn'));
+    expect(screen.getByTestId('coastal-anchor-bar')).toBeTruthy();
+    expect(window.localStorage.getItem('coastal-anchor')).not.toBeNull();
+
+    // QUITTER LE MOUILLAGE : barre remplacée par le bouton pleine largeur,
+    // localStorage effacé.
+    fireEvent.click(screen.getByTestId('coastal-anchor-quit-btn'));
+    expect(screen.queryByTestId('coastal-anchor-bar')).toBeNull();
+    expect(window.localStorage.getItem('coastal-anchor')).toBeNull();
+    expect(screen.getByTestId('coastal-anchor-btn').textContent).toContain('MOUILLAGE FAIT');
+  });
+
+  it('chart background : suit la préférence OVERVIEW (clé mapBaseStyle, retour #186)', () => {
+    // Défaut : standard.
+    const { unmount } = render(<CoastalPanel data={data()} />);
+    expect(
+      (screen.getByTestId('coastal-map').querySelector('.coastal-map-canvas') as HTMLElement)
+        .className
+    ).toContain('map-base-standard');
+    unmount();
+
+    // Préférence OVERVIEW 'faded' → classe map-base-faded sur le conteneur carte.
+    window.localStorage.setItem('mapBaseStyle', 'faded');
+    render(<CoastalPanel data={data()} />);
+    expect(
+      (screen.getByTestId('coastal-map').querySelector('.coastal-map-canvas') as HTMLElement)
+        .className
+    ).toContain('map-base-faded');
+    expect(
+      (screen.getByTestId('coastal-map').querySelector('.coastal-map-canvas') as HTMLElement)
+        .className
+    ).not.toContain('map-base-standard');
+  });
+
+  it('sans position GPS : bouton mouillage désactivé + fallback carte', () => {
+    render(<CoastalPanel data={data({ position: null })} />);
+    expect((screen.getByTestId('coastal-anchor-btn') as HTMLButtonElement).disabled).toBe(true);
+    expect(screen.getByTestId('coastal-map-fallback').textContent).toContain('pas de position GPS');
+  });
+});
