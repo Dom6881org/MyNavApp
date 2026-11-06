@@ -4,9 +4,12 @@ import {
   instrumentModeKey,
   parseStoredMode,
   parseUiMode,
+  parseWindNeedleMode,
   readInstrumentMode,
+  readWindNeedleMode,
   setUiMode,
-  writeInstrumentMode
+  writeInstrumentMode,
+  writeWindNeedleMode
 } from './instrumentMode';
 
 describe('instrumentMode (pur)', () => {
@@ -83,5 +86,23 @@ describe('instrumentMode (navigateur)', () => {
     expect(readInstrumentMode('WIND', 'dial')).toBe('numeric');
     // isolation par titre
     expect(readInstrumentMode('SOG', 'dial')).toBe('dial');
+  });
+
+  it('parseWindNeedleMode : seul "true" sélectionne le vrai, défaut apparent (#188)', () => {
+    expect(parseWindNeedleMode('true')).toBe('true');
+    expect(parseWindNeedleMode('apparent')).toBe('apparent');
+    expect(parseWindNeedleMode(null)).toBe('apparent');
+    expect(parseWindNeedleMode('bogus')).toBe('apparent');
+  });
+
+  it('readWindNeedleMode/writeWindNeedleMode : persisté mynav:wind-needle (#188)', () => {
+    window.localStorage.clear();
+    expect(readWindNeedleMode()).toBe('apparent'); // défaut
+    writeWindNeedleMode('true');
+    expect(readWindNeedleMode()).toBe('true');
+    expect(window.localStorage.getItem('mynav:wind-needle')).toBe('true');
+    writeWindNeedleMode('apparent');
+    expect(readWindNeedleMode()).toBe('apparent');
+    window.localStorage.clear();
   });
 });

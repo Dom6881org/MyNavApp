@@ -2,6 +2,13 @@ import React, { useState } from 'react';
 import type { NavigationData } from '../../types';
 import InstrumentCard from './InstrumentCard';
 import WindDial from './WindDial';
+import WindNeedleSwitch from './WindNeedleSwitch';
+import WindNumericGrid from './WindNumericGrid';
+import {
+  readWindNeedleMode,
+  writeWindNeedleMode,
+  type WindNeedleMode
+} from '../../utils/instrumentMode';
 import CoastalDepthCard from './CoastalDepthCard';
 import CoastalMap from './CoastalMap';
 import { useAnchor } from '../../hooks/useAnchor';
@@ -31,6 +38,9 @@ interface CoastalPanelProps {
 
 const CoastalPanel: React.FC<CoastalPanelProps> = ({ data }) => {
   const [windMode, setWindMode] = useState<WindDisplay>('dial');
+  // #188 : bord de l'aiguille (apparent par défaut) — même mode
+  // partagé que HELM et la rangée basse (mynav:wind-needle).
+  const [needleMode, setNeedleMode] = useState<WindNeedleMode>(readWindNeedleMode);
   const { anchor, saveAnchor, clearAnchor } = useAnchor();
 
   // Sources du vent identiques à HELM (#176) : vent du point pour TWD,
@@ -73,25 +83,23 @@ const CoastalPanel: React.FC<CoastalPanelProps> = ({ data }) => {
     </div>
   );
 
-  const windReadouts = (compact: boolean) => {
-    const items = compact
-      ? ([
-          ['AWS', aws === null ? '--' : `${aws.toFixed(0)} kt`],
-          ['TWA', twa === null ? '--' : `${Math.round(Math.abs(twa))}°`],
-          ['AWA', awa === null ? '--' : `${Math.round(Math.abs(awa))}°`]
-        ] as const)
-      : ([
-          ['TWS', fmt(tws, 0, 'kt')],
-          ['AWS', fmt(aws, 0, 'kt')],
-          ['TWA', twa === null ? '--' : `${Math.round(Math.abs(twa))}°`],
-          ['AWA', awa === null ? '--' : `${Math.round(Math.abs(awa))}°`]
-        ] as const);
+  const windReadouts = () => {
+    // #188 v5 : colorées par bord — ambre = vrai (TWS/TWA),
+    // bleu = apparent (AWS/AWA).
+    const items = (
+      [
+        ['TWS', fmt(tws, 0, 'kt'), 'true'],
+        ['AWS', fmt(aws, 0, 'kt'), 'apparent'],
+        ['TWA', twa === null ? '--' : `${Math.round(Math.abs(twa))}°`, 'true'],
+        ['AWA', awa === null ? '--' : `${Math.round(Math.abs(awa))}°`, 'apparent']
+      ] as const
+    );
     return (
       <div className="helm-wind-readouts" data-testid="coastal-wind-readouts">
-        {items.map(([label, value]) => (
+        {items.map(([label, value, side]) => (
           <span className="helm-readout" key={label}>
             <span className="helm-readout-lbl">{label}</span>
-            <strong>{value}</strong>
+            <strong className={`wind-${side}`}>{value}</strong>
           </span>
         ))}
       </div>
@@ -101,26 +109,44 @@ const CoastalPanel: React.FC<CoastalPanelProps> = ({ data }) => {
   return (
     <div className="coastal-panel" role="group" aria-label="Coastal instruments">
       <div className="coastal-grid">
-        {/* Colonne 1/3 — VENT : même présentation et options que HELM. */}
+        {/* Colonne 1/3 — VENT : même présentation et options que HELM.
+            #188 v5 : le switch APPARENT|VRAI vit SOUS la rosace (plus
+            dans le header) — le header ne garde que CADRAN|NUMÉRIQUE. */}
         <InstrumentCard title="VENT" hideToggle headerPrefix={windSwitch}>
           {windMode === 'numeric' ? (
-            <div
-              className="helm-central-value helm-central-digital"
-              data-testid="coastal-wind-numeric"
-            >
-              <span className="helm-digital-label">TWS</span>
-              <span className="helm-digital-value">
-                {tws === null ? '--' : tws.toFixed(0)}
-              </span>
-              <span className="helm-unit">kt</span>
-              {windReadouts(true)}
+            /* #188 v5 (retours n°2/n°3) : grille 2×2 de valeurs ÉGALES
+               colorées par bord — PAS de switch en numérique. */
+            <div className="helm-central-value">
+              <WindNumericGrid
+                tws={tws}
+                twa={twa}
+                aws={aws}
+                awa={awa}
+                testId="coastal-wind-numeric"
+              />
             </div>
           ) : (
             <div className="helm-central-value">
               <div className="coastal-wind-stage">
-                <WindDial twdDeg={twd} twsKts={tws} fill />
+                <WindDial
+                  twdDeg={twd}
+                  twsKts={tws}
+                  awaDeg={awa}
+                  twaDeg={twa}
+                  mode={needleMode}
+                  fill
+                />
               </div>
-              {windReadouts(false)}
+              {/* #188 v5 (retour n°1) : switch SOUS la rosace, centré. */}
+              <WindNeedleSwitch
+                mode={needleMode}
+                onChange={(m) => {
+                  setNeedleMode(m);
+                  writeWindNeedleMode(m);
+                }}
+                testId="coastal-wind-needle-switch"
+              />
+              {windReadouts()}
             </div>
           )}
         </InstrumentCard>

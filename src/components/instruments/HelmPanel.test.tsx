@@ -128,20 +128,55 @@ describe('HelmPanel', () => {
     expect(windTile.textContent).toContain('12');
   });
 
-  it('#184 : vue digitale du VENT — TWS enorme + AWS/TWA/AWA dessous', () => {
+  it('#188 : switch APPARENT|VRAI au central VENT — défaut apparent, persisté, aiguille suit', () => {
+    window.localStorage.clear();
+    render(<HelmPanel data={data()} />);
+    fireEvent.click(screen.getByTestId('helm-compact-wind')); // VENT au centre
+    const needleSwitch = screen.getByTestId('helm-wind-needle-switch');
+    expect(needleSwitch).toBeTruthy();
+    // #188 v5 (retour n°1) : le switch vit SOUS la rosace, dans le corps
+    // de la carte — plus dans le header.
+    expect(needleSwitch.closest('.instrument-card-header')).toBeNull();
+    expect(needleSwitch.closest('.helm-central-value')).toBeTruthy();
+    const segments = Array.from(needleSwitch.querySelectorAll('button'));
+    // APPARENT actif par défaut — aiguille sur AWA 45
+    expect(segments.find((b) => b.textContent === 'APPARENT')?.getAttribute('aria-pressed')).toBe('true');
+    expect(document.querySelector('svg.wind-dial')?.getAttribute('aria-label')).toContain('Apparent wind 45');
+    // clic VRAI : aiguille sur TWA 60 + persistance mynav:wind-needle
+    fireEvent.click(segments.find((b) => b.textContent === 'VRAI')!);
+    expect(segments.find((b) => b.textContent === 'VRAI')?.getAttribute('aria-pressed')).toBe('true');
+    expect(document.querySelector('svg.wind-dial')?.getAttribute('aria-label')).toContain('True wind 60');
+    expect(window.localStorage.getItem('mynav:wind-needle')).toBe('true');
+    window.localStorage.clear();
+  });
+
+  it('#188 v5 : vue numérique du VENT — 4 valeurs ÉGALES en 2×2 colorées par bord, PAS de switch', () => {
     render(<HelmPanel data={data()} />);
     fireEvent.click(screen.getByTestId('helm-compact-wind')); // VENT au centre
     clickSegment('NUMÉRIQUE');
-    const digital = screen.getByTestId('helm-central-digital');
-    expect(digital.textContent).toContain('TWS');
-    expect(digital.textContent).toContain('12');
-    expect(digital.textContent).toContain('kt');
-    expect(digital.textContent).toContain('AWS');
-    expect(digital.textContent).toContain('15 kt');
-    expect(digital.textContent).toContain('TWA');
-    expect(digital.textContent).toContain('60°');
-    expect(digital.textContent).toContain('AWA');
-    expect(digital.textContent).toContain('45°');
+    const grid = screen.getByTestId('helm-wind-numeric');
+    expect(grid.textContent).toContain('TWS');
+    expect(grid.textContent).toContain('12 kt');
+    expect(grid.textContent).toContain('TWA');
+    expect(grid.textContent).toContain('60°');
+    expect(grid.textContent).toContain('AWS');
+    expect(grid.textContent).toContain('15 kt');
+    expect(grid.textContent).toContain('AWA');
+    expect(grid.textContent).toContain('45°');
+    // couleurs par bord : ambre = vrai (TWS/TWA), bleu = apparent (AWS/AWA)
+    expect(grid.querySelectorAll('.wind-true').length).toBe(2);
+    expect(grid.querySelectorAll('.wind-apparent').length).toBe(2);
+    // retour n°3 : en numérique TOUT est affiché -> pas de switch
+    expect(screen.queryByTestId('helm-wind-needle-switch')).toBeNull();
+  });
+
+  it('#188 v5 : readouts du mode cadran colorés par bord (ambre vrai / bleu apparent)', () => {
+    const { container } = render(<HelmPanel data={data()} />);
+    fireEvent.click(screen.getByTestId('helm-compact-wind'));
+    const readouts = screen.getByTestId('helm-wind-readouts');
+    expect(readouts.querySelectorAll('.wind-true').length).toBe(2);
+    expect(readouts.querySelectorAll('.wind-apparent').length).toBe(2);
+    expect(container.querySelectorAll('.helm-readout .wind-true, .helm-readout .wind-apparent').length).toBe(4);
   });
 
   it('#184 n°21-quater : vitesse CADRAN — jauge legacy STW/SOG + MAX + RESET', () => {

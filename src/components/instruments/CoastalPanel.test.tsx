@@ -34,7 +34,7 @@ describe('CoastalPanel — reset #186 (3 colonnes vent/profondeur/carte)', () =>
     expect(screen.getByText('CARTE')).toBeTruthy();
   });
 
-  it('vent : switch CADRAN/NUMÉRIQUE, cadran par défaut puis TWS énorme en numérique', () => {
+  it('vent : switch CADRAN/NUMÉRIQUE, cadran par défaut puis grille 2×2 égale en numérique (#188 v5)', () => {
     render(<CoastalPanel data={data()} />);
     const sw = screen.getByTestId('coastal-wind-switch');
     expect(sw.textContent).toContain('CADRAN');
@@ -42,20 +42,49 @@ describe('CoastalPanel — reset #186 (3 colonnes vent/profondeur/carte)', () =>
     // Cadran par défaut : le WindDial affiche le TWS au centre (et le
     // readout TWS sous le cadran — même texte, plusieurs occurrences).
     expect(screen.getAllByText('12 kt').length).toBeGreaterThanOrEqual(1);
-    // Les QUATRE readouts TWS/AWS/TWA/AWA sous le cadran.
+    // Les QUATRE readouts TWS/AWS/TWA/AWA sous le cadran, colorés par bord.
     const readouts = screen.getByTestId('coastal-wind-readouts');
     expect(readouts.textContent).toContain('TWS');
     expect(readouts.textContent).toContain('AWS');
     expect(readouts.textContent).toContain('TWA');
     expect(readouts.textContent).toContain('AWA');
+    expect(readouts.querySelectorAll('.wind-true').length).toBe(2);
+    expect(readouts.querySelectorAll('.wind-apparent').length).toBe(2);
 
-    // Passage en numérique : TWS énorme + jumelage AWS/TWA/AWA (HELM).
+    // Passage en numérique : grille 2×2 de valeurs ÉGALES (#188 v5
+    // retour n°2) — et PAS de switch APPARENT|VRAI (retour n°3).
     fireEvent.click(
       screen.getByTestId('coastal-wind-switch').querySelector('button:last-child')!
     );
-    expect(screen.getByTestId('coastal-wind-numeric')).toBeTruthy();
-    expect(screen.getByTestId('coastal-wind-numeric').textContent).toContain('12');
-    expect(screen.queryByText('12 kt')).toBeNull();
+    const grid = screen.getByTestId('coastal-wind-numeric');
+    expect(grid.textContent).toContain('TWS');
+    expect(grid.textContent).toContain('12 kt');
+    expect(grid.textContent).toContain('TWA');
+    expect(grid.textContent).toContain('60°');
+    expect(grid.textContent).toContain('AWS');
+    expect(grid.textContent).toContain('15 kt');
+    expect(grid.textContent).toContain('AWA');
+    expect(grid.textContent).toContain('45°');
+    expect(screen.queryByTestId('coastal-wind-needle-switch')).toBeNull();
+  });
+
+  it('#188 : switch APPARENT|VRAI dans le header VENT — défaut apparent, persisté', () => {
+    render(<CoastalPanel data={data()} />);
+    const sw = screen.getByTestId('coastal-wind-needle-switch');
+    // #188 v5 (retour n°1) : sous la rosace, PAS dans le header — qui
+    // ne garde que le switch CADRAN|NUMÉRIQUE.
+    expect(sw.closest('.instrument-card-header')).toBeNull();
+    expect(sw.closest('.helm-central-value')).toBeTruthy();
+    expect(screen.getByTestId('coastal-wind-switch').closest('.instrument-card-header')).not.toBeNull();
+    const segments = Array.from(sw.querySelectorAll('button'));
+    // APPARENT actif par défaut — aiguille sur AWA 45 (fixtures)
+    expect(segments.find((b) => b.textContent === 'APPARENT')?.getAttribute('aria-pressed')).toBe('true');
+    expect(document.querySelector('svg.wind-dial')?.getAttribute('aria-label')).toContain('Apparent wind 45');
+    // clic VRAI : aiguille sur TWA 60 + persistance
+    fireEvent.click(segments.find((b) => b.textContent === 'VRAI')!);
+    expect(segments.find((b) => b.textContent === 'VRAI')?.getAttribute('aria-pressed')).toBe('true');
+    expect(document.querySelector('svg.wind-dial')?.getAttribute('aria-label')).toContain('True wind 60');
+    expect(window.localStorage.getItem('mynav:wind-needle')).toBe('true');
   });
 
   it('profondeur 24.6 m : échelle adaptative ×2 (0-30) + marqueur', () => {
