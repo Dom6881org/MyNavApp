@@ -28,7 +28,7 @@ mynav-routing @ git+https://github.com/Dom6881org/mynav-routing.git@v0.6.0
 # - Windows : incluse directement dans la roue 'eccodes'
 # pip suffit : ni conda, ni installation systeme.
 eccodes>=2.43
-xarray>=2024.1
+xarray>=2026.9.0
 cfgrib>=0.9.14
 # Bathymetrie GEBCO (issue #145, extra 'bathy' du moteur) : lecture du format
 # netCDF du portail GEBCO. xarray est deja fourni ci-dessus (GRIB/cfgrib) ;
