@@ -151,6 +151,28 @@ describe('CoastalPanel — reset #186 (3 colonnes vent/profondeur/carte)', () =>
     expect(screen.getByTestId('coastal-anchor-btn').textContent).toContain('MOUILLAGE FAIT');
   });
 
+  it('chart background : suit la préférence OVERVIEW (clé mapBaseStyle, retour #186)', () => {
+    // Défaut : standard.
+    const { unmount } = render(<CoastalPanel data={data()} />);
+    expect(
+      (screen.getByTestId('coastal-map').querySelector('.coastal-map-canvas') as HTMLElement)
+        .className
+    ).toContain('map-base-standard');
+    unmount();
+
+    // Préférence OVERVIEW 'faded' → classe map-base-faded sur le conteneur carte.
+    window.localStorage.setItem('mapBaseStyle', 'faded');
+    render(<CoastalPanel data={data()} />);
+    expect(
+      (screen.getByTestId('coastal-map').querySelector('.coastal-map-canvas') as HTMLElement)
+        .className
+    ).toContain('map-base-faded');
+    expect(
+      (screen.getByTestId('coastal-map').querySelector('.coastal-map-canvas') as HTMLElement)
+        .className
+    ).not.toContain('map-base-standard');
+  });
+
   it('sans position GPS : bouton mouillage désactivé + fallback carte', () => {
     render(<CoastalPanel data={data({ position: null })} />);
     expect((screen.getByTestId('coastal-anchor-btn') as HTMLButtonElement).disabled).toBe(true);

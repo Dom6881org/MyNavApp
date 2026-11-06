@@ -18,7 +18,7 @@ const BASE = process.env.BASE_URL ?? 'http://127.0.0.1:3001';
 const WAIT_MS = Number(process.env.WAIT_MS ?? 8000);
 const OUT = 'shots';
 
-const VIEWS = ['helm', 'helm-half', 'helm-numeric', 'helm-wind', 'helm-wind-small', 'helm-speed', 'helm-speed-numeric', 'helm-time', 'helm-depth', 'helm-position', 'coastal', 'coastal-numeric', 'coastal-anchor', 'coastal-quit', 'coastal-small', 'overview', 'prep', 'legacy'];
+const VIEWS = ['helm', 'helm-half', 'helm-numeric', 'helm-wind', 'helm-wind-small', 'helm-speed', 'helm-speed-numeric', 'helm-time', 'helm-depth', 'helm-position', 'coastal', 'coastal-numeric', 'coastal-anchor', 'coastal-quit', 'coastal-muted', 'coastal-small', 'overview', 'prep', 'legacy'];
 const THEMES = ['dark', 'light'];
 
 // Vues dérivées : capture d'un état interactif de la vue HELM.
@@ -117,6 +117,22 @@ const DERIVED = {
       await page.getByTestId('coastal-anchor-btn').click();
       await page.waitForTimeout(300);
       await page.getByTestId('coastal-anchor-quit-btn').click();
+      await page.waitForTimeout(500);
+    }
+  },
+  // Retour #186 : chart background — la vue COASTAL suit la préférence
+  // OVERVIEW (clé localStorage mapBaseStyle) ; capture en 'muted' après
+  // rechargement pour vérifier les filtres tuiles.
+  'coastal-muted': {
+    ui: 'coastal',
+    run: async (page) => {
+      await page.evaluate(() => {
+        try { window.localStorage.setItem('mapBaseStyle', 'muted'); } catch { /* noop */ }
+      });
+      await page.reload({ waitUntil: 'load' });
+      await page
+        .waitForSelector('[data-testid="wind-arrow"]', { timeout: 10000 })
+        .catch(() => {});
       await page.waitForTimeout(500);
     }
   },

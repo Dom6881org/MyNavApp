@@ -6,6 +6,7 @@ import { formatCoordinate } from '../../utils/formatCoordinate';
 import type { AnchorRecord } from '../../hooks/useAnchor';
 import { formatAnchorTime } from '../../hooks/useAnchor';
 import InstrumentCard from './InstrumentCard';
+import type { MapBaseStyle } from './ControlPanel';
 
 /** Carte du reset COASTAL (#186, maquettes c1/c4 validées) :
  * « Fond + bateau + ⚓ uniquement, épuré au max » (Dom).
@@ -53,6 +54,20 @@ const makeAnchorIcon = (L: typeof LeafletBundle) =>
     iconAnchor: [15, 15]
   });
 
+/** Chart background identique à OVERVIEW : même clé localStorage
+ * 'mapBaseStyle' (standard/muted/faded) — la classe map-base-* posée
+ * sur le conteneur carte active les filtres CSS App.css (variantes
+ * light/dark/night incluses ; la vue COASTALE n'a pas de réglage
+ * propre, elle suit la préférence OVERVIEW). */
+const readMapBaseStyle = (): MapBaseStyle => {
+  try {
+    const stored = localStorage.getItem('mapBaseStyle');
+    return stored === 'muted' || stored === 'faded' ? stored : 'standard';
+  } catch {
+    return 'standard';
+  }
+};
+
 const CoastalMap: React.FC<CoastalMapProps> = ({
   position,
   heading,
@@ -68,6 +83,9 @@ const CoastalMap: React.FC<CoastalMapProps> = ({
   const anchorLineRef = useRef<LeafletBundle.Polyline | null>(null);
   const [leafletReady, setLeafletReady] = useState(false);
   const [mapError, setMapError] = useState(false);
+  // Chart background partagé avec OVERVIEW (retour #186) — lu au montage :
+  // changer le style dans OVERVIEW puis revenir en COASTAL l'applique.
+  const [mapBaseStyle] = useState<MapBaseStyle>(readMapBaseStyle);
 
   // Leaflet identique au MapViewSimple : bundle exposé via window.L.
   useEffect(() => {
@@ -197,7 +215,7 @@ const CoastalMap: React.FC<CoastalMapProps> = ({
     <InstrumentCard title="CARTE" hideToggle>
       <div className="coastal-map-stage" data-testid="coastal-map">
         <div
-          className="coastal-map-canvas"
+          className={`coastal-map-canvas map-base-${mapBaseStyle}`}
           ref={mapDivRef}
           role="img"
           aria-label="Carte du mouillage"
