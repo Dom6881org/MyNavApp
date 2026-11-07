@@ -1,0 +1,138 @@
+{
+  "diag": {
+    "stage": {
+      "className": "coastal-map-stage",
+      "childCount": 1,
+      "rect": {
+        "x": 976.71875,
+        "y": 167.5625,
+        "width": 435.875,
+        "height": 641.109375,
+        "top": 167.5625,
+        "right": 1412.59375,
+        "bottom": 808.671875,
+        "left": 976.71875
+      },
+      "style": {
+        "display": "block",
+        "position": "relative",
+        "width": "435.875px",
+        "height": "641.109px",
+        "minHeight": "0px",
+        "backgroundColor": "rgba(0, 0, 0, 0)",
+        "visibility": "visible",
+        "opacity": "1",
+        "overflow": "hidden",
+        "zIndex": "auto"
+      }
+    },
+    "canvas": {
+      "className": "coastal-map-canvas map-base-standard leaflet-container leaflet-touch leaflet-fade-anim leaflet-grab leaflet-touch-drag leaflet-touch-zoom",
+      "childCount": 2,
+      "rect": {
+        "x": 977.71875,
+        "y": 168.5625,
+        "width": 433.875,
+        "height": 639.109375,
+        "top": 168.5625,
+        "right": 1411.59375,
+        "bottom": 807.671875,
+        "left": 977.71875
+      },
+      "style": {
+        "display": "block",
+        "position": "absolute",
+        "width": "433.875px",
+        "height": "639.109px",
+        "minHeight": "0px",
+        "backgroundColor": "rgb(15, 36, 56)",
+        "visibility": "visible",
+        "opacity": "1",
+        "overflow": "hidden",
+        "zIndex": "auto"
+      }
+    },
+    "canvasHtml": "<div class=\"coastal-map-canvas map-base-standard leaflet-container leaflet-touch leaflet-fade-anim leaflet-grab leaflet-touch-drag leaflet-touch-zoom\" role=\"img\" aria-label=\"Carte du mouillage\" tabindex=\"0\"><div class=\"leaflet-pane leaflet-map-pane\" style=\"transform: translate3d(0px, -14px, 0px);\"><div class=\"leaflet-pane leaflet-tile-pane\"><div class=\"leaflet-layer osm-base-tiles\" style=\"z-index: 1; opacity: 1;\"><div class=\"leaflet-tile-container leaflet-zoom-animated\" style=\"z-index: 19; transform: translate3d(0px, 0px, 0px) scale(1);\"><img alt=\"\" src=\"/api/tiles/osm/15/16666/12102.png\" clas",
+    "cardHtml": "<div class=\"instrument-card\" data-testid=\"instrument-CARTE\"><div class=\"instrument-card-header\"><span class=\"instrument-title\">CARTE</span><span class=\"instrument-card-info\"></span></div><div class=\"instrument-card-body\" data-testid=\"instrument-card-body\"><div class=\"coastal-map-stage\" data-testid=\"coastal-map\"><div class=\"coastal-map-canvas map-base-standard leaflet-container leaflet-touch leaflet-fade-anim leaflet-grab leaflet-touch-drag leaflet-touch-zoom\" role=\"img\" aria-label=\"Carte du mouillage\" tabindex=\"0\"><div class=\"leaflet-pane leaflet-map-pane\" style=\"transform: translate3d(0px, -14px, 0px);\"><div class=\"leaflet-pane leaflet-tile-pane\"><div class=\"leaflet-layer osm-base-tiles\" style=\"z-index: 1; opacity: 1;\"><div class=\"leaflet-tile-container leaflet-zoom-animated\" style=\"z-index: 19; transform: translate3d(0px, 0px, 0px) scale(1);\"><img alt=\"\" src=\"/api/tiles/osm/15/16666/12102.png\" class=\"leaflet-tile leaflet-tile-loaded\" style=\"width: 256px; height: 256px; transform: translate3d(174px, 191px, 0px); opacity: 1;\"><img alt=\"\" src=\"/api/tiles/osm/15/16666/12101.png\" class=\"leaflet-tile leaflet-tile-loaded\" style=\"width: 256px; height: 256px; transform: translate3d(174px,",
+    "fallback": false,
+    "windowL": "object",
+    "canvasRule": ".theme-light .coastal-map-canvas { background: rgb(220, 233, 242); }",
+    "tileResourceEntries": 18
+  },
+  "consoleMsgs": [],
+  "pageErrors": [],
+  "tileResponses": [
+    {
+      "url": "http://127.0.0.1:3001/api/tiles/osm/15/16666/12102.png",
+      "status": 200
+    },
+    {
+      "url": "http://127.0.0.1:3001/api/tiles/osm/15/16665/12102.png",
+      "status": 200
+    },
+    {
+      "url": "http://127.0.0.1:3001/api/tiles/osm/15/16666/12101.png",
+      "status": 200
+    },
+    {
+      "url": "http://127.0.0.1:3001/api/tiles/osm/15/16667/12101.png",
+      "status": 200
+    },
+    {
+      "url": "http://127.0.0.1:3001/api/tiles/osm/15/16665/12101.png",
+      "status": 200
+    },
+    {
+      "url": "http://127.0.0.1:3001/api/tiles/seamark/15/16665/12102.png",
+      "status": 200
+    },
+    {
+      "url": "http://127.0.0.1:3001/api/tiles/seamark/15/16667/12103.png",
+      "status": 200
+    },
+    {
+      "url": "http://127.0.0.1:3001/api/tiles/seamark/15/16665/12103.png",
+      "status": 200
+    },
+    {
+      "url": "http://127.0.0.1:3001/api/tiles/seamark/15/16665/12101.png",
+      "status": 200
+    },
+    {
+      "url": "http://127.0.0.1:3001/api/tiles/osm/15/16667/12102.png",
+      "status": 200
+    },
+    {
+      "url": "http://127.0.0.1:3001/api/tiles/osm/15/16666/12103.png",
+      "status": 200
+    },
+    {
+      "url": "http://127.0.0.1:3001/api/tiles/osm/15/16667/12103.png",
+      "status": 200
+    },
+    {
+      "url": "http://127.0.0.1:3001/api/tiles/osm/15/16665/12103.png",
+      "status": 200
+    },
+    {
+      "url": "http://127.0.0.1:3001/api/tiles/seamark/15/16666/12101.png",
+      "status": 200
+    },
+    {
+      "url": "http://127.0.0.1:3001/api/tiles/seamark/15/16667/12102.png",
+      "status": 200
+    },
+    {
+      "url": "http://127.0.0.1:3001/api/tiles/seamark/15/16666/12102.png",
+      "status": 200
+    },
+    {
+      "url": "http://127.0.0.1:3001/api/tiles/seamark/15/16667/12101.png",
+      "status": 200
+    },
+    {
+      "url": "http://127.0.0.1:3001/api/tiles/seamark/15/16666/12103.png",
+      "status": 200
+    }
+  ]
+}
